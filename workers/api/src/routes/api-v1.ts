@@ -1,18 +1,16 @@
 import type { ApiWorkerEnv } from '../middleware/auth.js';
-import { createDbClient } from '../lib/db.js';
+import { createDbClient, type DbClient } from '../lib/db.js';
+import { isAuthorizationError } from '../lib/authorization.js';
 import { correlationFromRequest, errorResponse, jsonResponse } from '../lib/http.js';
 import { WorkspaceController } from '../controllers/workspace-controller.js';
 import { EpicController } from '../controllers/epic-controller.js';
-import { StoryController, MilestoneController } from '../controllers/story-controller.js';
+import {
+  StoryController,
+  MilestoneController,
+  WorkflowStateController,
+} from '../controllers/story-controller.js';
 import { CycleController, ViewController } from '../controllers/cycle-view-controller.js';
 import { RelationController } from '../controllers/relation-controller.js';
-
-interface RouteContext {
-  env: ApiWorkerEnv;
-  request: Request;
-  correlationId: string;
-  pathParts: string[];
-}
 
 function parseJsonBody<T>(request: Request): Promise<T> {
   return request.json() as Promise<T>;
@@ -22,7 +20,11 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-export async function handleApiRequest(env: ApiWorkerEnv, request: Request): Promise<Response> {
+export async function handleApiRequest(
+  env: ApiWorkerEnv,
+  request: Request,
+  userId: string
+): Promise<Response> {
   const url = new URL(request.url);
   const correlation = correlationFromRequest(request);
   const correlationId = correlation.correlation_id;
@@ -37,22 +39,25 @@ export async function handleApiRequest(env: ApiWorkerEnv, request: Request): Pro
     return jsonResponse({ status: 'ok', correlation_id: correlationId }, 200, correlationId);
   }
 
-  const ctx: RouteContext = { env, request, correlationId, pathParts };
   const db = createDbClient(env);
+
+  const controller = <T extends new (env: ApiWorkerEnv, db: DbClient, userId: string) => unknown>(
+    Ctor: T
+  ): InstanceType<T> => new Ctor(env, db, userId) as InstanceType<T>;
 
   try {
     // GET /workspaces
     if (pathParts[0] === 'workspaces' && pathParts.length === 1 && request.method === 'GET') {
-      const controller = new WorkspaceController(env, db);
-      const data = await controller.list(correlation);
+      const wsController = controller(WorkspaceController);
+      const data = await wsController.list(correlation);
       return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
     }
 
     // POST /workspaces
     if (pathParts[0] === 'workspaces' && pathParts.length === 1 && request.method === 'POST') {
       const body = await parseJsonBody<{ slug: string; name: string; icon_url?: string }>(request);
-      const controller = new WorkspaceController(env, db);
-      const result = await controller.create(body, correlation);
+      const wsController = controller(WorkspaceController);
+      const result = await wsController.create(body, correlation);
       return jsonResponse(result, 201, correlationId);
     }
 
@@ -63,9 +68,9 @@ export async function handleApiRequest(env: ApiWorkerEnv, request: Request): Pro
 
       // GET/PATCH /workspaces/{wid}
       if (rest.length === 0) {
-        const controller = new WorkspaceController(env, db);
+        const wsController = controller(WorkspaceController);
         if (request.method === 'GET') {
-          const workspace = await controller.getById(workspaceId);
+          const workspace = await wsController.getById(workspaceId);
           if (!workspace) {
             return errorResponse('workspace_not_found', 'Workspace not found', 404, correlationId);
           }
@@ -73,15 +78,43 @@ export async function handleApiRequest(env: ApiWorkerEnv, request: Request): Pro
         }
         if (request.method === 'PATCH') {
           const body = await parseJsonBody<Record<string, unknown>>(request);
-          const result = await controller.update(workspaceId, body, correlation);
+          const result = await wsController.update(workspaceId, body, correlation);
           return jsonResponse(result, 200, correlationId);
+        }
+      }
+
+      // /workspaces/{wid}/workflow-states?team_id=
+      if (rest[0] === 'workflow-states') {
+        const workflowController = controller(WorkflowStateController);
+        const teamId = url.searchParams.get('team_id');
+
+        if (rest.length === 1 && request.method === 'GET') {
+          if (!teamId || !isUuid(teamId)) {
+            return errorResponse(
+              'invalid_request',
+              'Query parameter team_id (uuid) is required',
+              400,
+              correlationId
+            );
+          }
+          const data = await workflowController.list(workspaceId, teamId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+
+        if (rest.length === 1 && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<WorkflowStateController['create']>[1]>(request);
+          if (!body.team_id || !isUuid(body.team_id)) {
+            return errorResponse('invalid_request', 'team_id is required', 400, correlationId);
+          }
+          const result = await workflowController.create(workspaceId, body, correlation);
+          return jsonResponse(result, 201, correlationId);
         }
       }
 
       // /workspaces/{wid}/epics
       if (rest[0] === 'epics') {
-        const epicController = new EpicController(env, db);
-        const milestoneController = new MilestoneController(env, db);
+        const epicController = controller(EpicController);
+        const milestoneController = controller(MilestoneController);
 
         if (rest.length === 1 && request.method === 'GET') {
           const data = await epicController.list(workspaceId);
@@ -113,7 +146,7 @@ export async function handleApiRequest(env: ApiWorkerEnv, request: Request): Pro
           }
 
           if (epicRest[0] === 'stories' && epicRest.length === 1 && request.method === 'GET') {
-            const storyController = new StoryController(env, db);
+            const storyController = controller(StoryController);
             const data = await storyController.listByEpic(workspaceId, epicId);
             return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
           }
@@ -154,7 +187,7 @@ export async function handleApiRequest(env: ApiWorkerEnv, request: Request): Pro
 
       // /workspaces/{wid}/views
       if (rest[0] === 'views') {
-        const viewController = new ViewController(env, db);
+        const viewController = controller(ViewController);
         if (rest.length === 1 && request.method === 'GET') {
           const data = await viewController.list(workspaceId);
           return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
@@ -194,8 +227,8 @@ export async function handleApiRequest(env: ApiWorkerEnv, request: Request): Pro
         const storyResource = resource === 'stories' || isIssuesAlias;
 
         if (storyResource) {
-          const storyController = new StoryController(env, db);
-          const relationController = new RelationController(env, db);
+          const storyController = controller(StoryController);
+          const relationController = controller(RelationController);
 
           if (teamRest.length === 1 && request.method === 'GET') {
             const data = await storyController.list(workspaceId, teamId);
@@ -271,7 +304,7 @@ export async function handleApiRequest(env: ApiWorkerEnv, request: Request): Pro
         }
 
         if (rest[2] === 'cycles' || teamRest[0] === 'cycles') {
-          const cycleController = new CycleController(env, db);
+          const cycleController = controller(CycleController);
           if (teamRest.length === 1 && request.method === 'GET') {
             const data = await cycleController.list(workspaceId, teamId);
             return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
@@ -307,6 +340,9 @@ export async function handleApiRequest(env: ApiWorkerEnv, request: Request): Pro
 
     return errorResponse('not_found', 'Route not found', 404, correlationId, { path: url.pathname });
   } catch (err) {
+    if (isAuthorizationError(err)) {
+      return errorResponse('forbidden', err.message, 403, correlationId);
+    }
     const message = err instanceof Error ? err.message : 'Internal server error';
     const status = message.includes('not found') ? 404 : 500;
     const code = status === 404 ? 'not_found' : 'internal_error';

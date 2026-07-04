@@ -17,23 +17,9 @@ export interface CycleUpdateInput {
 }
 
 export class CycleController extends BaseController {
-  private async nextCycleNumber(teamId: string): Promise<number> {
-    const { data, error } = await this.db
-      .from('cycles')
-      .select('number')
-      .eq('team_id', teamId)
-      .order('number', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      throw new Error(`Failed to allocate cycle number: ${error.message}`);
-    }
-
-    return ((data as { number: number } | null)?.number ?? 0) + 1;
-  }
-
   async list(workspaceId: string, teamId: string): Promise<Cycle[]> {
+    await this.assertTeamReadable(workspaceId, teamId);
+
     const { data, error } = await this.db
       .from('cycles')
       .select('*')
@@ -49,6 +35,8 @@ export class CycleController extends BaseController {
   }
 
   async getById(workspaceId: string, teamId: string, cycleId: string): Promise<Cycle | null> {
+    await this.assertTeamReadable(workspaceId, teamId);
+
     const { data, error } = await this.db
       .from('cycles')
       .select('*')
@@ -70,32 +58,24 @@ export class CycleController extends BaseController {
     input: CycleCreateInput,
     ctx: CorrelationContext
   ): Promise<{ cycle: Cycle; correlation_id: string; outbox_event_id: string | null }> {
-    const number = await this.nextCycleNumber(teamId);
-    const row = {
-      workspace_id: workspaceId,
-      team_id: teamId,
-      name: input.name,
-      number,
-      starts_at: input.starts_at,
-      ends_at: input.ends_at,
-      settings: input.settings ?? {},
-    };
+    await this.assertTeamWriteAccess(workspaceId, teamId);
 
-    const { result, outbox_event_id } = await this.mutateWithOutbox(
+    const { entity, outbox_event_id } = await this.mutateWithOutbox<Cycle>(
       workspaceId,
       ENTITY_TOPICS.CYCLE_STARTED,
-      { team_id: teamId, cycle_number: number, name: input.name },
+      { team_id: teamId, name: input.name },
       ctx,
-      async () => {
-        const { data, error } = await this.db.from('cycles').insert(row).select('*').single();
-        if (error) {
-          throw new Error(`Failed to create cycle: ${error.message}`);
-        }
-        return data as Cycle;
+      'create_cycle',
+      {
+        team_id: teamId,
+        name: input.name,
+        starts_at: input.starts_at,
+        ends_at: input.ends_at,
+        settings: input.settings ?? {},
       }
     );
 
-    return { cycle: result, correlation_id: ctx.correlation_id, outbox_event_id };
+    return { cycle: entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
   async update(
@@ -105,35 +85,25 @@ export class CycleController extends BaseController {
     input: CycleUpdateInput,
     ctx: CorrelationContext
   ): Promise<{ cycle: Cycle; correlation_id: string; outbox_event_id: string | null }> {
-    const patch: Record<string, unknown> = {};
-    if (input.name !== undefined) patch.name = input.name;
-    if (input.starts_at !== undefined) patch.starts_at = input.starts_at;
-    if (input.ends_at !== undefined) patch.ends_at = input.ends_at;
-    if (input.settings !== undefined) patch.settings = input.settings;
+    await this.assertTeamWriteAccess(workspaceId, teamId);
 
-    const { result, outbox_event_id } = await this.mutateWithOutbox(
+    const { entity, outbox_event_id } = await this.mutateWithOutbox<Cycle>(
       workspaceId,
       ENTITY_TOPICS.CYCLE_UPDATED,
-      { cycle_id: cycleId, team_id: teamId, patch },
+      { cycle_id: cycleId, team_id: teamId, patch: input },
       ctx,
-      async () => {
-        const { data, error } = await this.db
-          .from('cycles')
-          .update(patch)
-          .eq('workspace_id', workspaceId)
-          .eq('team_id', teamId)
-          .eq('id', cycleId)
-          .select('*')
-          .single();
-
-        if (error) {
-          throw new Error(`Failed to update cycle: ${error.message}`);
-        }
-        return data as Cycle;
+      'update_cycle',
+      {
+        team_id: teamId,
+        cycle_id: cycleId,
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.starts_at !== undefined ? { starts_at: input.starts_at } : {}),
+        ...(input.ends_at !== undefined ? { ends_at: input.ends_at } : {}),
+        ...(input.settings !== undefined ? { settings: input.settings } : {}),
       }
     );
 
-    return { cycle: result, correlation_id: ctx.correlation_id, outbox_event_id };
+    return { cycle: entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
   async complete(
@@ -142,29 +112,21 @@ export class CycleController extends BaseController {
     cycleId: string,
     ctx: CorrelationContext
   ): Promise<{ cycle: Cycle; correlation_id: string; outbox_event_id: string | null }> {
-    const { result, outbox_event_id } = await this.mutateWithOutbox(
+    await this.assertTeamWriteAccess(workspaceId, teamId);
+
+    const { entity, outbox_event_id } = await this.mutateWithOutbox<Cycle>(
       workspaceId,
       ENTITY_TOPICS.CYCLE_UPDATED,
       { cycle_id: cycleId, action: 'completed' },
       ctx,
-      async () => {
-        const { data, error } = await this.db
-          .from('cycles')
-          .update({ completed_at: new Date().toISOString() })
-          .eq('workspace_id', workspaceId)
-          .eq('team_id', teamId)
-          .eq('id', cycleId)
-          .select('*')
-          .single();
-
-        if (error) {
-          throw new Error(`Failed to complete cycle: ${error.message}`);
-        }
-        return data as Cycle;
+      'complete_cycle',
+      {
+        team_id: teamId,
+        cycle_id: cycleId,
       }
     );
 
-    return { cycle: result, correlation_id: ctx.correlation_id, outbox_event_id };
+    return { cycle: entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 }
 
@@ -197,6 +159,8 @@ export interface ViewUpdateInput {
 
 export class ViewController extends BaseController {
   async list(workspaceId: string): Promise<View[]> {
+    await this.assertWorkspaceMember(workspaceId);
+
     const { data, error } = await this.db
       .from('views')
       .select('*')
@@ -211,6 +175,8 @@ export class ViewController extends BaseController {
   }
 
   async getById(workspaceId: string, viewId: string): Promise<View | null> {
+    await this.assertWorkspaceMember(workspaceId);
+
     const { data, error } = await this.db
       .from('views')
       .select('*')
@@ -230,37 +196,31 @@ export class ViewController extends BaseController {
     input: ViewCreateInput,
     ctx: CorrelationContext
   ): Promise<{ view: View; correlation_id: string; outbox_event_id: string | null }> {
-    const row = {
-      workspace_id: workspaceId,
-      name: input.name,
-      scope: input.scope,
-      layout: input.layout ?? 'list',
-      team_id: input.team_id ?? null,
-      epic_id: input.epic_id ?? null,
-      owner_id: input.owner_id ?? null,
-      description: input.description ?? null,
-      filter_ast: input.filter_ast ?? {},
-      display_options: input.display_options ?? {},
-      grouping: input.grouping ?? null,
-      sub_grouping: input.sub_grouping ?? null,
-      is_shared: input.is_shared ?? false,
-    };
+    await this.assertWorkspaceMember(workspaceId);
 
-    const { result, outbox_event_id } = await this.mutateWithOutbox(
+    const { entity, outbox_event_id } = await this.mutateWithOutbox<View>(
       workspaceId,
       ENTITY_TOPICS.VIEW_CREATED,
       { name: input.name, scope: input.scope },
       ctx,
-      async () => {
-        const { data, error } = await this.db.from('views').insert(row).select('*').single();
-        if (error) {
-          throw new Error(`Failed to create view: ${error.message}`);
-        }
-        return data as View;
+      'create_view',
+      {
+        name: input.name,
+        scope: input.scope,
+        layout: input.layout ?? 'list',
+        team_id: input.team_id ?? null,
+        epic_id: input.epic_id ?? null,
+        owner_id: input.owner_id ?? this.userId,
+        description: input.description ?? null,
+        filter_ast: input.filter_ast ?? {},
+        display_options: input.display_options ?? {},
+        grouping: input.grouping ?? null,
+        sub_grouping: input.sub_grouping ?? null,
+        is_shared: input.is_shared ?? false,
       }
     );
 
-    return { view: result, correlation_id: ctx.correlation_id, outbox_event_id };
+    return { view: entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
   async update(
@@ -269,39 +229,29 @@ export class ViewController extends BaseController {
     input: ViewUpdateInput,
     ctx: CorrelationContext
   ): Promise<{ view: View; correlation_id: string; outbox_event_id: string | null }> {
-    const patch: Record<string, unknown> = {};
-    if (input.name !== undefined) patch.name = input.name;
-    if (input.description !== undefined) patch.description = input.description;
-    if (input.layout !== undefined) patch.layout = input.layout;
-    if (input.filter_ast !== undefined) patch.filter_ast = input.filter_ast;
-    if (input.display_options !== undefined) patch.display_options = input.display_options;
-    if (input.grouping !== undefined) patch.grouping = input.grouping;
-    if (input.sub_grouping !== undefined) patch.sub_grouping = input.sub_grouping;
-    if (input.is_shared !== undefined) patch.is_shared = input.is_shared;
-    if (input.is_favorited !== undefined) patch.is_favorited = input.is_favorited;
+    await this.assertWorkspaceMember(workspaceId);
 
-    const { result, outbox_event_id } = await this.mutateWithOutbox(
+    const { entity, outbox_event_id } = await this.mutateWithOutbox<View>(
       workspaceId,
       ENTITY_TOPICS.VIEW_UPDATED,
-      { view_id: viewId, patch },
+      { view_id: viewId, patch: input },
       ctx,
-      async () => {
-        const { data, error } = await this.db
-          .from('views')
-          .update(patch)
-          .eq('workspace_id', workspaceId)
-          .eq('id', viewId)
-          .select('*')
-          .single();
-
-        if (error) {
-          throw new Error(`Failed to update view: ${error.message}`);
-        }
-        return data as View;
+      'update_view',
+      {
+        view_id: viewId,
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.layout !== undefined ? { layout: input.layout } : {}),
+        ...(input.filter_ast !== undefined ? { filter_ast: input.filter_ast } : {}),
+        ...(input.display_options !== undefined ? { display_options: input.display_options } : {}),
+        ...(input.grouping !== undefined ? { grouping: input.grouping } : {}),
+        ...(input.sub_grouping !== undefined ? { sub_grouping: input.sub_grouping } : {}),
+        ...(input.is_shared !== undefined ? { is_shared: input.is_shared } : {}),
+        ...(input.is_favorited !== undefined ? { is_favorited: input.is_favorited } : {}),
       }
     );
 
-    return { view: result, correlation_id: ctx.correlation_id, outbox_event_id };
+    return { view: entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
   async delete(
@@ -309,23 +259,15 @@ export class ViewController extends BaseController {
     viewId: string,
     ctx: CorrelationContext
   ): Promise<{ correlation_id: string; outbox_event_id: string | null }> {
-    const { outbox_event_id } = await this.mutateWithOutbox(
+    await this.assertWorkspaceMember(workspaceId);
+
+    const { outbox_event_id } = await this.mutateWithOutbox<View>(
       workspaceId,
       ENTITY_TOPICS.VIEW_DELETED,
       { view_id: viewId },
       ctx,
-      async () => {
-        const { error } = await this.db
-          .from('views')
-          .delete()
-          .eq('workspace_id', workspaceId)
-          .eq('id', viewId);
-
-        if (error) {
-          throw new Error(`Failed to delete view: ${error.message}`);
-        }
-        return null;
-      }
+      'delete_view',
+      { view_id: viewId }
     );
 
     return { correlation_id: ctx.correlation_id, outbox_event_id };

@@ -10,8 +10,8 @@ export type { PrepareEmitStatement } from './lib/outbox-emitter.js';
 export { BaseController } from './controllers/base-controller.js';
 export { WorkspaceController } from './controllers/workspace-controller.js';
 export { EpicController } from './controllers/epic-controller.js';
-export { StoryController, MilestoneController } from './controllers/story-controller.js';
-export type { StoryCreateInput } from './controllers/story-controller.js';
+export { StoryController, MilestoneController, WorkflowStateController } from './controllers/story-controller.js';
+export type { StoryCreateInput, WorkflowStateCreateInput } from './controllers/story-controller.js';
 export { CycleController, ViewController } from './controllers/cycle-view-controller.js';
 export { RelationController } from './controllers/relation-controller.js';
 export {
@@ -62,7 +62,7 @@ export default {
       if (authResult instanceof Response) {
         return authResult;
       }
-      return handleApiRequest(env, request);
+      return handleApiRequest(env, request, authResult.user.id);
     }
 
     return jsonResponse({ error: 'Not found' }, 404);

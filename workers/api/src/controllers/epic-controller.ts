@@ -26,6 +26,8 @@ export interface EpicUpdateInput {
 
 export class EpicController extends BaseController {
   async list(workspaceId: string): Promise<Epic[]> {
+    await this.assertWorkspaceMember(workspaceId);
+
     const { data, error } = await this.db
       .from('epics')
       .select('*')
@@ -41,6 +43,8 @@ export class EpicController extends BaseController {
   }
 
   async getById(workspaceId: string, epicId: string): Promise<Epic | null> {
+    await this.assertWorkspaceMember(workspaceId);
+
     const { data, error } = await this.db
       .from('epics')
       .select('*')
@@ -58,51 +62,31 @@ export class EpicController extends BaseController {
   async create(
     workspaceId: string,
     input: EpicCreateInput,
-    ctx: CorrelationContext,
-    createdBy?: string | null
+    ctx: CorrelationContext
   ): Promise<{ epic: Epic; correlation_id: string; outbox_event_id: string | null }> {
-    const row = {
-      workspace_id: workspaceId,
-      name: input.name,
-      slug: input.slug,
-      status_id: input.status_id,
-      description_md: input.description_md ?? null,
-      priority: input.priority ?? 'none',
-      lead_id: input.lead_id ?? null,
-      start_date: input.start_date ?? null,
-      target_date: input.target_date ?? null,
-      created_by: createdBy ?? null,
-      correlation_id: ctx.correlation_id,
-    };
+    await this.assertWorkspaceMember(workspaceId);
 
-    const { result, outbox_event_id } = await this.mutateWithOutbox(
+    const { entity, outbox_event_id } = await this.mutateWithOutbox<Epic>(
       workspaceId,
       ENTITY_TOPICS.EPIC_CREATED,
       { epic_slug: input.slug, name: input.name },
       ctx,
-      async () => {
-        const { data, error } = await this.db.from('epics').insert(row).select('*').single();
-        if (error) {
-          throw new Error(`Failed to create epic: ${error.message}`);
-        }
-
-        const epic = data as Epic;
-        if (input.team_ids && input.team_ids.length > 0) {
-          const junction = input.team_ids.map((team_id) => ({
-            epic_id: epic.id,
-            team_id,
-          }));
-          const { error: junctionError } = await this.db.from('epic_teams').insert(junction);
-          if (junctionError) {
-            throw new Error(`Failed to link epic teams: ${junctionError.message}`);
-          }
-        }
-
-        return epic;
+      'create_epic',
+      {
+        name: input.name,
+        slug: input.slug,
+        status_id: input.status_id,
+        description_md: input.description_md ?? null,
+        priority: input.priority ?? 'none',
+        lead_id: input.lead_id ?? null,
+        start_date: input.start_date ?? null,
+        target_date: input.target_date ?? null,
+        created_by: this.userId,
+        team_ids: input.team_ids ?? [],
       }
     );
 
-    return { epic: result, correlation_id: ctx.correlation_id, outbox_event_id };
+    return { epic: entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
   async update(
@@ -111,40 +95,32 @@ export class EpicController extends BaseController {
     input: EpicUpdateInput,
     ctx: CorrelationContext
   ): Promise<{ epic: Epic; correlation_id: string; outbox_event_id: string | null }> {
-    const patch: Record<string, unknown> = {};
-    if (input.name !== undefined) patch.name = input.name;
-    if (input.description_md !== undefined) patch.description_md = input.description_md;
-    if (input.status_id !== undefined) patch.status_id = input.status_id;
-    if (input.priority !== undefined) patch.priority = input.priority;
-    if (input.lead_id !== undefined) patch.lead_id = input.lead_id;
-    if (input.start_date !== undefined) patch.start_date = input.start_date;
-    if (input.target_date !== undefined) patch.target_date = input.target_date;
+    await this.assertWorkspaceMember(workspaceId);
 
-    const { result, outbox_event_id } = await this.mutateWithOutbox(
+    const { entity, outbox_event_id } = await this.mutateWithOutbox<Epic>(
       workspaceId,
       ENTITY_TOPICS.EPIC_UPDATED,
-      { epic_id: epicId, patch },
+      { epic_id: epicId, patch: input },
       ctx,
-      async () => {
-        const { data, error } = await this.db
-          .from('epics')
-          .update(patch)
-          .eq('workspace_id', workspaceId)
-          .eq('id', epicId)
-          .select('*')
-          .single();
-
-        if (error) {
-          throw new Error(`Failed to update epic: ${error.message}`);
-        }
-        return data as Epic;
+      'update_epic',
+      {
+        epic_id: epicId,
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.description_md !== undefined ? { description_md: input.description_md } : {}),
+        ...(input.status_id !== undefined ? { status_id: input.status_id } : {}),
+        ...(input.priority !== undefined ? { priority: input.priority } : {}),
+        ...(input.lead_id !== undefined ? { lead_id: input.lead_id } : {}),
+        ...(input.start_date !== undefined ? { start_date: input.start_date } : {}),
+        ...(input.target_date !== undefined ? { target_date: input.target_date } : {}),
       }
     );
 
-    return { epic: result, correlation_id: ctx.correlation_id, outbox_event_id };
+    return { epic: entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
   async setTeams(workspaceId: string, epicId: string, teamIds: string[]): Promise<void> {
+    await this.assertWorkspaceMember(workspaceId);
+
     const { error: deleteError } = await this.db
       .from('epic_teams')
       .delete()

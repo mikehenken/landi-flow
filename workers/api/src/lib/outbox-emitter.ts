@@ -10,9 +10,10 @@ export interface PrepareEmitStatement {
 }
 
 /**
- * Transactional outbox emitter — server tier.
+ * Outbox emitter — server tier.
  * Reference: landi-store-extension `LifecycleEmitter.prepareEmit()`.
- * Clone: INSERT into linear_clone.outbox_events in same Postgres txn as entity mutation.
+ * Atomic persistence: entity DML + outbox INSERT occur in one Postgres transaction
+ * via `linear_clone.execute_mutation_with_outbox` RPC (not separate client round-trips).
  * OBS-001: correlation_id required on every event.
  */
 export class LifecycleEmitter {

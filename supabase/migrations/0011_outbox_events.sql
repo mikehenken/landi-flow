@@ -1,4 +1,4 @@
--- Transactional outbox (domain events). Entity mutation + outbox INSERT in same txn via controllers.
+-- Transactional outbox (domain events). Entity mutation + outbox INSERT atomically via execute_mutation_with_outbox RPC.
 CREATE TABLE linear_clone.outbox_events (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id    uuid NOT NULL REFERENCES linear_clone.workspaces(id) ON DELETE CASCADE,

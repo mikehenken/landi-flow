@@ -1,13 +1,40 @@
 import type { CorrelationContext } from '@landi-flow/core/types';
 import type { DbClient } from '../lib/db.js';
-import { LifecycleEmitter, persistOutboxEvent, type PrepareEmitStatement } from '../lib/outbox-emitter.js';
+import {
+  assertTeamReadable,
+  assertTeamWriteAccess,
+  assertWorkspaceAdmin,
+  assertWorkspaceMember,
+} from '../lib/authorization.js';
 import type { ApiWorkerEnv } from '../middleware/auth.js';
+import {
+  buildMutationPayload,
+  executeTransactionalMutation,
+  type MutationOperation,
+  type TransactionalMutationResult,
+} from '../lib/transactional-mutation.js';
 
 export abstract class BaseController {
-  protected readonly emitter: LifecycleEmitter;
+  constructor(
+    protected readonly env: ApiWorkerEnv,
+    protected readonly db: DbClient,
+    protected readonly userId: string
+  ) {}
 
-  constructor(protected readonly env: ApiWorkerEnv, protected readonly db: DbClient) {
-    this.emitter = new LifecycleEmitter(env);
+  protected async assertWorkspaceMember(workspaceId: string): Promise<void> {
+    await assertWorkspaceMember(this.db, this.userId, workspaceId);
+  }
+
+  protected async assertWorkspaceAdmin(workspaceId: string): Promise<void> {
+    await assertWorkspaceAdmin(this.db, this.userId, workspaceId);
+  }
+
+  protected async assertTeamWriteAccess(workspaceId: string, teamId: string): Promise<void> {
+    await assertTeamWriteAccess(this.db, this.userId, workspaceId, teamId);
+  }
+
+  protected async assertTeamReadable(workspaceId: string, teamId: string): Promise<void> {
+    await assertTeamReadable(this.db, this.userId, workspaceId, teamId);
   }
 
   protected async mutateWithOutbox<T>(
@@ -15,23 +42,39 @@ export abstract class BaseController {
     topic: string,
     payload: Record<string, unknown>,
     ctx: CorrelationContext,
-    mutate: () => Promise<T>
-  ): Promise<{ result: T; outbox_event_id: string | null }> {
-    const result = await mutate();
-    const emit = this.emitter.prepareEmit(workspaceId, topic, payload, ctx);
-    if (!emit) {
-      return { result, outbox_event_id: null };
-    }
-    const outboxEventId = await persistOutboxEvent(this.db, emit);
-    return { result, outbox_event_id: outboxEventId };
+    op: MutationOperation,
+    params: Record<string, unknown>
+  ): Promise<TransactionalMutationResult<T>> {
+    return executeTransactionalMutation<T>(this.db, this.env, {
+      op,
+      workspace_id: workspaceId,
+      topic,
+      payload: buildMutationPayload(workspaceId, topic, payload, ctx),
+      correlation_id: ctx.correlation_id,
+      causation_id: ctx.causation_id,
+      params,
+    });
   }
 
-  protected prepareOnly(
-    workspaceId: string,
+  protected async mutateWithOutboxNullableWorkspace<T>(
     topic: string,
     payload: Record<string, unknown>,
-    ctx: CorrelationContext
-  ): PrepareEmitStatement | null {
-    return this.emitter.prepareEmit(workspaceId, topic, payload, ctx);
+    ctx: CorrelationContext,
+    op: MutationOperation,
+    params: Record<string, unknown>
+  ): Promise<TransactionalMutationResult<T>> {
+    return executeTransactionalMutation<T>(this.db, this.env, {
+      op,
+      workspace_id: null,
+      topic,
+      payload: {
+        ...payload,
+        correlation_id: ctx.correlation_id,
+        ...(ctx.causation_id ? { causation_id: ctx.causation_id } : {}),
+      },
+      correlation_id: ctx.correlation_id,
+      causation_id: ctx.causation_id,
+      params,
+    });
   }
 }

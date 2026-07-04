@@ -9,10 +9,9 @@ export interface RelationCreateInput {
 }
 
 export class RelationController extends BaseController {
-  async list(
-    workspaceId: string,
-    sourceStoryId: string
-  ): Promise<StoryRelation[]> {
+  async list(workspaceId: string, sourceStoryId: string): Promise<StoryRelation[]> {
+    await this.assertWorkspaceMember(workspaceId);
+
     const { data, error } = await this.db
       .from('story_relations')
       .select('*')
@@ -32,19 +31,13 @@ export class RelationController extends BaseController {
     input: RelationCreateInput,
     ctx: CorrelationContext
   ): Promise<{ relation: StoryRelation; correlation_id: string; outbox_event_id: string | null }> {
+    await this.assertWorkspaceMember(workspaceId);
+
     if (sourceStoryId === input.target_story_id) {
       throw new Error('Cannot relate story to itself');
     }
 
-    const row = {
-      workspace_id: workspaceId,
-      source_story_id: sourceStoryId,
-      target_story_id: input.target_story_id,
-      relation_type: input.relation_type,
-      created_by: input.created_by ?? null,
-    };
-
-    const { result, outbox_event_id } = await this.mutateWithOutbox(
+    const { entity, outbox_event_id } = await this.mutateWithOutbox<StoryRelation>(
       workspaceId,
       ENTITY_TOPICS.STORY_UPDATED,
       {
@@ -54,21 +47,16 @@ export class RelationController extends BaseController {
         relation_type: input.relation_type,
       },
       ctx,
-      async () => {
-        const { data, error } = await this.db
-          .from('story_relations')
-          .insert(row)
-          .select('*')
-          .single();
-
-        if (error) {
-          throw new Error(`Failed to create relation: ${error.message}`);
-        }
-        return data as StoryRelation;
+      'create_story_relation',
+      {
+        source_story_id: sourceStoryId,
+        target_story_id: input.target_story_id,
+        relation_type: input.relation_type,
+        created_by: input.created_by ?? this.userId,
       }
     );
 
-    return { relation: result, correlation_id: ctx.correlation_id, outbox_event_id };
+    return { relation: entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
   async remove(
@@ -77,23 +65,17 @@ export class RelationController extends BaseController {
     relationId: string,
     ctx: CorrelationContext
   ): Promise<{ correlation_id: string; outbox_event_id: string | null }> {
-    const { outbox_event_id } = await this.mutateWithOutbox(
+    await this.assertWorkspaceMember(workspaceId);
+
+    const { outbox_event_id } = await this.mutateWithOutbox<StoryRelation>(
       workspaceId,
       ENTITY_TOPICS.STORY_UPDATED,
       { story_id: sourceStoryId, action: 'relation_removed', relation_id: relationId },
       ctx,
-      async () => {
-        const { error } = await this.db
-          .from('story_relations')
-          .delete()
-          .eq('workspace_id', workspaceId)
-          .eq('source_story_id', sourceStoryId)
-          .eq('id', relationId);
-
-        if (error) {
-          throw new Error(`Failed to remove relation: ${error.message}`);
-        }
-        return null;
+      'delete_story_relation',
+      {
+        source_story_id: sourceStoryId,
+        relation_id: relationId,
       }
     );
 
