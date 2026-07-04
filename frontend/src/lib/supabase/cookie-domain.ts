@@ -46,7 +46,7 @@ export function requestOrigin(request: NextRequest): string {
   return request.nextUrl.origin;
 }
 
-export function buildOAuthRedirectUrl(nextPath: string = '/workspace'): string {
+export function buildOAuthRedirectUrl(nextPath: string = '/workspace/inbox'): string {
   const siteUrl = getEnv(AUTH_ENV_KEYS.siteUrl, process.env);
   const base = siteUrl ?? 'http://localhost:3000';
   const callback = new URL('/auth/callback', base);

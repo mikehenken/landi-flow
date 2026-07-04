@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   }
 
   if (user && isAuthPage(pathname)) {
-    return NextResponse.redirect(new URL('/workspace', request.url));
+    return NextResponse.redirect(new URL('/workspace/inbox', request.url));
   }
 
   return supabaseResponse;

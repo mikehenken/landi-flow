@@ -1,7 +1,6 @@
 /**
  * Base domain store — client-tier event-driven pattern.
  * Reference: landi-store-extension `CartStateManager` (subscribe → hydrate → unsubscribe).
- * Clone stores: storyStore, epicStore, boardStore, commentStore, cycleStore, milestoneStore, agentEventStore.
  */
 
 export type DomainStoreListener<TState> = (state: TState) => void;

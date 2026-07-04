@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input } from '@landi-flow/ui';
 import { createClient } from '@/lib/supabase/client';
@@ -16,7 +16,6 @@ interface AuthFormProps {
 
 export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): React.ReactElement {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -28,6 +27,7 @@ export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): 
   async function handleOAuth(provider: OAuthProvider): Promise<void> {
     setError(null);
     setLoading(true);
+    const supabase = createClient();
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: oauthRedirect },
@@ -42,6 +42,7 @@ export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): 
     event.preventDefault();
     setError(null);
     setLoading(true);
+    const supabase = createClient();
 
     if (mode === 'signup') {
       const { error: signUpError } = await supabase.auth.signUp({

@@ -1,14 +1,16 @@
 import type { Story } from '@landi-flow/core/types';
-import { BaseDomainStore } from './base-domain-store.js';
+import { BaseDomainStore } from './base-domain-store';
 
 export interface StoryStoreState {
   stories: Story[];
+  selectedStoryId: string | null;
   loading: boolean;
   error: string | null;
 }
 
 const emptyState = (): StoryStoreState => ({
   stories: [],
+  selectedStoryId: null,
   loading: false,
   error: null,
 });
@@ -35,14 +37,54 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
   protected getSnapshot(): StoryStoreState {
     return {
       stories: [...this.state.stories],
+      selectedStoryId: this.state.selectedStoryId,
       loading: this.state.loading,
       error: this.state.error,
     };
   }
 
-  /** Placeholder — wired to story-controller in Phase 09. */
+  hydrate(stories: Story[]): void {
+    this.state = {
+      ...this.state,
+      stories,
+      loading: false,
+      error: null,
+    };
+    this.notify();
+  }
+
   setStories(stories: Story[]): void {
-    this.state = { ...this.state, stories, loading: false, error: null };
+    this.hydrate(stories);
+  }
+
+  selectStory(storyId: string | null): void {
+    this.state = { ...this.state, selectedStoryId: storyId };
+    this.notify();
+  }
+
+  updateStoryWorkflowState(storyId: string, workflowStateId: string): void {
+    this.state = {
+      ...this.state,
+      stories: this.state.stories.map((story) =>
+        story.id === storyId
+          ? {
+              ...story,
+              workflow_state_id: workflowStateId,
+              updated_at: new Date().toISOString(),
+            }
+          : story,
+      ),
+    };
+    this.notify();
+  }
+
+  setLoading(loading: boolean): void {
+    this.state = { ...this.state, loading };
+    this.notify();
+  }
+
+  setError(error: string | null): void {
+    this.state = { ...this.state, error, loading: false };
     this.notify();
   }
 }

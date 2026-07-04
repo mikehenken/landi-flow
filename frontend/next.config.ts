@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
 import path from 'node:path';
 
+const repoRoot = path.join(__dirname, '..');
+
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: repoRoot,
   transpilePackages: ['@landi-flow/ui', '@landi-flow/core', '@landi-flow/auth'],
   experimental: {
     externalDir: true,
@@ -12,7 +15,7 @@ const nextConfig: NextConfig = {
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@': path.join(__dirname, '../packages/ui/src'),
+      '@': path.join(repoRoot, 'packages/ui/src'),
     };
     return config;
   },

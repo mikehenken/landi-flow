@@ -42,3 +42,6 @@ supabase/.temp/
 # Misc
 .turbo/
 .vercel/
+
+# Frontend synced copy of monorepo public/ (see frontend/scripts/sync-public-assets.mjs)
+frontend/public/

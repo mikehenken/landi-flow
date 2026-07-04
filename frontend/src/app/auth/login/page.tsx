@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { AuthForm } from '@/components/auth/auth-form';
 
+export const dynamic = 'force-dynamic';
+
 interface LoginPageProps {
   searchParams: Promise<{ redirect?: string }>;
 }
