@@ -10,7 +10,9 @@
     "lint": "echo \"lint placeholder\""
   },
   "dependencies": {
-    "@landi-flow/core": "workspace:*"
+    "@landi-flow/auth": "workspace:*",
+    "@landi-flow/core": "workspace:*",
+    "@supabase/supabase-js": "^2.49.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250204.0",

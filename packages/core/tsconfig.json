@@ -6,7 +6,11 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "paths": {
+      "@landi-flow/auth": ["../auth/src/index.ts"],
+      "@landi-flow/auth/*": ["../auth/src/*"]
+    }
   },
   "include": ["src/**/*"]
 }

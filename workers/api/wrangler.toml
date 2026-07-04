@@ -5,8 +5,12 @@ compatibility_date = "2026-01-01"
 [vars]
 ENABLE_OUTBOX_EMITTER = "true"
 
-# Secrets (wrangler secret put — never commit values):
-# SUPABASE_SERVICE_ROLE_KEY, CLOUDFLARE_AI_GATEWAY_TOKEN, etc.
+# Set via wrangler secret / dashboard — key NAMES only (never commit values):
+# NEXT_PUBLIC_SUPABASE_URL
+# NEXT_PUBLIC_SUPABASE_ANON_KEY
+# SUPABASE_SERVICE_ROLE_KEY
+# CLOUDFLARE_AI_GATEWAY_TOKEN
+# DATABASE_URL
 
 # [[queues.producers]]
 # binding = "OUTBOX_QUEUE"

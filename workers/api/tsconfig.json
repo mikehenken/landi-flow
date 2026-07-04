@@ -10,6 +10,8 @@
     "noEmit": true,
     "isolatedModules": true,
     "paths": {
+      "@landi-flow/auth": ["../../packages/auth/src/index.ts"],
+      "@landi-flow/auth/*": ["../../packages/auth/src/*"],
       "@landi-flow/core/*": ["../../packages/core/src/*"]
     }
   },

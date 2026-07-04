@@ -1,0 +1,42 @@
+# Supabase local config — linear_clone schema (non-public)
+# See: https://supabase.com/docs/guides/cli/config
+
+project_id = "landi-flow"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["linear_clone"]
+extra_search_path = ["linear_clone", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+jwt_expiry = 3600
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[auth.external.google]
+enabled = true
+
+[auth.external.github]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
