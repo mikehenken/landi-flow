@@ -1,0 +1,17 @@
+{
+  "name": "landi-flow",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Landi Flow — open-source Linear-class PM with native human+AI collaboration",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @landi-flow/frontend dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

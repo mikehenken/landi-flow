@@ -1,0 +1,5 @@
+name = "landi-flow-mcp"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+
+# OAuth 2.1 + DCR — secrets via wrangler secret put (key names in .env.example)

@@ -1,0 +1,17 @@
+{
+  "name": "@landi-flow/frontend",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"Next.js dev server — configure in Phase 09 (task-09a-frontend)\"",
+    "build": "echo \"build placeholder\"",
+    "lint": "echo \"lint placeholder\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@landi-flow/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

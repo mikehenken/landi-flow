@@ -1,0 +1,16 @@
+name = "landi-flow-api"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+
+[vars]
+ENABLE_OUTBOX_EMITTER = "true"
+
+# Secrets (wrangler secret put — never commit values):
+# SUPABASE_SERVICE_ROLE_KEY, CLOUDFLARE_AI_GATEWAY_TOKEN, etc.
+
+# [[queues.producers]]
+# binding = "OUTBOX_QUEUE"
+# queue = "landi-flow-outbox"
+
+# [[triggers.crons]]
+# crons = ["*/1 * * * *"]  # outbox poller — Phase 09b
