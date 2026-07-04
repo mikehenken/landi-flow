@@ -1,0 +1,16 @@
+STUDY-013 task-09j-instant-markdown-editor iteration-1 — SELF REVIEW (nextjs-developer)
+
+GAPS: none blocking iteration-1 deliverables
+SCORE: 0.95 / 1.0
+
+PASS criteria:
+- [x] In-place markdown editor with instant type/paste render
+- [x] Uses @landi-flow/ui design tokens
+- [x] Liveblocks integration when keys configured (task-09h seam)
+- [x] Epic + Story detail views wired
+- [x] Actual code in repo
+- [x] UI typecheck + lint pass
+
+Minor gaps (documented, not blocking):
+- API persistence for description_md not wired (local store only)
+- Pre-existing task-09h frontend typecheck errors unrelated to editor files

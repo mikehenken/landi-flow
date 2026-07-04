@@ -3,6 +3,7 @@ import React from 'react';
 import { withThemeByClassName } from '@storybook/addon-themes';
 import { NextIntlClientProvider } from 'next-intl';
 import '../src/styles/globals.css';
+import '../src/components/editor/editor-styles.css';
 import { messages, DEFAULT_LOCALE } from '../src/i18n/config';
 
 const preview: Preview = {

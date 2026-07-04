@@ -1,4 +1,5 @@
 @import '@landi-flow/ui/styles';
+@import '@landi-flow/ui/editor-styles';
 
 html {
   color-scheme: dark;

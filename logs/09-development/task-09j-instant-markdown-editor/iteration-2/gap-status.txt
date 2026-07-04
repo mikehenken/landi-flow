@@ -1,0 +1,15 @@
+STUDY-013 task-09j-instant-markdown-editor iteration-2 — SELF REVIEW (nextjs-developer)
+
+G1 Paste markdown render — FIXED
+- handlePaste → insertContent(text, { contentType: 'markdown' })
+- Rich HTML paste unchanged (returns false)
+
+G2 Behavioral test — FIXED (Storybook play)
+- TypeMarkdownConversion: **bold** → <strong>
+- PasteMarkdownConversion: # H + list → <h1> + <ul><li>
+- Note: no test-runner wired; plays run in Storybook UI
+
+G3 API persistence — OPEN (deferred, low)
+G4 Collaborative runtime — OPEN (deferred, low)
+
+Typecheck: pnpm --filter @landi-flow/ui typecheck → exit 0

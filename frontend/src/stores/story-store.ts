@@ -78,6 +78,52 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
     this.notify();
   }
 
+  /**
+   * Assign a Story to members (optimistic). A human fills the assignee slot; an AGENT
+   * fills the delegate slot — both first-class assignees. Pass `null` to unassign.
+   * Only the keys provided are changed (tri-state), mirroring the `assign_story`
+   * Action Bus op so this reconciles cleanly against server truth.
+   */
+  assignStory(
+    storyId: string,
+    input: { assigneeId?: string | null; delegateAgentId?: string | null },
+  ): void {
+    this.state = {
+      ...this.state,
+      stories: this.state.stories.map((story) =>
+        story.id === storyId
+          ? {
+              ...story,
+              assignee_id:
+                'assigneeId' in input ? (input.assigneeId ?? null) : story.assignee_id,
+              delegate_agent_id:
+                'delegateAgentId' in input
+                  ? (input.delegateAgentId ?? null)
+                  : story.delegate_agent_id,
+              updated_at: new Date().toISOString(),
+            }
+          : story,
+      ),
+    };
+    this.notify();
+  }
+
+  updateStoryDescription(storyId: string, descriptionMd: string): void {
+    this.state = {
+      ...this.state,
+      stories: this.state.stories.map((story) =>
+        story.id === storyId
+          ? {
+              ...story,
+              description_md: descriptionMd,
+              updated_at: new Date().toISOString(),
+            }
+          : story,
+      ),
+    };
+    this.notify();
+  }
+
   setLoading(loading: boolean): void {
     this.state = { ...this.state, loading };
     this.notify();

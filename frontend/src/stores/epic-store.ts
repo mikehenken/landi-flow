@@ -59,6 +59,50 @@ class EpicStore extends BaseDomainStore<EpicStoreState> {
     this.notify();
   }
 
+  /**
+   * Assign an Epic to members (optimistic). A human fills the lead slot; an AGENT fills
+   * the delegate slot (a first-class assignee that can drive the Epic). Pass `null` to
+   * unassign. Only the keys provided are changed, mirroring the `assign_epic` op.
+   */
+  assignEpic(
+    epicId: string,
+    input: { leadId?: string | null; delegateAgentId?: string | null },
+  ): void {
+    this.state = {
+      ...this.state,
+      epics: this.state.epics.map((epic) =>
+        epic.id === epicId
+          ? {
+              ...epic,
+              lead_id: 'leadId' in input ? (input.leadId ?? null) : epic.lead_id,
+              delegate_agent_id:
+                'delegateAgentId' in input
+                  ? (input.delegateAgentId ?? null)
+                  : epic.delegate_agent_id,
+              updated_at: new Date().toISOString(),
+            }
+          : epic,
+      ),
+    };
+    this.notify();
+  }
+
+  updateEpicDescription(epicId: string, descriptionMd: string): void {
+    this.state = {
+      ...this.state,
+      epics: this.state.epics.map((epic) =>
+        epic.id === epicId
+          ? {
+              ...epic,
+              description_md: descriptionMd,
+              updated_at: new Date().toISOString(),
+            }
+          : epic,
+      ),
+    };
+    this.notify();
+  }
+
   setLoading(loading: boolean): void {
     this.state = { ...this.state, loading };
     this.notify();

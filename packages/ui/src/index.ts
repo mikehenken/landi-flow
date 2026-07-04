@@ -55,6 +55,24 @@ export {
   type StoryPriorityBadgeProps,
 } from './components/badges/story-badge';
 
+// Instant markdown editor (Differentiator #2)
+export {
+  InstantMarkdownEditor,
+  createInstantMarkdownExtensions,
+  type InstantMarkdownEditorProps,
+  type CreateInstantMarkdownExtensionsOptions,
+} from './components/editor';
+
+// Members — agents as first-class assignees alongside humans (task-09k)
+export {
+  AssigneePicker,
+  MemberAvatar,
+  MemberChip,
+  type AssigneePickerProps,
+  type PickerMember,
+  type MemberAvatarProps,
+} from './components/members';
+
 // OBS-001 observability
 export {
   ErrorFallback,
@@ -63,6 +81,71 @@ export {
   type ErrorToastContentProps,
   type CorrelationContext,
 } from './components/observability/error-fallback';
+
+// AI / agent conversation primitives (shadcn.io/ai-style, owned source)
+export {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+  Message,
+  MessageContent,
+  Response,
+  Reasoning,
+  Tool,
+  Confirmation,
+  Sources,
+  InlineCitation,
+  PromptInput,
+  PromptInputTextarea,
+  PromptInputToolbar,
+  PromptInputSubmit,
+  Suggestions,
+  Suggestion,
+  Loader,
+  ModelSelector,
+  Actions,
+  Action,
+  Plan,
+  Task,
+  type ConversationProps,
+  type ConversationContentProps,
+  type ConversationEmptyStateProps,
+  type MessageProps,
+  type MessageContentProps,
+  type ResponseProps,
+  type ReasoningProps,
+  type ToolProps,
+  type ConfirmationProps,
+  type SourcesProps,
+  type InlineCitationProps,
+  type PromptInputProps,
+  type PromptInputTextareaProps,
+  type PromptInputToolbarProps,
+  type PromptInputSubmitProps,
+  type SuggestionsProps,
+  type SuggestionProps,
+  type LoaderProps,
+  type ModelSelectorProps,
+  type ModelOption,
+  type ActionsProps,
+  type ActionProps,
+  type PlanProps,
+  type TaskItem,
+  type TaskStatus,
+  type AgentChatStatus,
+  type ToolState,
+  type ApprovalState,
+  type MessageRole,
+  type MessageAuthor,
+  type TextPart,
+  type ReasoningPart,
+  type SourcePart,
+  type ToolPart,
+  type ToolFieldDiff,
+  type MessagePart,
+  type UIMessage,
+} from './components/ai';
 
 // Theming
 export {
