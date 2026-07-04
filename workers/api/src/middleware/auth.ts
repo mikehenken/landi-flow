@@ -16,6 +16,10 @@ export interface ApiWorkerEnv {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
   ENABLE_OUTBOX_EMITTER?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_PRICE_PRO_MONTHLY?: string;
+  NEXT_PUBLIC_SITE_URL?: string;
 }
 
 export function toAuthEnv(env: ApiWorkerEnv): Record<string, string | undefined> {

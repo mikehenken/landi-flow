@@ -29,6 +29,17 @@ export const BILLING_TOPICS = {
   ENTITLEMENT_CHANGED: 'billing.entitlement_changed',
 } as const;
 
+export const EXTENSION_TOPICS = {
+  INSTALLED: 'extension.installed',
+  UNINSTALLED: 'extension.uninstalled',
+} as const;
+
+export const WEBHOOK_TOPICS = {
+  REGISTERED: 'webhook.registered',
+  UPDATED: 'webhook.updated',
+  DELETED: 'webhook.deleted',
+} as const;
+
 export const SECURITY_TOPICS = {
   PERMISSION_CHANGED: 'security.permission_changed',
 } as const;
@@ -41,6 +52,8 @@ export const ALL_TOPICS = {
   ...ENTITY_TOPICS,
   ...AGENT_TOPICS,
   ...BILLING_TOPICS,
+  ...EXTENSION_TOPICS,
+  ...WEBHOOK_TOPICS,
   ...SECURITY_TOPICS,
   ...SIGNAL_TOPICS,
 } as const;
@@ -51,6 +64,8 @@ export type DomainTopic =
   | EntityTopic
   | AgentTopic
   | (typeof BILLING_TOPICS)[keyof typeof BILLING_TOPICS]
+  | (typeof EXTENSION_TOPICS)[keyof typeof EXTENSION_TOPICS]
+  | (typeof WEBHOOK_TOPICS)[keyof typeof WEBHOOK_TOPICS]
   | (typeof SECURITY_TOPICS)[keyof typeof SECURITY_TOPICS]
   | (typeof SIGNAL_TOPICS)[keyof typeof SIGNAL_TOPICS];
 

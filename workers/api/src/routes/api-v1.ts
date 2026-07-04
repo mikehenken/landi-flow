@@ -11,6 +11,7 @@ import {
 } from '../controllers/story-controller.js';
 import { CycleController, ViewController } from '../controllers/cycle-view-controller.js';
 import { RelationController } from '../controllers/relation-controller.js';
+import { handleIntegrationsRoutes } from './integrations-routes.js';
 
 function parseJsonBody<T>(request: Request): Promise<T> {
   return request.json() as Promise<T>;
@@ -46,6 +47,17 @@ export async function handleApiRequest(
   ): InstanceType<T> => new Ctor(env, db, userId) as InstanceType<T>;
 
   try {
+    const integrationsResponse = await handleIntegrationsRoutes(
+      env,
+      request,
+      userId,
+      pathParts,
+      correlationId
+    );
+    if (integrationsResponse) {
+      return integrationsResponse;
+    }
+
     // GET /workspaces
     if (pathParts[0] === 'workspaces' && pathParts.length === 1 && request.method === 'GET') {
       const wsController = controller(WorkspaceController);

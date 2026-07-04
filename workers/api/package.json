@@ -12,7 +12,8 @@
   "dependencies": {
     "@landi-flow/auth": "workspace:*",
     "@landi-flow/core": "workspace:*",
-    "@supabase/supabase-js": "^2.49.1"
+    "@supabase/supabase-js": "^2.49.1",
+    "stripe": "^17.7.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250204.0",

@@ -214,3 +214,84 @@ export interface PaginatedResponse<T> {
   };
   correlation_id: string;
 }
+
+export interface ExtensionCatalogItem {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  manifest: Record<string, unknown>;
+  publisher: string | null;
+  is_official: boolean;
+  created_at: string;
+}
+
+export interface ExtensionInstall {
+  id: string;
+  workspace_id: string;
+  extension_id: string;
+  oauth_app_id: string | null;
+  config: Record<string, unknown>;
+  installed_by: string;
+  enabled: boolean;
+  created_at: string;
+  extension?: ExtensionCatalogItem;
+}
+
+export interface WebhookEndpoint {
+  id: string;
+  workspace_id: string;
+  app_id: string | null;
+  url: string;
+  signing_secret_hash: string;
+  resource_types: string[];
+  team_id: string | null;
+  all_public_teams: boolean;
+  enabled: boolean;
+  failure_count: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  webhook_id: string;
+  outbox_event_id: string | null;
+  delivery_uuid: string;
+  event_topic: string;
+  response_status: number | null;
+  attempt: number;
+  status: 'pending' | 'delivered' | 'failed' | 'dead_letter';
+  correlation_id: string;
+  created_at: string;
+}
+
+export interface WorkspaceSubscription {
+  id: string;
+  workspace_id: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  plan_key: string;
+  status: string;
+  current_period_end: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspaceEntitlement {
+  id: string;
+  workspace_id: string;
+  feature_key: string;
+  enabled: boolean;
+  limits: Record<string, unknown>;
+  source: string;
+  updated_at: string;
+}
+
+export interface AiGatewayUsageSummary {
+  total_tokens_in: number;
+  total_tokens_out: number;
+  total_cost_usd: number;
+  request_count: number;
+}

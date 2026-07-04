@@ -20,7 +20,12 @@ export type MutationOperation =
   | 'delete_view'
   | 'create_story_relation'
   | 'delete_story_relation'
-  | 'create_workflow_state';
+  | 'create_workflow_state'
+  | 'install_extension'
+  | 'uninstall_extension'
+  | 'create_webhook'
+  | 'update_webhook'
+  | 'delete_webhook';
 
 export interface TransactionalMutationInput {
   op: MutationOperation;
