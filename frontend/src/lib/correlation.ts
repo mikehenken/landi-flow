@@ -14,7 +14,7 @@ export function createCorrelationContext(
     : { correlation_id: correlationId };
 }
 
-/** Brand asset paths served from monorepo public/assets (symlinked to frontend/public). */
+/** Brand asset paths served from monorepo public/assets (copied to frontend/public via prebuild). */
 export const brandAssets = {
   logoMark: '/assets/logo/logomark-primary.jpg',
   logoWordmark: '/assets/logo/logo-wordmark-horizontal.jpg',

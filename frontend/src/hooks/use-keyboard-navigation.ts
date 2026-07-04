@@ -10,8 +10,11 @@ export interface KeyboardNavigationOptions {
   onEscape: () => void;
   onGKey: () => void;
   onGSecondary: (key: string) => void;
+  onCancelGSecondary: () => void;
   awaitingGSecondary: boolean;
 }
+
+const G_SECONDARY_KEYS = new Set(['i', 's', 'e']);
 
 /**
  * Global keyboard shortcuts per shared-design-system.
@@ -57,8 +60,13 @@ export function useKeyboardNavigation(options: KeyboardNavigationOptions): void 
       }
 
       if (optionsRef.current.awaitingGSecondary) {
-        optionsRef.current.onGSecondary(event.key.toLowerCase());
-        event.preventDefault();
+        const secondaryKey = event.key.toLowerCase();
+        if (G_SECONDARY_KEYS.has(secondaryKey)) {
+          event.preventDefault();
+          optionsRef.current.onGSecondary(secondaryKey);
+        } else {
+          optionsRef.current.onCancelGSecondary();
+        }
         return;
       }
 

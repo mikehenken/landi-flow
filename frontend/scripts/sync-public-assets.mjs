@@ -7,7 +7,7 @@ const frontendRoot = path.join(__dirname, '..');
 const source = path.join(frontendRoot, '..', 'public');
 const target = path.join(frontendRoot, 'public');
 
-function copyRecursive(src: string, dest: string): void {
+function copyRecursive(src, dest) {
   if (!fs.existsSync(src)) {
     console.warn(`[sync-public-assets] Source missing: ${src}`);
     return;

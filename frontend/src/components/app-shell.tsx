@@ -140,6 +140,10 @@ export function AppShell({
       gKeyTimerRef.current = setTimeout(() => setGKeyHintsVisible(false), 3000);
     },
     onGSecondary: handleGKeyNavigation,
+    onCancelGSecondary: () => {
+      setAwaitingGSecondary(false);
+      setGKeyHintsVisible(false);
+    },
     awaitingGSecondary,
   });
 
