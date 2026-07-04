@@ -10,7 +10,10 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "paths": {
-      "@landi-flow/core/*": ["../packages/core/src/*"]
+      "@landi-flow/core/*": ["../packages/core/src/*"],
+      "@landi-flow/ui": ["../packages/ui/src/index.ts"],
+      "@landi-flow/ui/*": ["../packages/ui/src/*"],
+      "@/*": ["../packages/ui/src/*"]
     }
   },
   "include": ["src/**/*"]

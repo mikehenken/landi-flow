@@ -1,0 +1,22 @@
+{
+  "app": {
+    "name": "Landi Flow",
+    "command_palette": "Command palette",
+    "search_placeholder": "Search or jump to…",
+    "keyboard_shortcut_hint": "Press {shortcut}"
+  },
+  "actions": {
+    "create_story": "Create Story",
+    "create_epic": "Create Epic",
+    "retry": "Retry",
+    "copy_trace_id": "Copy Trace ID"
+  },
+  "sidebar": {
+    "inbox": "Inbox",
+    "my_stories": "My Stories",
+    "epics": "Epics",
+    "teams": "Teams",
+    "views": "Views",
+    "powered_by": "Powered by Landi Flow"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "create": {
+    "title": "Create Story",
+    "title_placeholder": "Story title",
+    "description_placeholder": "Describe what needs to be done…"
+  },
+  "status": {
+    "todo": "Todo",
+    "in_progress": "In Progress",
+    "done": "Done",
+    "canceled": "Canceled"
+  },
+  "empty": {
+    "heading": "No Stories yet",
+    "description": "Stories are the atomic unit of work in your Workspace.",
+    "cta": "Create your first Story"
+  },
+  "badge": {
+    "label": "Story"
+  },
+  "identifier": {
+    "format": "{team}-{number}"
+  }
+}
