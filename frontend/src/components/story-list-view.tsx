@@ -8,6 +8,7 @@ import {
   StoryIdentifierBadge,
   StoryPriorityBadge,
   cn,
+  useTranslations,
 } from '@landi-flow/ui';
 import { workflowStateToStatus } from '@/lib/workflow-states';
 import { brandAssets } from '@/lib/correlation';
@@ -20,28 +21,30 @@ export interface StoryListViewProps {
   onCreateStory?: () => void;
 }
 
-/** Compact Story list view (~36–40px rows). */
+/** Compact Story list view (~36–40px rows) with i18n empty state. */
 export function StoryListView({
   stories,
   selectedStoryId,
   onStorySelect,
   onCreateStory,
 }: StoryListViewProps): React.ReactElement {
+  const t = useTranslations('stories');
+
   if (stories.length === 0) {
     return (
       <EmptyState
-        heading="No Stories yet"
-        description="Stories are the atomic unit of work in your Workspace."
-        ctaLabel="Create your first Story"
+        heading={t('empty.heading')}
+        description={t('empty.description')}
+        ctaLabel={t('empty.cta')}
         onCtaClick={onCreateStory}
         imageSrc={brandAssets.featureCollaboration}
-        imageAlt="Human and AI collaboration feature illustration"
+        imageAlt={t('badge.label')}
       />
     );
   }
 
   return (
-    <div className="divide-y divide-border-subtle" role="list" aria-label="Stories">
+    <div className="divide-y divide-border-subtle" role="list" aria-label={t('badge.label')}>
       {stories.map((story) => {
         const status = workflowStateToStatus(story.workflow_state_id);
         const isSelected = selectedStoryId === story.id;
@@ -81,34 +84,13 @@ export function StoryListView({
                 aria-label={`Assignee ${story.assignee_id}`}
               >
                 <AvatarFallback actorType="human">
-                  {story.assignee_id.charAt(5).toUpperCase()}
+                  {story.assignee_id.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             ) : null}
-            <StatusDot status={status} />
           </button>
         );
       })}
     </div>
-  );
-}
-
-interface StatusDotProps {
-  status: ReturnType<typeof workflowStateToStatus>;
-}
-
-function StatusDot({ status }: StatusDotProps): React.ReactElement {
-  const colorClass: Record<typeof status, string> = {
-    todo: 'bg-status-todo',
-    in_progress: 'bg-status-inProgress',
-    done: 'bg-status-done',
-    canceled: 'bg-status-canceled',
-  };
-
-  return (
-    <span
-      className={cn('h-2 w-2 shrink-0 rounded-full', colorClass[status])}
-      aria-hidden
-    />
   );
 }

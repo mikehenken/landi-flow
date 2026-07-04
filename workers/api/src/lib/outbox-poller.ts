@@ -1,11 +1,18 @@
 import type { ApiWorkerEnv } from '../middleware/auth.js';
 import { createDbClient } from './db.js';
 import { deliverPendingWebhooks } from './webhook-delivery.js';
+import {
+  extractStoryIdFromPayload,
+  fanOutStoryToRoom,
+  shouldFanOutTopic,
+} from './collaboration-fanout.js';
 
 interface ClaimedOutboxEvent {
   id: string;
   workspace_id: string;
   topic: string;
+  payload: Record<string, unknown>;
+  correlation_id: string;
 }
 
 export interface OutboxPollResult {
@@ -37,6 +44,17 @@ export async function runOutboxPoller(env: ApiWorkerEnv): Promise<OutboxPollResu
   result.events_claimed = claimed.length;
 
   for (const event of claimed) {
+    if (shouldFanOutTopic(event.topic)) {
+      const storyId = extractStoryIdFromPayload(event.payload ?? {});
+      if (storyId) {
+        try {
+          await fanOutStoryToRoom(env, db, storyId, event.correlation_id);
+        } catch (fanOutErr) {
+          console.error(`Liveblocks fan-out failed for story ${storyId}:`, fanOutErr);
+        }
+      }
+    }
+
     const { data: scheduled, error: scheduleError } = await db.rpc('schedule_webhook_deliveries', {
       p_outbox_event_id: event.id,
     });

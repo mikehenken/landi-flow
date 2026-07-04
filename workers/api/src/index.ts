@@ -5,6 +5,7 @@ import {
 } from './middleware/auth.js';
 import { handleApiRequest } from './routes/api-v1.js';
 import { handleStripeInboundWebhook } from './handlers/stripe-webhook.js';
+import { handleLiveblocksInboundWebhook } from './handlers/liveblocks-webhook.js';
 import { runOutboxPoller } from './lib/outbox-poller.js';
 
 export { LifecycleEmitter } from './lib/outbox-emitter.js';
@@ -61,6 +62,10 @@ export default {
 
     if (url.pathname === '/webhooks/inbound/stripe' && request.method === 'POST') {
       return handleStripeInboundWebhook(request, env);
+    }
+
+    if (url.pathname === '/webhooks/inbound/liveblocks' && request.method === 'POST') {
+      return handleLiveblocksInboundWebhook(request, env);
     }
 
     if (url.pathname === '/internal/outbox/poll' && request.method === 'POST') {

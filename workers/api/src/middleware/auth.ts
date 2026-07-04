@@ -20,6 +20,8 @@ export interface ApiWorkerEnv {
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_PRICE_PRO_MONTHLY?: string;
   NEXT_PUBLIC_SITE_URL?: string;
+  LIVEBLOCKS_SECRET_KEY?: string;
+  LIVEBLOCKS_WEBHOOK_SECRET?: string;
 }
 
 export function toAuthEnv(env: ApiWorkerEnv): Record<string, string | undefined> {

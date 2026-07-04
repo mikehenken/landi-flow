@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { Epic } from '@landi-flow/core/types';
+import type { Epic, EpicStatusCategory } from '@landi-flow/core/types';
 import {
   Card,
   CardContent,
@@ -9,12 +9,12 @@ import {
   CardTitle,
   EpicBadge,
   cn,
+  useTranslations,
 } from '@landi-flow/ui';
 import { useStoryStore } from '@/hooks/use-story-store';
 import { brandAssets } from '@/lib/correlation';
 import {
   EPIC_BOARD_COLUMNS,
-  EPIC_STATUS_LABELS,
   getEpicStatusCategory,
 } from '@/lib/epic-status';
 import { EmptyState } from '@/components/empty-state';
@@ -26,7 +26,15 @@ export interface EpicBoardViewProps {
   selectedEpicId?: string | null;
 }
 
-/** Kanban-style Epic board grouped by status category. */
+const STATUS_I18N_KEYS: Record<EpicStatusCategory, `status.${EpicStatusCategory}`> = {
+  backlog: 'status.backlog',
+  planned: 'status.planned',
+  in_progress: 'status.in_progress',
+  completed: 'status.completed',
+  cancelled: 'status.cancelled',
+};
+
+/** Kanban-style Epic board grouped by status category with i18n labels. */
 export function EpicBoardView({
   epics,
   onEpicSelect,
@@ -34,16 +42,18 @@ export function EpicBoardView({
   selectedEpicId,
 }: EpicBoardViewProps): React.ReactElement {
   const { stories } = useStoryStore();
+  const t = useTranslations('epics');
+  const tStories = useTranslations('stories');
 
   if (epics.length === 0) {
     return (
       <EmptyState
-        heading="No Epics yet"
-        description="Epics are strategic containers for your team's work."
-        ctaLabel="Create your first Epic"
+        heading={t('empty.heading')}
+        description={t('empty.description')}
+        ctaLabel={t('empty.cta')}
         onCtaClick={onCreateEpic}
         imageSrc={brandAssets.emptyEpic}
-        imageAlt="Empty Epic board illustration"
+        imageAlt={t('badge.label')}
       />
     );
   }
@@ -54,16 +64,17 @@ export function EpicBoardView({
         const columnEpics = epics.filter(
           (epic) => getEpicStatusCategory(epic) === status,
         );
+        const statusLabel = t(STATUS_I18N_KEYS[status]);
 
         return (
           <section
             key={status}
             className="flex min-w-[300px] flex-1 flex-col rounded-lg bg-surface-elevated/50"
-            aria-label={`${EPIC_STATUS_LABELS[status]} Epics`}
+            aria-label={`${statusLabel} ${t('badge.label')}`}
           >
             <header className="flex items-center justify-between border-b border-border px-4 py-3">
-              <h3 className="text-sm font-semibold text-foreground">
-                {EPIC_STATUS_LABELS[status]}
+              <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+                {statusLabel}
               </h3>
               <span className="font-mono text-xs tabular-nums text-foreground-subtle">
                 {columnEpics.length}
@@ -72,7 +83,7 @@ export function EpicBoardView({
             <div className="flex flex-1 flex-col gap-2 p-3">
               {columnEpics.length === 0 ? (
                 <p className="py-8 text-center text-xs text-foreground-subtle">
-                  No Epics in {EPIC_STATUS_LABELS[status].toLowerCase()}
+                  {t('empty.heading')}
                 </p>
               ) : (
                 columnEpics.map((epic) => {
@@ -96,16 +107,16 @@ export function EpicBoardView({
                       <Card className="cursor-pointer hover:bg-white/5">
                         <CardHeader className="space-y-2 p-3 pb-2">
                           <EpicBadge name={epic.name} status={statusCategory} />
-                          <CardTitle className="text-sm font-medium leading-snug">
+                          <CardTitle className="line-clamp-2 text-sm font-medium leading-snug">
                             {epic.name}
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="p-3 pt-0">
                           <p className="line-clamp-2 text-xs text-muted-foreground">
-                            {epic.description_md ?? 'No description'}
+                            {epic.description_md ?? '—'}
                           </p>
                           <p className="mt-2 font-mono text-xs tabular-nums text-foreground-subtle">
-                            {storyCount} {storyCount === 1 ? 'Story' : 'Stories'}
+                            {storyCount} {tStories('badge.label')}
                           </p>
                         </CardContent>
                       </Card>

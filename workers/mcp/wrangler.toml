@@ -1,5 +1,23 @@
 name = "landi-flow-mcp"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
 
-# OAuth 2.1 + DCR — secrets via wrangler secret put (key names in .env.example)
+[vars]
+ENABLE_OUTBOX_EMITTER = "true"
+
+# OAuth 2.1 + DCR resource server. Secrets via `wrangler secret put` — key NAMES only
+# (never commit values). See .env.example for the full list.
+#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY
+#   SUPABASE_SERVICE_ROLE_KEY
+#   MCP_OAUTH_ISSUER            # e.g. https://mcp.flow.landi.build
+#   MCP_RESOURCE_URI            # e.g. https://mcp.flow.landi.build/mcp  (RFC 8707 audience)
+#   MCP_CREDENTIAL_PEPPER       # server-side HMAC pepper for credential hashing
+#   CLOUDFLARE_ACCOUNT_ID
+#   CLOUDFLARE_AI_GATEWAY_ENDPOINT
+#   CLOUDFLARE_AI_GATEWAY_TOKEN
+#   CLOUDFLARE_AI_GATEWAY_ID
+#   GEMINI_API_KEY
+#   VERTEX_API_KEY
+#   DEFAULT_GEMINI_MODEL

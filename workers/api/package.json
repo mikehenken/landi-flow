@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@landi-flow/auth": "workspace:*",
+    "@landi-flow/collaboration": "workspace:*",
     "@landi-flow/core": "workspace:*",
+    "@liveblocks/node": "^3.21.0",
     "@supabase/supabase-js": "^2.49.1",
     "stripe": "^17.7.0"
   },
