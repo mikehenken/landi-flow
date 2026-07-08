@@ -4,12 +4,16 @@
   "private": true,
   "scripts": {
     "predev": "node ./scripts/sync-public-assets.mjs",
+    "predev:alt": "node ./scripts/sync-public-assets.mjs",
     "prebuild": "node ./scripts/sync-public-assets.mjs",
     "dev": "next dev --port 3000",
+    "dev:alt": "node ./scripts/dev-alt.mjs",
     "build": "next build",
     "start": "next start --port 3000",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@landi-flow/auth": "workspace:*",
@@ -30,6 +34,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
