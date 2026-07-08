@@ -1,0 +1,22 @@
+{
+  "create": {
+    "title": "Crear Épica",
+    "title_placeholder": "Nombre de la Épica",
+    "description_placeholder": "Describe el objetivo estratégico de esta Épica…"
+  },
+  "status": {
+    "backlog": "Pendiente",
+    "planned": "Planificada",
+    "in_progress": "En progreso",
+    "completed": "Completada",
+    "cancelled": "Cancelada"
+  },
+  "empty": {
+    "heading": "Aún no hay Épicas",
+    "description": "Las Épicas son contenedores estratégicos para el trabajo de tu equipo.",
+    "cta": "Crea tu primera Épica"
+  },
+  "badge": {
+    "label": "Épica"
+  }
+}

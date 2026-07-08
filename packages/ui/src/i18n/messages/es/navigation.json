@@ -1,0 +1,79 @@
+{
+  "command_palette": {
+    "create_story": "Crear Historia",
+    "create_epic": "Crear Épica",
+    "goto_prefix": "Ir a",
+    "goto_inbox": "Ir a Bandeja",
+    "goto_stories": "Ir a Historias",
+    "goto_epics": "Ir a Épicas",
+    "open_agents": "Abrir Consola de Agentes",
+    "suggested_actions": "Acciones sugeridas",
+    "navigation_group": "Navegación",
+    "stories_group": "Historias",
+    "epics_group": "Épicas",
+    "placeholder": "Buscar historias, épicas o acciones…",
+    "search_placeholder": "Buscar {stories}, {epics} o acciones…",
+    "no_results": "No se encontraron resultados."
+  },
+  "views": {
+    "inbox": "Bandeja de entrada",
+    "stories": "Mis Historias",
+    "stories_nav": "Mis {stories}",
+    "story_board": "Tablero de Historias",
+    "entity_board": "Tablero de {entity}",
+    "agents": "Agentes",
+    "epic_board": "Tablero de Épicas",
+    "customers": "Clientes",
+    "epics_section": "Épicas",
+    "views_section": "Vistas",
+    "workspace": "Espacio de trabajo"
+  },
+  "inbox": {
+    "title": "Bandeja de entrada",
+    "welcome": "Bienvenido — {count} Historias activas en tu Espacio de trabajo.",
+    "team_breadcrumb": "Equipo Diseño"
+  },
+  "stories": {
+    "title": "Historias",
+    "board_title": "Tablero de Historias"
+  },
+  "epics": {
+    "title": "Tablero de Épicas",
+    "detail_breadcrumb": "Épica"
+  },
+  "agents": {
+    "title": "Agentes",
+    "breadcrumb": "Agentes"
+  },
+  "account": {
+    "title": "Cuenta"
+  },
+  "settings": {
+    "title": "Configuración del espacio",
+    "section": "Configuración",
+    "general": "General",
+    "members": "Miembros",
+    "general_placeholder": "Nombre del espacio, terminología y preferencias de visualización estarán aquí.",
+    "members_placeholder": "Invitar compañeros y gestionar roles — próximamente.",
+    "account_hint": "Administra valores predeterminados del espacio y membresía del equipo.",
+    "open_workspace": "Abrir configuración del espacio"
+  },
+  "story_detail": {
+    "layout_sidebar": "Barra lateral",
+    "layout_modal": "Modal",
+    "layout_sidebar_active": "El detalle se abre en la barra lateral",
+    "layout_modal_active": "El detalle se abre en un modal",
+    "layout_toggle": "Cambiar a diseño {mode}",
+    "setting_title": "Diseño del detalle de historia",
+    "setting_description": "Elige si los detalles se abren en un panel lateral o en un modal (fijar y expandir).",
+    "pin": "Fijar detalle",
+    "unpin": "Desfijar detalle",
+    "expand": "Expandir detalle",
+    "collapse": "Contraer detalle",
+    "close": "Cerrar detalle"
+  },
+  "locale_switcher": {
+    "label": "Idioma",
+    "current": "Idioma actual: {locale}"
+  }
+}

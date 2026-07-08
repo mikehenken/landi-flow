@@ -1,0 +1,22 @@
+{
+  "create": {
+    "title": "إنشاء ملحمة",
+    "title_placeholder": "اسم الملحمة",
+    "description_placeholder": "صف الهدف الاستراتيجي لهذه الملحمة…"
+  },
+  "status": {
+    "backlog": "المتراكم",
+    "planned": "مخطط",
+    "in_progress": "قيد التنفيذ",
+    "completed": "مكتمل",
+    "cancelled": "ملغى"
+  },
+  "empty": {
+    "heading": "لا توجد ملاحم بعد",
+    "description": "الملاحم هي حاويات استراتيجية لعمل فريقك.",
+    "cta": "أنشئ ملحمتك الأولى"
+  },
+  "badge": {
+    "label": "ملحمة"
+  }
+}

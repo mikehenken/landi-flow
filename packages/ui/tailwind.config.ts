@@ -31,6 +31,9 @@ const config: Config = {
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
+        'foreground-subtle': 'hsl(var(--foreground-subtle))',
+        'foreground-muted': 'hsl(var(--foreground-muted))',
+        'brand-primary': 'hsl(var(--brand-primary))',
         surface: {
           DEFAULT: 'hsl(var(--surface))',
           elevated: 'hsl(var(--surface-elevated))',

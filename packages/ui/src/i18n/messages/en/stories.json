@@ -2,7 +2,11 @@
   "create": {
     "title": "Create Story",
     "title_placeholder": "Story title",
-    "description_placeholder": "Describe what needs to be done…"
+    "description_placeholder": "Describe what needs to be done…",
+    "create_more": "Create more",
+    "cancel": "Cancel",
+    "submit": "Create",
+    "properties_label": "Story properties"
   },
   "status": {
     "todo": "Todo",

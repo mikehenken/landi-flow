@@ -1,0 +1,14 @@
+{
+  "console": {
+    "title": "Agent Console",
+    "description": "Collaborate with governed agent identities — native in-app or external MCP. No remote IDE control from the browser.",
+    "select_agent": "Select an agent identity to chat (native inference + Handoff Queue writes)."
+  },
+  "roster": {
+    "title": "Collaborators",
+    "agents": "Agents",
+    "humans": "Humans",
+    "builtin_badge": "Built-in",
+    "connect_mcp": "Connect via MCP in Settings"
+  }
+}

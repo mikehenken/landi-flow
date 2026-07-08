@@ -2,7 +2,11 @@
   "create": {
     "title": "Create Epic",
     "title_placeholder": "Epic name",
-    "description_placeholder": "Describe the strategic goal of this Epic…"
+    "description_placeholder": "Describe the strategic goal of this Epic…",
+    "create_more": "Create more",
+    "cancel": "Cancel",
+    "submit": "Create",
+    "properties_label": "Epic properties"
   },
   "status": {
     "backlog": "Backlog",

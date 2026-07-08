@@ -1,0 +1,23 @@
+{
+  "app": {
+    "name": "Landi Flow",
+    "command_palette": "لوحة الأوامر",
+    "search_placeholder": "ابحث أو انتقل إلى…",
+    "keyboard_shortcut_hint": "اضغط {shortcut}"
+  },
+  "actions": {
+    "create": "إنشاء",
+    "create_story": "إنشاء قصة",
+    "create_epic": "إنشاء ملحمة",
+    "retry": "إعادة المحاولة",
+    "copy_trace_id": "نسخ معرّف التتبع"
+  },
+  "sidebar": {
+    "inbox": "صندوق الوارد",
+    "my_stories": "قصصي",
+    "epics": "الملاحم",
+    "teams": "الفرق",
+    "views": "العروض",
+    "powered_by": "مدعوم من Landi Flow"
+  }
+}

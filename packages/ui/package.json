@@ -16,7 +16,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "test:storybook": "playwright test --config playwright.config.ts",
+    "test:storybook:visual": "playwright test tests/storybook/visual-regression.spec.ts --config playwright.config.ts",
+    "test:storybook:i18n": "playwright test tests/storybook/i18n-verification.spec.ts --config playwright.config.ts",
+    "test:storybook:interactions": "playwright test tests/storybook/interaction-regression.spec.ts --config playwright.config.ts"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -53,6 +57,7 @@
     "@storybook/react": "^8.5.0",
     "@storybook/react-vite": "^8.5.0",
     "@storybook/test": "^8.5.0",
+    "@playwright/test": "^1.49.1",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",

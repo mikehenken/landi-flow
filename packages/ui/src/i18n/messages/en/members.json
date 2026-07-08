@@ -1,0 +1,17 @@
+{
+  "create": {
+    "title": "Invite member",
+    "user_id_label": "Supabase user ID",
+    "user_id_placeholder": "Enter user UUID to invite",
+    "properties_label": "Member properties",
+    "cancel": "Cancel",
+    "submit": "Invite",
+    "roles": {
+      "member": "Member",
+      "admin": "Admin",
+      "team_owner": "Team owner",
+      "guest": "Guest",
+      "owner": "Owner"
+    }
+  }
+}

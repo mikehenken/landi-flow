@@ -13,10 +13,21 @@ export default meta;
 type Story = StoryObj<typeof CommandPalette>;
 
 const defaultActions = [
-  { id: 'create-story', label: 'Create Story', shortcut: 'C', group: 'Actions' },
-  { id: 'create-epic', label: 'Create Epic', group: 'Actions' },
+  { id: 'create-story', label: 'Create Story', shortcut: 'C', group: 'Suggested Actions' },
+  { id: 'create-epic', label: 'Create Epic', group: 'Suggested Actions' },
   { id: 'go-inbox', label: 'Go to Inbox', shortcut: 'G I', group: 'Navigation' },
   { id: 'go-epics', label: 'Go to Epics', shortcut: 'G E', group: 'Navigation' },
+];
+
+const demoStories = [
+  { id: 'story-1', identifier: 'LAN-1', title: 'Command palette search scope' },
+  { id: 'story-2', identifier: 'LAN-2', title: 'Epic board drag-and-drop' },
+  { id: 'story-3', identifier: 'LAN-3', title: 'Agent delegate workflow' },
+];
+
+const demoEpics = [
+  { id: 'epic-1', name: 'Discoverability' },
+  { id: 'epic-2', name: 'Collaboration' },
 ];
 
 function CommandPaletteDemo(): React.ReactElement {
@@ -28,6 +39,9 @@ function CommandPaletteDemo(): React.ReactElement {
         open={open}
         onOpenChange={setOpen}
         actions={defaultActions}
+        stories={demoStories}
+        epics={demoEpics}
+        groupLabels={{ stories: 'Stories', epics: 'Epics' }}
       />
     </>
   );
@@ -47,6 +61,8 @@ export const Closed: Story = {
           open={open}
           onOpenChange={setOpen}
           actions={defaultActions}
+          stories={demoStories}
+          epics={demoEpics}
         />
       </>
     );
@@ -63,7 +79,13 @@ export const WithManyActions: Story = {
       { id: 'set-label', label: 'Set Label', shortcut: 'L', group: 'Story' },
     ];
     return (
-      <CommandPalette open={open} onOpenChange={setOpen} actions={actions} />
+      <CommandPalette
+        open={open}
+        onOpenChange={setOpen}
+        actions={actions}
+        stories={demoStories}
+        epics={demoEpics}
+      />
     );
   },
 };

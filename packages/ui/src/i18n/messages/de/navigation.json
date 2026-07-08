@@ -1,0 +1,79 @@
+{
+  "command_palette": {
+    "create_story": "Story erstellen",
+    "create_epic": "Epic erstellen",
+    "goto_prefix": "Zu",
+    "goto_inbox": "Zum Posteingang",
+    "goto_stories": "Zu Stories",
+    "goto_epics": "Zu Epics",
+    "open_agents": "Agenten-Konsole öffnen",
+    "suggested_actions": "Vorgeschlagene Aktionen",
+    "navigation_group": "Navigation",
+    "stories_group": "Stories",
+    "epics_group": "Epics",
+    "placeholder": "Stories, Epics oder Aktionen suchen…",
+    "search_placeholder": "{stories}, {epics} oder Aktionen suchen…",
+    "no_results": "Keine Ergebnisse gefunden."
+  },
+  "views": {
+    "inbox": "Posteingang",
+    "stories": "Meine Stories",
+    "stories_nav": "Meine {stories}",
+    "story_board": "Story-Board",
+    "entity_board": "{entity}-Board",
+    "agents": "Agenten",
+    "epic_board": "Epic-Board",
+    "customers": "Kunden",
+    "epics_section": "Epics",
+    "views_section": "Ansichten",
+    "workspace": "Workspace"
+  },
+  "inbox": {
+    "title": "Posteingang",
+    "welcome": "Willkommen zurück — {count} aktive Stories in Ihrem Workspace.",
+    "team_breadcrumb": "Team Design"
+  },
+  "stories": {
+    "title": "Stories",
+    "board_title": "Story-Board"
+  },
+  "epics": {
+    "title": "Epic-Board",
+    "detail_breadcrumb": "Epic"
+  },
+  "agents": {
+    "title": "Agenten",
+    "breadcrumb": "Agenten"
+  },
+  "account": {
+    "title": "Konto"
+  },
+  "settings": {
+    "title": "Workspace-Einstellungen",
+    "section": "Einstellungen",
+    "general": "Allgemein",
+    "members": "Mitglieder",
+    "general_placeholder": "Workspace-Name, Terminologie und Anzeigeoptionen folgen hier.",
+    "members_placeholder": "Team einladen und Rollen verwalten — demnächst verfügbar.",
+    "account_hint": "Workspace-Standards und Teammitgliedschaft verwalten.",
+    "open_workspace": "Workspace-Einstellungen öffnen"
+  },
+  "story_detail": {
+    "layout_sidebar": "Seitenleiste",
+    "layout_modal": "Modal",
+    "layout_sidebar_active": "Story-Details in der Seitenleiste",
+    "layout_modal_active": "Story-Details in einem Modal",
+    "layout_toggle": "Zu {mode}-Layout wechseln",
+    "setting_title": "Story-Detail-Layout",
+    "setting_description": "Wählen Sie Seitenpanel oder Modal-Overlay (Anheften und Erweitern).",
+    "pin": "Story-Detail anheften",
+    "unpin": "Story-Detail lösen",
+    "expand": "Story-Detail erweitern",
+    "collapse": "Story-Detail verkleinern",
+    "close": "Story-Detail schließen"
+  },
+  "locale_switcher": {
+    "label": "Sprache",
+    "current": "Aktuelle Sprache: {locale}"
+  }
+}

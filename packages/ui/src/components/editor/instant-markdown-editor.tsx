@@ -135,6 +135,7 @@ export function InstantMarkdownEditor({
 
   return (
     <div
+      data-testid="instant-markdown-editor"
       className={cn(
         'instant-md-editor rounded-md border border-transparent transition-colors',
         'focus-within:border-border focus-within:bg-surface/40',

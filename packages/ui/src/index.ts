@@ -34,6 +34,9 @@ export {
   CommandPaletteTrigger,
   type CommandPaletteProps,
   type CommandPaletteAction,
+  type CommandPaletteStoryResult,
+  type CommandPaletteEpicResult,
+  type CommandPaletteGroupLabels,
   type CommandPaletteTriggerProps,
 } from './components/command/command-palette';
 
@@ -72,6 +75,20 @@ export {
   type PickerMember,
   type MemberAvatarProps,
 } from './components/members';
+
+// Views — filter, display, bulk overlays (task-09s)
+export {
+  FilterPanel,
+  DisplayPanel,
+  BulkActionBar,
+  type FilterPanelProps,
+  type FilterPanelLabels,
+  type FilterDimensionOption,
+  type DisplayPanelProps,
+  type DisplayPanelLabels,
+  type BulkActionBarProps,
+  type BulkActionBarLabels,
+} from './components/views';
 
 // OBS-001 observability
 export {
@@ -162,6 +179,7 @@ export {
 // i18n
 export {
   SUPPORTED_LOCALES,
+  isRtlLocale,
   DEFAULT_LOCALE,
   messages,
   i18nConfig,
@@ -171,6 +189,16 @@ export {
   type SupportedLocale,
   type Messages,
 } from './i18n';
+
+export {
+  TerminologyProvider,
+  useTerminology,
+  useTerminologyOptional,
+  type TerminologyProviderProps,
+  type TerminologyContextValue,
+  type ResolvedEntityTerminology,
+  type EntityTerminologyKey,
+} from './i18n/terminology';
 
 // Utilities
 export { cn } from './lib/utils';

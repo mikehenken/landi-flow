@@ -1,0 +1,24 @@
+{
+  "title": "Customers",
+  "search_placeholder": "Find by name or domain…",
+  "create": {
+    "title": "Create Customer",
+    "name_label": "Organization name",
+    "name_placeholder": "Acme Corp",
+    "domain_label": "Domain",
+    "domain_placeholder": "acme.com",
+    "create_more": "Create more",
+    "cancel": "Cancel",
+    "submit": "Create"
+  },
+  "empty": {
+    "heading": "Customers",
+    "description": "Add organizations using your product to track their feature requests and use attributes like revenue and size to prioritize development.",
+    "cta": "Create new customer",
+    "documentation": "Documentation",
+    "no_results": "No customers match your search."
+  },
+  "list": {
+    "aria_label": "Customer list"
+  }
+}

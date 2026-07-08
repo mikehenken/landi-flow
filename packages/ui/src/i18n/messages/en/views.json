@@ -1,0 +1,48 @@
+{
+  "toolbar": {
+    "filter": "Filter",
+    "display": "Display",
+    "search_placeholder": "Search stories…",
+    "layout_list": "List",
+    "layout_board": "Board"
+  },
+  "filter": {
+    "title": "Filters",
+    "add_filter": "Add filter",
+    "clear_all": "Clear all",
+    "apply": "Apply",
+    "status": "Status",
+    "assignee": "Assignee",
+    "priority": "Priority",
+    "customer": "Customer",
+    "is": "is",
+    "is_not": "is not",
+    "unassigned": "Unassigned",
+    "no_customer": "No customer"
+  },
+  "display": {
+    "title": "Display",
+    "layout": "Layout",
+    "list": "List",
+    "board": "Board",
+    "ordering": "Ordering",
+    "ordering_manual": "Manual",
+    "ordering_priority": "Priority",
+    "ordering_updated": "Updated",
+    "order_completed_by_recency": "Order completed by recency",
+    "show_sub_stories": "Show sub-stories",
+    "display_properties": "Display properties",
+    "property_id": "ID",
+    "property_status": "Status",
+    "property_assignee": "Assignee",
+    "property_priority": "Priority",
+    "property_customer": "Customer"
+  },
+  "bulk": {
+    "selected": "selected",
+    "clear_selection": "Clear",
+    "set_status": "Set status",
+    "set_priority": "Set priority",
+    "delete": "Delete"
+  }
+}

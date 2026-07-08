@@ -1,0 +1,14 @@
+{
+  "title": "Kunden",
+  "search_placeholder": "Nach Name oder Domain suchen…",
+  "empty": {
+    "heading": "Kunden",
+    "description": "Fügen Sie Organisationen hinzu, die Ihr Produkt nutzen, um deren Feature-Anfragen zu verfolgen und Entwicklung nach Umsatz und Größe zu priorisieren.",
+    "cta": "Neuen Kunden erstellen",
+    "documentation": "Dokumentation",
+    "no_results": "Keine Kunden entsprechen Ihrer Suche."
+  },
+  "list": {
+    "aria_label": "Kundenliste"
+  }
+}

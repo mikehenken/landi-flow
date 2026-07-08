@@ -1,0 +1,23 @@
+{
+  "app": {
+    "name": "Landi Flow",
+    "command_palette": "Paleta de comandos",
+    "search_placeholder": "Buscar o ir a…",
+    "keyboard_shortcut_hint": "Presiona {shortcut}"
+  },
+  "actions": {
+    "create": "Crear",
+    "create_story": "Crear Historia",
+    "create_epic": "Crear Épica",
+    "retry": "Reintentar",
+    "copy_trace_id": "Copiar ID de trazado"
+  },
+  "sidebar": {
+    "inbox": "Bandeja de entrada",
+    "my_stories": "Mis Historias",
+    "epics": "Épicas",
+    "teams": "Equipos",
+    "views": "Vistas",
+    "powered_by": "Impulsado por Landi Flow"
+  }
+}

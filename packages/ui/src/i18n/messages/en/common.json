@@ -6,8 +6,10 @@
     "keyboard_shortcut_hint": "Press {shortcut}"
   },
   "actions": {
+    "create": "Create",
     "create_story": "Create Story",
     "create_epic": "Create Epic",
+    "invite_member": "Invite member",
     "retry": "Retry",
     "copy_trace_id": "Copy Trace ID"
   },

@@ -3,3 +3,4 @@ export * from './rooms.js';
 export * from './permissions.js';
 export * from './hydration.js';
 export * from './comment-attribution.js';
+export * from './structured-field-reconcile.js';

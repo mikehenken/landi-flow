@@ -49,7 +49,12 @@ export function ErrorFallback({
         <p className="text-sm text-foreground">{message}</p>
         <p className="font-mono text-xs tabular-nums text-muted-foreground">
           Trace:{' '}
-          <span className="text-foreground-subtle">{correlation.correlation_id}</span>
+          <span
+            className="text-foreground-subtle"
+            data-testid="obs-correlation-id"
+          >
+            {correlation.correlation_id}
+          </span>
         </p>
       </CardContent>
       <CardFooter className="gap-2">

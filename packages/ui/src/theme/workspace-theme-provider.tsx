@@ -9,8 +9,23 @@ import {
 export interface WorkspaceThemeProviderProps {
   theme?: WorkspaceThemePayload['theme'];
   logoUrl?: string;
+  /** Google Fonts family for async loading (font-display: swap). */
+  fontGoogleFamily?: string;
   children: React.ReactNode;
   className?: string;
+}
+
+/**
+ * Loads a Google Font asynchronously with font-display: swap to prevent CLS.
+ */
+function WorkspaceFontLink({ family }: { family: string }): React.ReactElement {
+  const encoded = encodeURIComponent(family.replace(/ /g, '+'));
+  const href = `https://fonts.googleapis.com/css2?family=${encoded}:wght@400;500;600;700&display=swap`;
+
+  return (
+    // eslint-disable-next-line @next/next/no-page-custom-font
+    <link rel="stylesheet" href={href} />
+  );
 }
 
 /**
@@ -20,6 +35,7 @@ export interface WorkspaceThemeProviderProps {
 export function WorkspaceThemeProvider({
   theme,
   logoUrl,
+  fontGoogleFamily,
   children,
   className,
 }: WorkspaceThemeProviderProps): React.ReactElement {
@@ -31,6 +47,7 @@ export function WorkspaceThemeProvider({
   }, [theme]);
 
   const resolvedLogoUrl = logoUrl ?? theme?.logo_url;
+  const googleFamily = fontGoogleFamily ?? undefined;
 
   return (
     <div
@@ -38,6 +55,7 @@ export function WorkspaceThemeProvider({
       style={style}
       data-logo-url={resolvedLogoUrl ?? undefined}
     >
+      {googleFamily ? <WorkspaceFontLink family={googleFamily} /> : null}
       {children}
     </div>
   );

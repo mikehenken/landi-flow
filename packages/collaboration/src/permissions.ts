@@ -35,9 +35,11 @@ export function resolveRoomAccess(input: RoomPermissionInput): RoomAccessLevel {
   return 'denied';
 }
 
+export type LiveblocksRoomGrant = 'room:write' | 'room:read';
+
 export function roomAccessToLiveblocksGrants(
   access: RoomAccessLevel
-): readonly ('room:write' | 'room:read')[] {
+): readonly LiveblocksRoomGrant[] {
   switch (access) {
     case 'room:write':
       return ['room:write'];
@@ -46,6 +48,19 @@ export function roomAccessToLiveblocksGrants(
     case 'denied':
       return [];
   }
+}
+
+/** Session permissions for Liveblocks access tokens (comments + presence on read). */
+export function sessionPermissionsFromGrants(
+  grants: readonly LiveblocksRoomGrant[]
+): readonly string[] {
+  if (grants.includes('room:write')) {
+    return ['room:write', 'comments:write'];
+  }
+  if (grants.includes('room:read')) {
+    return ['room:read', 'room:presence:write', 'comments:read'];
+  }
+  return [];
 }
 
 export function canWriteStructuredFields(access: RoomAccessLevel): boolean {

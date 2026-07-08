@@ -40,3 +40,47 @@ export const AgencyOverride: Story = {
     </WorkspaceThemeProvider>
   ),
 };
+
+/** Acme Agency white-label — green brand-primary from workspace registry (ws-acme-agency). */
+export const AcmeAgencyGreen: Story = {
+  render: () => (
+    <WorkspaceThemeProvider
+      theme={{
+        brand_primary: '142 76% 36%',
+        surface: '220 10% 12%',
+      }}
+      fontGoogleFamily="Geist"
+    >
+      <div
+        className="rounded-lg border border-border bg-surface p-6 space-y-4"
+        data-testid="brand-acme"
+      >
+        <p className="text-sm text-muted-foreground">Acme Agency — tracker.acme.test</p>
+        <Button>Create Story</Button>
+        <EpicBadge name="Client Delivery Epic" status="in_progress" showLabel />
+      </div>
+    </WorkspaceThemeProvider>
+  ),
+};
+
+/** RTL Demo workspace — purple accent, default locale ar (ws-rtl-demo). */
+export const RtlDemoPurple: Story = {
+  render: () => (
+    <WorkspaceThemeProvider
+      theme={{
+        brand_primary: '262 83% 58%',
+        surface: '220 10% 12%',
+      }}
+    >
+      <div
+        className="rounded-lg border border-border bg-surface p-6 space-y-4"
+        dir="rtl"
+        data-testid="brand-rtl-demo"
+      >
+        <p className="text-sm text-muted-foreground">RTL Demo — rtl.localhost</p>
+        <Button>إنشاء قصة</Button>
+        <EpicBadge name="لوحة الملاحم" status="in_progress" showLabel />
+      </div>
+    </WorkspaceThemeProvider>
+  ),
+};

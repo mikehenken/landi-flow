@@ -1,0 +1,12 @@
+{
+  "console": {
+    "title": "Agenten-Konsole",
+    "description": "Arbeiten Sie mit regulierten KI-Agenten als Workspace-Mitglieder zusammen.",
+    "select_agent": "Wählen Sie einen Agenten, um ein Gespräch zu starten."
+  },
+  "roster": {
+    "title": "Mitarbeiter",
+    "agents": "Agenten",
+    "humans": "Menschen"
+  }
+}

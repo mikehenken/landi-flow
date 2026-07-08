@@ -1,0 +1,22 @@
+{
+  "create": {
+    "title": "Epic erstellen",
+    "title_placeholder": "Epic-Name",
+    "description_placeholder": "Beschreiben Sie das strategische Ziel dieses Epics…"
+  },
+  "status": {
+    "backlog": "Backlog",
+    "planned": "Geplant",
+    "in_progress": "In Bearbeitung",
+    "completed": "Abgeschlossen",
+    "cancelled": "Abgebrochen"
+  },
+  "empty": {
+    "heading": "Noch keine Epics",
+    "description": "Epics sind strategische Container für die Arbeit Ihres Teams.",
+    "cta": "Erstellen Sie Ihr erstes Epic"
+  },
+  "badge": {
+    "label": "Epic"
+  }
+}

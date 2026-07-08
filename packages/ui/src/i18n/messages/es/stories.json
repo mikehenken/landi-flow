@@ -1,0 +1,28 @@
+{
+  "create": {
+    "title": "Crear Historia",
+    "title_placeholder": "Título de la Historia",
+    "description_placeholder": "Describe lo que hay que hacer…",
+    "create_more": "Crear más",
+    "cancel": "Cancelar",
+    "submit": "Crear",
+    "properties_label": "Propiedades de la Historia"
+  },
+  "status": {
+    "todo": "Por hacer",
+    "in_progress": "En progreso",
+    "done": "Hecho",
+    "canceled": "Cancelado"
+  },
+  "empty": {
+    "heading": "Aún no hay Historias",
+    "description": "Las Historias son la unidad atómica de trabajo en tu Espacio de trabajo.",
+    "cta": "Crea tu primera Historia"
+  },
+  "badge": {
+    "label": "Historia"
+  },
+  "identifier": {
+    "format": "{team}-{number}"
+  }
+}
