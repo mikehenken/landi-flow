@@ -35,6 +35,7 @@ export interface StoryUpdateInput {
   cycle_id?: string | null;
   estimate?: number | null;
   sort_order?: number;
+  is_draft?: boolean;
 }
 
 export interface WorkflowStateCreateInput {
@@ -247,7 +248,28 @@ export class StoryController extends BaseController {
         ...(input.cycle_id !== undefined ? { cycle_id: input.cycle_id } : {}),
         ...(input.estimate !== undefined ? { estimate: input.estimate } : {}),
         ...(input.sort_order !== undefined ? { sort_order: input.sort_order } : {}),
+        ...(input.is_draft !== undefined ? { is_draft: input.is_draft } : {}),
       }
+    );
+
+    return { story: entity, correlation_id: ctx.correlation_id, outbox_event_id };
+  }
+
+  async archive(
+    workspaceId: string,
+    teamId: string,
+    storyId: string,
+    ctx: CorrelationContext,
+  ): Promise<{ story: Story; correlation_id: string; outbox_event_id: string | null }> {
+    await this.assertTeamWriteAccess(workspaceId, teamId);
+
+    const { entity, outbox_event_id } = await this.mutateWithOutbox<Story>(
+      workspaceId,
+      ENTITY_TOPICS.STORY_UPDATED,
+      { story_id: storyId, action: 'archived' },
+      ctx,
+      'archive_story',
+      { team_id: teamId, story_id: storyId },
     );
 
     return { story: entity, correlation_id: ctx.correlation_id, outbox_event_id };

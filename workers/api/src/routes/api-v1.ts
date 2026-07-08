@@ -2,6 +2,7 @@ import type { ApiWorkerEnv } from '../middleware/auth.js';
 import { createDbClient, type DbClient } from '../lib/db.js';
 import { isAuthorizationError } from '../lib/authorization.js';
 import { correlationFromRequest, errorResponse, jsonResponse } from '../lib/http.js';
+import { logAndSinkObsError } from '../lib/obs-logger.js';
 import { WorkspaceController } from '../controllers/workspace-controller.js';
 import { EpicController } from '../controllers/epic-controller.js';
 import {
@@ -11,6 +12,14 @@ import {
 } from '../controllers/story-controller.js';
 import { CycleController, ViewController } from '../controllers/cycle-view-controller.js';
 import { RelationController } from '../controllers/relation-controller.js';
+import { CustomerController } from '../controllers/customer-controller.js';
+import { CustomerRequestController } from '../controllers/customer-request-controller.js';
+import { SlaController } from '../controllers/sla-controller.js';
+import { AdminSettingsController } from '../controllers/admin-settings-controller.js';
+import { ProfileController } from '../controllers/profile-controller.js';
+import { MemberController } from '../controllers/member-controller.js';
+import { InboxController } from '../controllers/inbox-controller.js';
+import { TeamController } from '../controllers/team-controller.js';
 import { handleIntegrationsRoutes } from './integrations-routes.js';
 
 function parseJsonBody<T>(request: Request): Promise<T> {
@@ -73,6 +82,20 @@ export async function handleApiRequest(
       return jsonResponse(result, 201, correlationId);
     }
 
+    // GET/PATCH /me/profile
+    if (pathParts[0] === 'me' && pathParts[1] === 'profile') {
+      const profileController = controller(ProfileController);
+      if (request.method === 'GET') {
+        const profile = await profileController.getProfile();
+        return jsonResponse({ profile, correlation_id: correlationId }, 200, correlationId);
+      }
+      if (request.method === 'PATCH') {
+        const body = await parseJsonBody<Parameters<ProfileController['updateProfile']>[0]>(request);
+        const result = await profileController.updateProfile(body, correlation);
+        return jsonResponse(result, 200, correlationId);
+      }
+    }
+
     // /workspaces/{wid}/...
     if (pathParts[0] === 'workspaces' && pathParts.length >= 2 && isUuid(pathParts[1])) {
       const workspaceId = pathParts[1];
@@ -123,6 +146,213 @@ export async function handleApiRequest(
         }
       }
 
+      // GET /workspaces/{wid}/teams
+      if (rest[0] === 'teams' && rest.length === 1 && request.method === 'GET') {
+        const teamController = controller(TeamController);
+        const data = await teamController.list(workspaceId);
+        return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+      }
+
+      // GET /workspaces/{wid}/context/defaults
+      if (rest[0] === 'context' && rest[1] === 'defaults' && rest.length === 2 && request.method === 'GET') {
+        const teamController = controller(TeamController);
+        const defaults = await teamController.ensureWorkspaceDefaults(workspaceId, correlation);
+        return jsonResponse({ ...defaults, correlation_id: correlationId }, 200, correlationId);
+      }
+
+      // /workspaces/{wid}/customer-requests
+      if (rest[0] === 'customer-requests') {
+        const requestController = controller(CustomerRequestController);
+
+        if (rest.length === 1 && request.method === 'GET') {
+          const data = await requestController.list(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+        if (rest.length === 1 && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<CustomerRequestController['create']>[1]>(request);
+          const result = await requestController.create(workspaceId, body, correlation);
+          return jsonResponse(result, 201, correlationId);
+        }
+        if (rest.length === 3 && rest[2] === 'link' && isUuid(rest[1]) && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<CustomerRequestController['link']>[2]>(request);
+          const result = await requestController.link(workspaceId, rest[1], body, correlation);
+          return jsonResponse(result, 200, correlationId);
+        }
+      }
+
+      // /workspaces/{wid}/slas
+      if (rest[0] === 'slas') {
+        const slaController = controller(SlaController);
+
+        if (rest.length === 1 && request.method === 'GET') {
+          const data = await slaController.list(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+        if (rest.length === 1 && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<SlaController['create']>[1]>(request);
+          const result = await slaController.create(workspaceId, body, correlation);
+          return jsonResponse(result, 201, correlationId);
+        }
+        if (rest.length === 2 && isUuid(rest[1])) {
+          const slaId = rest[1];
+          if (request.method === 'PATCH') {
+            const body = await parseJsonBody<Parameters<SlaController['update']>[2]>(request);
+            const result = await slaController.update(workspaceId, slaId, body, correlation);
+            return jsonResponse(result, 200, correlationId);
+          }
+          if (request.method === 'DELETE') {
+            const result = await slaController.delete(workspaceId, slaId, correlation);
+            return jsonResponse(result, 200, correlationId);
+          }
+        }
+      }
+
+      // /workspaces/{wid}/settings/*
+      if (rest[0] === 'settings') {
+        const adminController = controller(AdminSettingsController);
+
+        if (rest[1] === 'teams' && rest.length === 2 && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<AdminSettingsController['createTeam']>[1]>(request);
+          const result = await adminController.createTeam(workspaceId, body, correlation);
+          return jsonResponse(result, 201, correlationId);
+        }
+        if (rest[1] === 'teams' && rest.length === 3 && isUuid(rest[2]) && request.method === 'PATCH') {
+          const body = await parseJsonBody<Parameters<AdminSettingsController['updateTeam']>[2]>(request);
+          const result = await adminController.updateTeam(workspaceId, rest[2], body, correlation);
+          return jsonResponse(result, 200, correlationId);
+        }
+        if (rest[1] === 'invite-links' && rest.length === 2 && request.method === 'GET') {
+          const data = await adminController.listInviteLinks(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+        if (rest[1] === 'invite-links' && rest.length === 2 && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<AdminSettingsController['createInviteLink']>[1]>(request);
+          const result = await adminController.createInviteLink(workspaceId, body, correlation);
+          return jsonResponse(result, 201, correlationId);
+        }
+        if (rest[1] === 'invite-links' && rest.length === 4 && rest[3] === 'revoke' && isUuid(rest[2]) && request.method === 'POST') {
+          const result = await adminController.revokeInviteLink(workspaceId, rest[2], correlation);
+          return jsonResponse(result, 200, correlationId);
+        }
+        if (rest[1] === 'security' && rest.length === 2 && request.method === 'PATCH') {
+          const body = await parseJsonBody<{ allowed_domains?: string[] }>(request);
+          const result = await adminController.updateSecuritySettings(workspaceId, body, correlation);
+          return jsonResponse(result, 200, correlationId);
+        }
+        if (rest[1] === 'application-members' && rest.length === 2 && request.method === 'GET') {
+          const data = await adminController.listApplicationMembers(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+        if (rest[1] === 'authorized-apps' && rest.length === 2 && request.method === 'GET') {
+          const data = await adminController.listAuthorizedApps(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+        if (rest[1] === 'authorized-apps' && rest.length === 4 && rest[3] === 'revoke' && isUuid(rest[2]) && request.method === 'POST') {
+          const result = await adminController.revokeAuthorizedApp(workspaceId, rest[2], correlation);
+          return jsonResponse(result, 200, correlationId);
+        }
+        if (rest[1] === 'import' && rest[2] === 'csv' && rest.length === 3 && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<AdminSettingsController['importCsvStories']>[1]>(request);
+          const result = await adminController.importCsvStories(workspaceId, body, correlation);
+          return jsonResponse(result, 201, correlationId);
+        }
+      }
+
+      // /workspaces/{wid}/profile/*
+      if (rest[0] === 'profile') {
+        const profileController = controller(ProfileController);
+
+        if (rest[1] === 'notifications' && rest.length === 2 && request.method === 'GET') {
+          const prefs = await profileController.getNotificationPrefs(workspaceId);
+          return jsonResponse({ prefs, correlation_id: correlationId }, 200, correlationId);
+        }
+        if (rest[1] === 'notifications' && rest.length === 2 && request.method === 'PATCH') {
+          const body = await parseJsonBody<Parameters<ProfileController['updateNotificationPrefs']>[1]>(request);
+          const result = await profileController.updateNotificationPrefs(workspaceId, body, correlation);
+          return jsonResponse(result, 200, correlationId);
+        }
+        if (rest[1] === 'leave' && rest.length === 2 && request.method === 'POST') {
+          const result = await profileController.leaveWorkspace(workspaceId, correlation);
+          return jsonResponse(result, 200, correlationId);
+        }
+      }
+
+      // /workspaces/{wid}/teams/{tid}/stories/{sid}/sla
+      if (rest[0] === 'teams' && rest.length >= 4 && isUuid(rest[1]) && rest[2] === 'stories' && isUuid(rest[3]) && rest[4] === 'sla' && request.method === 'GET') {
+        const slaController = controller(SlaController);
+        const status = await slaController.getStorySlaStatus(workspaceId, rest[3]);
+        return jsonResponse({ status, correlation_id: correlationId }, 200, correlationId);
+      }
+
+      // /workspaces/{wid}/customers
+      if (rest[0] === 'customers') {
+        const customerController = controller(CustomerController);
+
+        if (rest.length === 1 && request.method === 'GET') {
+          const data = await customerController.list(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+        if (rest.length === 1 && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<CustomerController['create']>[1]>(request);
+          const result = await customerController.create(workspaceId, body, correlation);
+          return jsonResponse(result, 201, correlationId);
+        }
+        if (rest.length === 2 && isUuid(rest[1])) {
+          const customerId = rest[1];
+          if (request.method === 'PATCH') {
+            const body = await parseJsonBody<Parameters<CustomerController['update']>[2]>(request);
+            const result = await customerController.update(workspaceId, customerId, body, correlation);
+            return jsonResponse(result, 200, correlationId);
+          }
+          if (request.method === 'DELETE') {
+            const result = await customerController.delete(workspaceId, customerId, correlation);
+            return jsonResponse(result, 200, correlationId);
+          }
+        }
+      }
+
+      // /workspaces/{wid}/inbox/notifications | /inbox/activity
+      if (rest[0] === 'inbox') {
+        const inboxController = controller(InboxController);
+
+        if (rest[1] === 'notifications' && rest.length === 2 && request.method === 'GET') {
+          const data = await inboxController.listNotifications(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+
+        if (rest[1] === 'activity' && rest.length === 2 && request.method === 'GET') {
+          const data = await inboxController.listActivity(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+      }
+
+      // /workspaces/{wid}/members
+      if (rest[0] === 'members') {
+        const memberController = controller(MemberController);
+
+        if (rest.length === 1 && request.method === 'GET') {
+          const data = await memberController.list(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+        if (rest.length === 1 && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<MemberController['invite']>[1]>(request);
+          const result = await memberController.invite(workspaceId, body, correlation);
+          return jsonResponse(result, 201, correlationId);
+        }
+        if (rest.length === 2 && isUuid(rest[1])) {
+          const memberId = rest[1];
+          if (request.method === 'PATCH') {
+            const body = await parseJsonBody<Parameters<MemberController['update']>[2]>(request);
+            const result = await memberController.update(workspaceId, memberId, body, correlation);
+            return jsonResponse(result, 200, correlationId);
+          }
+          if (request.method === 'DELETE') {
+            const result = await memberController.remove(workspaceId, memberId, correlation);
+            return jsonResponse(result, 200, correlationId);
+          }
+        }
+      }
+
       // /workspaces/{wid}/epics
       if (rest[0] === 'epics') {
         const epicController = controller(EpicController);
@@ -153,6 +383,10 @@ export async function handleApiRequest(
             if (request.method === 'PATCH') {
               const body = await parseJsonBody<Parameters<EpicController['update']>[2]>(request);
               const result = await epicController.update(workspaceId, epicId, body, correlation);
+              return jsonResponse(result, 200, correlationId);
+            }
+            if (request.method === 'DELETE') {
+              const result = await epicController.archive(workspaceId, epicId, correlation);
               return jsonResponse(result, 200, correlationId);
             }
           }
@@ -290,6 +524,15 @@ export async function handleApiRequest(
                 );
                 return jsonResponse(result, 200, correlationId);
               }
+              if (request.method === 'DELETE') {
+                const result = await storyController.archive(
+                  workspaceId,
+                  teamId,
+                  story.id,
+                  correlation
+                );
+                return jsonResponse(result, 200, correlationId);
+              }
             }
 
             if (story && storyRest[0] === 'relations') {
@@ -358,6 +601,9 @@ export async function handleApiRequest(
     const message = err instanceof Error ? err.message : 'Internal server error';
     const status = message.includes('not found') ? 404 : 500;
     const code = status === 404 ? 'not_found' : 'internal_error';
+    if (status >= 500) {
+      await logAndSinkObsError(env, message, correlation, { path: url.pathname });
+    }
     return errorResponse(code, message, status, correlationId);
   }
 }

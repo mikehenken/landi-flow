@@ -22,6 +22,8 @@ export interface ApiWorkerEnv {
   NEXT_PUBLIC_SITE_URL?: string;
   LIVEBLOCKS_SECRET_KEY?: string;
   LIVEBLOCKS_WEBHOOK_SECRET?: string;
+  OBS_ERROR_SINK_URL?: string;
+  ASKS_INTAKE_WEBHOOK_SECRET?: string;
 }
 
 export function toAuthEnv(env: ApiWorkerEnv): Record<string, string | undefined> {

@@ -25,7 +25,15 @@ export type MutationOperation =
   | 'uninstall_extension'
   | 'create_webhook'
   | 'update_webhook'
-  | 'delete_webhook';
+  | 'delete_webhook'
+  | 'archive_epic'
+  | 'archive_story'
+  | 'create_customer'
+  | 'update_customer'
+  | 'delete_customer'
+  | 'invite_workspace_member'
+  | 'update_workspace_member'
+  | 'remove_workspace_member';
 
 export interface TransactionalMutationInput {
   op: MutationOperation;

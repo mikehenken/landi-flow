@@ -118,6 +118,25 @@ export class EpicController extends BaseController {
     return { epic: entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
+  async archive(
+    workspaceId: string,
+    epicId: string,
+    ctx: CorrelationContext,
+  ): Promise<{ epic: Epic; correlation_id: string; outbox_event_id: string | null }> {
+    await this.assertWorkspaceMember(workspaceId);
+
+    const { entity, outbox_event_id } = await this.mutateWithOutbox<Epic>(
+      workspaceId,
+      ENTITY_TOPICS.EPIC_UPDATED,
+      { epic_id: epicId, action: 'archived' },
+      ctx,
+      'archive_epic',
+      { epic_id: epicId },
+    );
+
+    return { epic: entity, correlation_id: ctx.correlation_id, outbox_event_id };
+  }
+
   async setTeams(workspaceId: string, epicId: string, teamIds: string[]): Promise<void> {
     await this.assertWorkspaceMember(workspaceId);
 
