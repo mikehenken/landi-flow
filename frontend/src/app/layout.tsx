@@ -1,32 +1,11 @@
-import type { Metadata } from 'next';
-import { StoreHydrator } from '@/components/store-hydrator';
-import './globals.css';
+import type { ReactNode } from 'react';
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
-  title: 'Landi Flow',
-  description:
-    'Open-source Linear-class PM with native human+AI collaboration — Epic and Story nomenclature.',
-  openGraph: {
-    title: 'Landi Flow',
-    description: 'Easier than Linear — keyboard-first PM with governed AI agents.',
-    images: ['/assets/og/og-image.jpg'],
-  },
-  icons: {
-    icon: '/assets/favicons/favicon-master.jpg',
-  },
-};
-
+/**
+ * Passthrough root layout — localized pages render html/body in `[locale]/layout.tsx`.
+ * API routes and OAuth callbacks use this minimal wrapper per next-intl App Router pattern.
+ */
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>): React.ReactElement {
-  return (
-    <html lang="en" className="dark h-full">
-      <body className="h-full antialiased">
-        <StoreHydrator>{children}</StoreHydrator>
-      </body>
-    </html>
-  );
+}: Readonly<{ children: ReactNode }>): ReactNode {
+  return children;
 }

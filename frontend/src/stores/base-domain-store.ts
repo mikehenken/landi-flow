@@ -7,10 +7,17 @@ export type DomainStoreListener<TState> = (state: TState) => void;
 
 export abstract class BaseDomainStore<TState> {
   private listeners = new Set<DomainStoreListener<TState>>();
+  /** Cached snapshot for useSyncExternalStore getServerSnapshot (must be referentially stable). */
+  private serverSnapshotCache: TState | null = null;
 
   protected abstract getSnapshot(): TState;
 
+  protected invalidateServerSnapshotCache(): void {
+    this.serverSnapshotCache = null;
+  }
+
   protected notify(): void {
+    this.invalidateServerSnapshotCache();
     const snapshot = this.getSnapshot();
     for (const listener of this.listeners) {
       listener(snapshot);
@@ -26,8 +33,11 @@ export abstract class BaseDomainStore<TState> {
     };
   }
 
-  /** For useSyncExternalStore(serverSnapshot must match getSnapshot shape). */
+  /** For useSyncExternalStore — returns a stable reference until the store notifies. */
   getServerSnapshot(): TState {
-    return this.getSnapshot();
+    if (this.serverSnapshotCache === null) {
+      this.serverSnapshotCache = this.getSnapshot();
+    }
+    return this.serverSnapshotCache;
   }
 }

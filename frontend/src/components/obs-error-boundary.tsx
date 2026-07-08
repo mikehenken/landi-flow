@@ -4,6 +4,7 @@ import * as React from 'react';
 import type { CorrelationContext } from '@landi-flow/core/types';
 import { ErrorFallback } from '@landi-flow/ui';
 import { createCorrelationContext } from '@/lib/correlation';
+import { reportObsClientError } from '@/lib/obs-client';
 
 export interface ObsErrorBoundaryProps {
   children: React.ReactNode;
@@ -42,7 +43,10 @@ export class ObsErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    console.error('[OBS-001]', this.state.correlation.correlation_id, error, errorInfo);
+    void reportObsClientError(error.message, {
+      component_stack: errorInfo.componentStack,
+      boundary: 'ObsErrorBoundary',
+    }, this.state.correlation.correlation_id);
   }
 
   private handleRetry = (): void => {

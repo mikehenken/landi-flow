@@ -12,6 +12,7 @@ import {
   useOthers,
 } from '@liveblocks/react/suspense';
 import { Input, cn } from '@landi-flow/ui';
+import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 import { CollaborativeRoom } from './collaboration-provider';
 import { CursorOverlay, PresenceAvatars } from './presence-cursors';
 import { CollaborativeComments } from './collaborative-comments';
@@ -26,7 +27,15 @@ export function CollaborativeStoryPanel({
   story,
   className,
 }: CollaborativeStoryPanelProps): React.ReactElement {
-  const hydrated = React.useMemo(() => hydrateStoryRoom(story), [story]);
+  const liveblocksReady = isLiveblocksConfigured();
+  const hydrated = React.useMemo(
+    () => (liveblocksReady ? hydrateStoryRoom(story) : null),
+    [liveblocksReady, story],
+  );
+
+  if (!liveblocksReady || hydrated === null) {
+    return <OfflineStoryPanel story={story} className={className} />;
+  }
 
   return (
     <CollaborativeRoom
@@ -41,6 +50,44 @@ export function CollaborativeStoryPanel({
 interface StoryPanelInnerProps {
   story: Story;
   className?: string;
+}
+
+/** Local-only story detail when Liveblocks keys are absent (CI mock auth / E2E). */
+function OfflineStoryPanel({ story, className }: StoryPanelInnerProps): React.ReactElement {
+  const [title, setTitle] = React.useState(story.title);
+
+  React.useEffect(() => {
+    setTitle(story.title);
+  }, [story.id, story.title]);
+
+  return (
+    <div className={cn('relative flex flex-col gap-4 p-4', className)}>
+      <div>
+        <label htmlFor="story-title-offline" className="sr-only">
+          Story title
+        </label>
+        <Input
+          id="story-title-offline"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          className="text-lg font-semibold"
+        />
+      </div>
+
+      <div className="rounded-lg border border-border bg-surface-elevated/30 p-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+          Description
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {story.description_md ?? 'No description — collaborative Yjs editor ships in task-09j.'}
+        </p>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Collaboration offline — configure Liveblocks to enable live cursors and comments.
+      </p>
+    </div>
+  );
 }
 
 function StoryPanelInner({ story, className }: StoryPanelInnerProps): React.ReactElement {

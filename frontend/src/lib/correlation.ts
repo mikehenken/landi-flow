@@ -16,11 +16,17 @@ export function createCorrelationContext(
 
 /** Brand asset paths served from monorepo public/assets (copied to frontend/public via prebuild). */
 export const brandAssets = {
-  logoMark: '/assets/logo/logomark-primary.jpg',
-  logoWordmark: '/assets/logo/logo-wordmark-horizontal.jpg',
+  /** Canonical SVG — scales cleanly at 32px sidebar width. */
+  logoMark: '/assets/logo/logomark-primary.svg',
+  logoWordmark: '/assets/logo/logo-wordmark-horizontal.svg',
+  /** Phase-07 JPG fallbacks for OG/social and gemini regen targets. */
+  logoMarkJpg: '/assets/logo/logomark-primary.jpg',
+  logoWordmarkJpg: '/assets/logo/logo-wordmark-horizontal.jpg',
   heroGraphic: '/assets/landing/hero-graphic.jpg',
   emptyEpic: '/assets/admin/empty-state-epic.jpg',
   adminDashboard: '/assets/admin/admin-dashboard-mockup.jpg',
   featureCollaboration: '/assets/landing/feature-human-ai-collaboration.jpg',
   ogImage: '/assets/og/og-image.jpg',
 } as const;
+
+export type BrandAssetKey = keyof typeof brandAssets;

@@ -4,26 +4,61 @@ import * as React from 'react';
 import type { Epic, Story } from '@landi-flow/core/types';
 import {
   AssigneePicker,
-  Badge,
   Button,
   EpicBadge,
+  MemberChip,
   StoryIdentifierBadge,
-  StoryPriorityBadge,
   cn,
 } from '@landi-flow/ui';
 import { DescriptionEditor } from '@/components/description-editor';
-import { getEpicById } from '@/lib/seed-data';
-import { getEpicStatusCategory } from '@/lib/epic-status';
-import { workflowStateToStatus } from '@/lib/workflow-states';
-import { epicStore } from '@/stores/epic-store';
-import { storyStore } from '@/stores/story-store';
-import { PICKER_MEMBERS, getAgentName } from '@/lib/workspace-members';
+import {
+  AgentDelegatePicker,
+  FollowersPicker,
+  OwnerPicker,
+  StoryEpicPicker,
+  StoryPriorityPicker,
+  StoryStatusPicker,
+} from '@/components/story-property-pickers';
+import {
+  updateEpicDelegateAgent,
+  updateEpicDescription,
+  updateEpicLead,
+} from '@/controllers/epic-controller';
+import {
+  StoryAttachmentsPanel,
+} from '@/components/story-lifecycle/story-attachments-panel';
+import { StoryHistoryPanel } from '@/components/story-lifecycle/story-history-panel';
+import { StoryRelationsPanel } from '@/components/story-lifecycle/story-relations-panel';
+import { SubStoriesList } from '@/components/story-lifecycle/sub-story-progress';
+import { StorySlaBadge } from '@/components/story-sla-badge';
+import { publishStory } from '@/controllers/story-controller';
+import {
+  updateStoryDelegateAgent,
+  updateStoryDescription,
+  updateStoryEpic,
+  updateStoryFollowers,
+  updateStoryOwner,
+  updateStoryPriority,
+  updateStoryWorkflowState,
+} from '@/controllers/story-controller';
+import { useAssignableMembers } from '@/hooks/use-assignable-members';
+import { getDelegateAttributionLabel } from '@/lib/agents/roster-client';
 import { assignAndActRequest } from '@/lib/agents/assign-client';
+import { getEpicStatusCategory } from '@/lib/epic-status';
+
+/** Matches create-story-modal description field styling (CAP-004 / task-09p). */
+const STORY_DESCRIPTION_EDITOR_CLASS =
+  'min-h-[120px] rounded-md border border-border bg-white/5 px-3 py-2';
+
+export type StoryInspectorLayout = 'inspector' | 'detail';
 
 export interface StoryInspectorProps {
   story: Story | null;
   epic?: Epic | null;
   onClose?: () => void;
+  layout?: StoryInspectorLayout;
+  /** When true, description editor skips nested CollaborativeRoom (parent provides room). */
+  embeddedCollaboration?: boolean;
 }
 
 /** Right properties panel (280px) for selected Story metadata. */
@@ -31,6 +66,8 @@ export function StoryInspector({
   story,
   epic: epicProp,
   onClose,
+  layout = 'inspector',
+  embeddedCollaboration = false,
 }: StoryInspectorProps): React.ReactElement {
   if (!story) {
     return (
@@ -43,33 +80,44 @@ export function StoryInspector({
   }
 
   return (
-    <StoryInspectorContent story={story} epic={epicProp} onClose={onClose} />
+    <StoryInspectorContent
+      story={story}
+      epic={epicProp}
+      onClose={onClose}
+      layout={layout}
+      embeddedCollaboration={embeddedCollaboration}
+    />
   );
 }
 
 function StoryInspectorContent({
   story,
-  epic: epicProp,
   onClose,
+  layout,
+  embeddedCollaboration,
 }: {
   story: Story;
   epic?: Epic | null;
   onClose?: () => void;
+  layout: StoryInspectorLayout;
+  embeddedCollaboration: boolean;
 }): React.ReactElement {
-  const epic = epicProp ?? (story.epic_id ? getEpicById(story.epic_id) : null);
-  const status = workflowStateToStatus(story.workflow_state_id);
   const [agentActivity, setAgentActivity] = React.useState<string | null>(null);
+  const { pickerMembers, getMemberById, getAgentName } = useAssignableMembers();
+  const requester = getMemberById(story.creator_id);
+  const delegateMember = getMemberById(story.delegate_agent_id);
+  const delegateAttribution = getDelegateAttributionLabel(delegateMember);
 
   const handleDescriptionChange = React.useCallback(
     (markdown: string) => {
-      storyStore.updateStoryDescription(story.id, markdown);
+      void updateStoryDescription(story.workspace_id, story, markdown);
     },
-    [story.id],
+    [story],
   );
 
-  const handleSelectHuman = React.useCallback(
+  const handleSelectOwner = React.useCallback(
     (userId: string | null) => {
-      storyStore.assignStory(story.id, { assigneeId: userId });
+      void updateStoryOwner(story.workspace_id, story, userId);
       void assignAndActRequest({
         entity: 'story',
         entityId: story.id,
@@ -78,12 +126,40 @@ function StoryInspectorContent({
         entityLabel: story.identifier,
       });
     },
-    [story.id, story.workspace_id, story.identifier],
+    [story],
+  );
+
+  const handleFollowersChange = React.useCallback(
+    (followerIds: string[]) => {
+      void updateStoryFollowers(story.workspace_id, story, followerIds);
+    },
+    [story],
+  );
+
+  const handleStatusChange = React.useCallback(
+    (workflowStateId: string) => {
+      void updateStoryWorkflowState(story.workspace_id, story, workflowStateId);
+    },
+    [story],
+  );
+
+  const handlePriorityChange = React.useCallback(
+    (priority: Story['priority']) => {
+      void updateStoryPriority(story.workspace_id, story, priority);
+    },
+    [story],
+  );
+
+  const handleEpicChange = React.useCallback(
+    (epicId: string | null) => {
+      void updateStoryEpic(story.workspace_id, story, epicId);
+    },
+    [story],
   );
 
   const handleSelectAgent = React.useCallback(
     (agentId: string | null) => {
-      storyStore.assignStory(story.id, { delegateAgentId: agentId });
+      void updateStoryDelegateAgent(story.workspace_id, story, agentId);
       if (agentId) {
         setAgentActivity(`${getAgentName(agentId)} is acting via the Action Bus…`);
       } else {
@@ -106,26 +182,51 @@ function StoryInspectorContent({
         );
       });
     },
-    [story.id, story.workspace_id, story.identifier],
+    [story, getAgentName],
   );
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <h2 className="text-sm font-medium text-foreground">Properties</h2>
-        {onClose ? (
-          <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close inspector">
-            ✕
-          </Button>
-        ) : null}
-      </div>
+      {layout === 'inspector' ? (
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="text-sm font-medium text-foreground">Properties</h2>
+          {onClose ? (
+            <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close inspector">
+              ✕
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
-      <div className="space-y-6 p-4">
+      <div className={cn('space-y-6', layout === 'detail' ? 'p-4' : 'p-4')}>
+        {story.is_draft ? (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-2"
+            data-testid="story-draft-banner"
+            data-cap="CAP-005"
+          >
+            <p className="text-sm text-foreground">This Story is a draft — not visible on the team board.</p>
+            <Button
+              type="button"
+              size="sm"
+              data-testid="story-publish-button"
+              onClick={() => void publishStory(story.workspace_id, story)}
+            >
+              Publish
+            </Button>
+          </div>
+        ) : null}
+
         <section>
-          <StoryIdentifierBadge identifier={story.identifier} />
-          <h3 className="text-lg font-semibold leading-snug text-foreground">
-            {story.title}
-          </h3>
+          {layout === 'inspector' ? (
+            <>
+              <StoryIdentifierBadge identifier={story.identifier} />
+              <h3 className="text-lg font-semibold leading-snug text-foreground">
+                {story.title}
+              </h3>
+              <StorySlaBadge workspaceId={story.workspace_id} story={story} />
+            </>
+          ) : null}
           <DescriptionEditor
             workspaceId={story.workspace_id}
             entityType="story"
@@ -133,55 +234,102 @@ function StoryInspectorContent({
             value={story.description_md}
             onChange={handleDescriptionChange}
             placeholder="Add acceptance criteria — paste markdown instantly…"
-            variant="compact"
-            className="mt-3"
-            label="Description"
+            variant="default"
+            sectionClassName={layout === 'detail' ? undefined : 'mt-3'}
+            editorClassName={STORY_DESCRIPTION_EDITOR_CLASS}
+            showLabel={layout !== 'detail'}
+            embeddedCollaboration={embeddedCollaboration}
           />
+          {layout === 'detail' ? (
+            <div
+              data-testid="story-detail-property-chips"
+              className="flex flex-wrap items-center gap-2 pt-3"
+              aria-label="Story properties"
+            >
+              <StoryStatusPicker
+                workflowStateId={story.workflow_state_id}
+                onSelect={handleStatusChange}
+              />
+              <StoryPriorityPicker priority={story.priority} onSelect={handlePriorityChange} />
+              <StoryEpicPicker epicId={story.epic_id} onSelect={handleEpicChange} />
+              <StorySlaBadge workspaceId={story.workspace_id} story={story} />
+            </div>
+          ) : null}
         </section>
 
-        <PropertyRow label="Status">
-          <Badge
-            variant={
-              status === 'done'
-                ? 'statusDone'
-                : status === 'in_progress'
-                  ? 'statusInProgress'
-                  : status === 'canceled'
-                    ? 'secondary'
-                    : 'statusTodo'
-            }
-            className="capitalize"
-          >
-            {status.replace('_', ' ')}
-          </Badge>
-        </PropertyRow>
+        {layout === 'inspector' ? (
+          <>
+            <PropertyRow label="Status">
+              <StoryStatusPicker
+                workflowStateId={story.workflow_state_id}
+                onSelect={handleStatusChange}
+              />
+            </PropertyRow>
 
-        <PropertyRow label="Priority">
-          <StoryPriorityBadge priority={story.priority} />
-        </PropertyRow>
+            <PropertyRow label="Priority">
+              <StoryPriorityPicker priority={story.priority} onSelect={handlePriorityChange} />
+            </PropertyRow>
 
-        {epic ? (
-          <PropertyRow label="Epic">
-            <EpicBadge
-              name={epic.name}
-              status={getEpicStatusCategory(epic)}
-              showLabel
-            />
-          </PropertyRow>
+            <PropertyRow label="Epic">
+              <StoryEpicPicker epicId={story.epic_id} onSelect={handleEpicChange} />
+            </PropertyRow>
+          </>
         ) : null}
 
-        <PropertyRow label="Assignee">
-          <AssigneePicker
-            members={PICKER_MEMBERS}
-            humanId={story.assignee_id}
+        <PropertyRow label="Owner">
+          <OwnerPicker
+            members={pickerMembers}
+            ownerId={story.assignee_id}
+            onSelect={handleSelectOwner}
+          />
+        </PropertyRow>
+
+        <PropertyRow label="Requester">
+          {requester ? (
+            <MemberChip
+              member={{
+                kind: requester.kind,
+                id: requester.id,
+                name: requester.name,
+                avatar_url: requester.avatar_url,
+                presence: requester.presence,
+                subtitle: requester.subtitle,
+                runtime: requester.runtime ?? undefined,
+              }}
+            />
+          ) : (
+            <span className="text-sm text-muted-foreground">Unknown</span>
+          )}
+        </PropertyRow>
+
+        <PropertyRow label="Followers">
+          <FollowersPicker
+            members={pickerMembers}
+            followerIds={story.follower_ids}
+            onChange={handleFollowersChange}
+          />
+        </PropertyRow>
+
+        <PropertyRow label="Agent delegate">
+          <AgentDelegatePicker
+            members={pickerMembers}
             agentId={story.delegate_agent_id}
-            humanLabel="Assignee"
-            onSelectHuman={handleSelectHuman}
             onSelectAgent={handleSelectAgent}
           />
-          {story.delegate_agent_id ? (
-            <p className="mt-1.5 text-xs text-foreground-subtle">
-              {getAgentName(story.delegate_agent_id)} acts on behalf of the assignee.
+          {story.delegate_agent_id && delegateAttribution ? (
+            <p className="mt-1.5 text-xs text-foreground-subtle" data-testid="delegate-attribution-badge">
+              {delegateMember?.runtime === 'attribution_only' ? (
+                <span className="rounded bg-white/5 px-1.5 py-0.5 text-primary">
+                  {delegateAttribution}
+                </span>
+              ) : delegateMember?.runtime === 'external_mcp' &&
+                delegateMember.connection_state === 'connected' ? (
+                <span className="rounded bg-status-inProgress/10 px-1.5 py-0.5 text-status-inProgress">
+                  Active delegate — {getAgentName(story.delegate_agent_id)} acts via MCP
+                </span>
+              ) : (
+                delegateAttribution
+              )}
             </p>
           ) : null}
           {agentActivity ? (
@@ -199,6 +347,11 @@ function StoryInspectorContent({
             {new Date(story.updated_at).toLocaleString()}
           </time>
         </PropertyRow>
+
+        <SubStoriesList parentStory={story} />
+        <StoryRelationsPanel story={story} />
+        <StoryAttachmentsPanel story={story} />
+        <StoryHistoryPanel story={story} />
       </div>
     </div>
   );
@@ -256,17 +409,20 @@ function EpicInspectorContent({
   onClose?: () => void;
 }): React.ReactElement {
   const [agentActivity, setAgentActivity] = React.useState<string | null>(null);
+  const { pickerMembers, getAgentName, getMemberById } = useAssignableMembers();
+  const delegateMember = getMemberById(epic.delegate_agent_id);
+  const delegateAttribution = getDelegateAttributionLabel(delegateMember);
 
   const handleDescriptionChange = React.useCallback(
     (markdown: string) => {
-      epicStore.updateEpicDescription(epic.id, markdown);
+      void updateEpicDescription(epic.workspace_id, epic, markdown);
     },
-    [epic.id],
+    [epic],
   );
 
   const handleSelectLead = React.useCallback(
     (userId: string | null) => {
-      epicStore.assignEpic(epic.id, { leadId: userId });
+      void updateEpicLead(epic.workspace_id, epic, userId);
       void assignAndActRequest({
         entity: 'epic',
         entityId: epic.id,
@@ -275,12 +431,12 @@ function EpicInspectorContent({
         entityLabel: epic.name,
       });
     },
-    [epic.id, epic.workspace_id, epic.name],
+    [epic],
   );
 
   const handleSelectAgent = React.useCallback(
     (agentId: string | null) => {
-      epicStore.assignEpic(epic.id, { delegateAgentId: agentId });
+      void updateEpicDelegateAgent(epic.workspace_id, epic, agentId);
       if (agentId) {
         setAgentActivity(`${getAgentName(agentId)} is acting via the Action Bus…`);
       } else {
@@ -303,7 +459,7 @@ function EpicInspectorContent({
         );
       });
     },
-    [epic.id, epic.workspace_id, epic.name],
+    [epic, getAgentName],
   );
 
   return (
@@ -335,16 +491,27 @@ function EpicInspectorContent({
         />
         <PropertyRow label="Lead / Agent">
           <AssigneePicker
-            members={PICKER_MEMBERS}
+            members={pickerMembers}
             humanId={epic.lead_id}
             agentId={epic.delegate_agent_id}
             humanLabel="Lead"
             onSelectHuman={handleSelectLead}
             onSelectAgent={handleSelectAgent}
           />
-          {epic.delegate_agent_id ? (
-            <p className="mt-1.5 text-xs text-foreground-subtle">
-              {getAgentName(epic.delegate_agent_id)} is driving this Epic.
+          {epic.delegate_agent_id && delegateAttribution ? (
+            <p className="mt-1.5 text-xs text-foreground-subtle" data-testid="epic-delegate-attribution-badge">
+              {delegateMember?.runtime === 'attribution_only' ? (
+                <span className="rounded bg-white/5 px-1.5 py-0.5 text-primary">
+                  {delegateAttribution}
+                </span>
+              ) : delegateMember?.runtime === 'external_mcp' &&
+                delegateMember.connection_state === 'connected' ? (
+                <span className="rounded bg-status-inProgress/10 px-1.5 py-0.5 text-status-inProgress">
+                  Active delegate
+                </span>
+              ) : (
+                delegateAttribution
+              )}
             </p>
           ) : null}
           {agentActivity ? (

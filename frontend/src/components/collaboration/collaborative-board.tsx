@@ -1,12 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import type { Story, WorkflowState } from '@landi-flow/core/types';
+import type { Cycle, Epic, Story, WorkflowState } from '@landi-flow/core/types';
 import { LiveList, LiveObject } from '@liveblocks/client';
 import type { JsonObject } from '@liveblocks/client';
 import { hydrateBoardRoom } from '@landi-flow/collaboration';
 import { useMutation, useStorage } from '@liveblocks/react/suspense';
 import { Card, CardContent, CardHeader, CardTitle, cn } from '@landi-flow/ui';
+import { BoardColumnsGrid } from '@/components/board-columns-grid';
+import { BoardSwimlanesView } from '@/components/board-swimlanes-view';
+import { isMockAuthEnabled } from '@/lib/api/config';
+import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
+import type { BoardGroupBy } from '@/lib/board-swimlane-preference';
 import { CollaborativeRoom } from './collaboration-provider';
 import { CursorOverlay, PresenceAvatars } from './presence-cursors';
 
@@ -18,7 +23,12 @@ export interface CollaborativeBoardProps {
   storyTitles: Record<string, string>;
   onCardSelect?: (storyId: string) => void;
   selectedStoryId?: string | null;
+  groupBy?: BoardGroupBy;
+  epics?: Epic[];
+  cycles?: Cycle[];
   className?: string;
+  hiddenColumnIds?: Set<string>;
+  onQuickAdd?: (workflowStateId: string) => void;
 }
 
 /** Live Kanban board with fractional-indexed card drag/drop. */
@@ -30,12 +40,42 @@ export function CollaborativeBoard({
   storyTitles,
   onCardSelect,
   selectedStoryId,
+  groupBy = 'none',
+  epics = [],
+  cycles = [],
   className,
+  hiddenColumnIds,
+  onQuickAdd,
 }: CollaborativeBoardProps): React.ReactElement {
+  const liveblocksReady = isLiveblocksConfigured() && !isMockAuthEnabled();
+  const useSwimlanes = groupBy !== 'none';
+  const useOfflineBoard = useSwimlanes || isMockAuthEnabled() || !liveblocksReady;
   const hydrated = React.useMemo(
-    () => hydrateBoardRoom(workspaceId, teamId, stories, workflowStates),
-    [workspaceId, teamId, stories, workflowStates]
+    () =>
+      liveblocksReady && !useOfflineBoard
+        ? hydrateBoardRoom(workspaceId, teamId, stories, workflowStates)
+        : null,
+    [liveblocksReady, useOfflineBoard, workspaceId, teamId, stories, workflowStates],
   );
+
+  if (useOfflineBoard || hydrated === null) {
+    return (
+    <OfflineBoard
+      workspaceId={workspaceId}
+      stories={stories}
+      workflowStates={workflowStates}
+        storyTitles={storyTitles}
+        onCardSelect={onCardSelect}
+        selectedStoryId={selectedStoryId}
+        groupBy={groupBy}
+        epics={epics}
+        cycles={cycles}
+        className={className}
+        hiddenColumnIds={hiddenColumnIds}
+        onQuickAdd={onQuickAdd}
+      />
+    );
+  }
 
   return (
     <CollaborativeRoom
@@ -50,6 +90,66 @@ export function CollaborativeBoard({
         className={className}
       />
     </CollaborativeRoom>
+  );
+}
+
+interface OfflineBoardProps {
+  workspaceId: string;
+  stories: Story[];
+  workflowStates: WorkflowState[];
+  storyTitles: Record<string, string>;
+  onCardSelect?: (storyId: string) => void;
+  selectedStoryId?: string | null;
+  groupBy?: BoardGroupBy;
+  epics?: Epic[];
+  cycles?: Cycle[];
+  className?: string;
+  hiddenColumnIds?: Set<string>;
+  onQuickAdd?: (workflowStateId: string) => void;
+}
+
+/** Local-only Kanban when Liveblocks keys are absent (mock auth / local dev). */
+function OfflineBoard({
+  workspaceId,
+  stories,
+  workflowStates,
+  storyTitles,
+  onCardSelect,
+  selectedStoryId,
+  groupBy = 'none',
+  epics = [],
+  cycles = [],
+  className,
+  hiddenColumnIds,
+  onQuickAdd,
+}: OfflineBoardProps): React.ReactElement {
+  return (
+    <div className={cn('relative flex h-full flex-col', className)} data-testid="story-board">
+      {groupBy !== 'none' ? (
+        <BoardSwimlanesView
+          workspaceId={workspaceId}
+          stories={stories}
+          workflowStates={workflowStates}
+          storyTitles={storyTitles}
+          groupBy={groupBy}
+          epics={epics}
+          cycles={cycles}
+          onCardSelect={onCardSelect}
+          selectedStoryId={selectedStoryId}
+        />
+      ) : (
+        <BoardColumnsGrid
+          workspaceId={workspaceId}
+          stories={stories}
+          workflowStates={workflowStates}
+          storyTitles={storyTitles}
+          onCardSelect={onCardSelect}
+          selectedStoryId={selectedStoryId}
+          hiddenColumnIds={hiddenColumnIds}
+          onQuickAdd={onQuickAdd}
+        />
+      )}
+    </div>
   );
 }
 
@@ -180,7 +280,11 @@ function BoardInner({
 
       <CursorOverlay containerRef={containerRef} />
 
-      <div className="flex flex-1 gap-4 overflow-x-auto p-4">
+      <div
+        className="flex min-h-0 min-w-0 flex-1 gap-3 overflow-x-auto overscroll-x-contain p-3 sm:gap-4 sm:p-4"
+        data-testid="board-columns-grid"
+        data-cap="CAP-019"
+      >
         {(columns ?? []).map((column, columnIndex) => {
           const statusName = stateNameById.get(column.statusId) ?? column.statusId;
           const cards = column.cards ?? [];
@@ -188,7 +292,7 @@ function BoardInner({
           return (
             <section
               key={column.statusId}
-              className="flex min-w-[280px] flex-1 flex-col rounded-lg bg-surface-elevated/50"
+              className="flex w-[240px] shrink-0 flex-col rounded-lg bg-surface-elevated/50 sm:min-w-[280px] sm:w-auto sm:flex-1"
               aria-label={`${statusName} column`}
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => handleDrop(event, columnIndex, cards.length)}
@@ -215,6 +319,7 @@ function BoardInner({
                         selectedStoryId === cardId ? 'ring-1 ring-primary' : ''
                       )}
                       onClick={() => onCardSelect?.(String(cardId))}
+                      data-testid="board-story-card"
                     >
                       <CardHeader className="p-3 pb-1">
                         <CardTitle className="text-sm font-medium">

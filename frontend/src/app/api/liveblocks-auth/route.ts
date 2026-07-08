@@ -5,6 +5,7 @@ import {
   parseRoomId,
   resolveRoomAccess,
   roomAccessToLiveblocksGrants,
+  sessionPermissionsFromGrants,
 } from '@landi-flow/collaboration';
 import type { WorkspaceMemberRole } from '@landi-flow/auth';
 import { Liveblocks } from '@liveblocks/node';
@@ -34,13 +35,6 @@ function errorJson(
     { error: { code, message, correlation_id: correlationId } },
     { status, headers: { 'X-Landi-Correlation-Id': correlationId } }
   );
-}
-
-function grantsToPermissions(grants: readonly ('room:write' | 'room:read')[]): string[] {
-  if (grants.includes('room:write')) {
-    return ['room:write', 'comments:write'];
-  }
-  return ['room:read', 'room:presence:write', 'comments:read'];
 }
 
 /**
@@ -79,13 +73,15 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const supabase = await createClient();
   const {
-    data: { user },
+    data: { session: authSession },
     error: authError,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getSession();
 
-  if (authError || !user) {
+  if (authError || !authSession?.user) {
     return errorJson('unauthorized', 'Supabase session required', 401, correlationId);
   }
+
+  const user = authSession.user;
 
   const serviceClient = createServiceClientIfConfigured();
   if (!serviceClient) {
@@ -187,7 +183,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     },
   });
 
-  const session = liveblocks.prepareSession(
+  const liveblocksSession = liveblocks.prepareSession(
     user.id,
     {
       userInfo: {
@@ -199,15 +195,56 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
   );
 
-  session.allow(room, grantsToPermissions(grants) as ['room:write', 'comments:write']);
+  const sessionPermissions = sessionPermissionsFromGrants(grants);
+  liveblocksSession.allow(
+    room,
+    sessionPermissions as ['room:write', 'comments:write']
+  );
 
-  const { body: authBody, status } = await session.authorize();
+  const { body: authBody, status } = await liveblocksSession.authorize();
 
-  return new NextResponse(authBody, {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Landi-Correlation-Id': correlationId,
-    },
-  });
+  if (status !== 200) {
+    let message = 'Liveblocks authorize failed';
+    try {
+      const parsed = JSON.parse(authBody) as { error?: string; reason?: string };
+      if (parsed.reason) {
+        message = parsed.reason;
+      } else if (parsed.error) {
+        message = parsed.error;
+      }
+    } catch {
+      // keep default message
+    }
+    return errorJson('liveblocks_authorize_failed', message, status, correlationId);
+  }
+
+  let token: string | undefined;
+  try {
+    const parsed = JSON.parse(authBody) as { token?: string };
+    token = parsed.token;
+  } catch {
+    return errorJson(
+      'liveblocks_token_parse_failed',
+      'Liveblocks authorize response was not valid JSON',
+      502,
+      correlationId
+    );
+  }
+
+  if (!token) {
+    return errorJson(
+      'liveblocks_token_missing',
+      'Liveblocks did not return an access token',
+      502,
+      correlationId
+    );
+  }
+
+  return NextResponse.json(
+    { token },
+    {
+      status: 200,
+      headers: { 'X-Landi-Correlation-Id': correlationId },
+    }
+  );
 }

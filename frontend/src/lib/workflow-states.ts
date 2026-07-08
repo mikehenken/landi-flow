@@ -1,4 +1,5 @@
 export const WORKFLOW_STATES = {
+  triage: 'state-triage',
   todo: 'state-todo',
   in_progress: 'state-in-progress',
   done: 'state-done',

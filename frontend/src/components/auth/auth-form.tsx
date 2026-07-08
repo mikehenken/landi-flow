@@ -1,11 +1,12 @@
-'use client';
+﻿'use client';
 
 import { useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button, Input } from '@landi-flow/ui';
+import { Button, Input, useTranslations } from '@landi-flow/ui';
 import { createClient } from '@/lib/supabase/client';
 import { buildOAuthRedirectUrl } from '@/lib/supabase/cookie-domain';
 import type { OAuthProvider } from '@landi-flow/auth';
+import { useRouter } from '@/i18n/navigation';
+import { useWorkspaceOptional } from '@/lib/workspace';
 
 type AuthMode = 'login' | 'signup';
 
@@ -14,8 +15,13 @@ interface AuthFormProps {
   redirectPath?: string;
 }
 
-export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): React.ReactElement {
+export function AuthForm({ mode, redirectPath = '/workspace/inbox' }: AuthFormProps): React.ReactElement {
   const router = useRouter();
+  const t = useTranslations('auth');
+  const tCommon = useTranslations('common');
+  const workspaceCtx = useWorkspaceOptional();
+  const appName = workspaceCtx?.workspace.name ?? tCommon('app.name');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -58,8 +64,8 @@ export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): 
         setError(signUpError.message);
         return;
       }
-      router.push(redirectPath);
       router.refresh();
+      router.push(redirectPath);
       return;
     }
 
@@ -77,10 +83,10 @@ export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): 
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 rounded-lg border border-border bg-card p-8 shadow-sm">
       <div className="space-y-1 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
-          {mode === 'login' ? 'Sign in to Landi Flow' : 'Create your account'}
+          {mode === 'login' ? t('login.title', { appName }) : t('signup.title')}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Google, GitHub, or email — real Supabase auth with workspace RBAC.
+          {mode === 'login' ? t('login.subtitle') : t('signup.subtitle')}
         </p>
       </div>
 
@@ -91,7 +97,7 @@ export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): 
           disabled={loading}
           onClick={() => void handleOAuth('google')}
         >
-          Continue with Google
+          {t('oauth.google')}
         </Button>
         <Button
           type="button"
@@ -99,12 +105,12 @@ export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): 
           disabled={loading}
           onClick={() => void handleOAuth('github')}
         >
-          Continue with GitHub
+          {t('oauth.github')}
         </Button>
       </div>
 
       <div className="relative text-center text-xs uppercase text-muted-foreground">
-        <span className="bg-card px-2">or email</span>
+        <span className="bg-card px-2">{t('oauth.divider')}</span>
         <div className="absolute inset-x-0 top-1/2 -z-10 border-t border-border" />
       </div>
 
@@ -112,7 +118,7 @@ export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): 
         {mode === 'signup' ? (
           <Input
             type="text"
-            placeholder="Display name"
+            placeholder={t('fields.display_name')}
             value={displayName}
             onChange={(event) => setDisplayName(event.target.value)}
             autoComplete="name"
@@ -120,7 +126,7 @@ export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): 
         ) : null}
         <Input
           type="email"
-          placeholder="Email"
+          placeholder={t('fields.email')}
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -128,7 +134,7 @@ export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): 
         />
         <Input
           type="password"
-          placeholder="Password"
+          placeholder={t('fields.password')}
           required
           minLength={8}
           value={password}
@@ -137,9 +143,14 @@ export function AuthForm({ mode, redirectPath = '/workspace' }: AuthFormProps): 
         />
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <Button type="submit" disabled={loading}>
-          {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Sign up'}
+          {loading
+            ? t('loading')
+            : mode === 'login'
+              ? t('login.submit')
+              : t('signup.submit')}
         </Button>
       </form>
     </div>
   );
 }
+

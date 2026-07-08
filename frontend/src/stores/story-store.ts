@@ -1,5 +1,27 @@
-import type { Story } from '@landi-flow/core/types';
+import type { Story, StoryPriority } from '@landi-flow/core/types';
+import { WORKFLOW_STATES } from '@/lib/workflow-states';
+import { CURRENT_USER } from '@/lib/agent-roster';
 import { BaseDomainStore } from './base-domain-store';
+
+const TEAM_IDENTIFIER_PREFIX = 'LAN';
+
+export interface CreateStoryInput {
+  title: string;
+  descriptionMd?: string | null;
+  workspaceId: string;
+  teamId: string;
+  workflowStateId?: string;
+  priority?: StoryPriority;
+  epicId?: string | null;
+  isDraft?: boolean;
+}
+
+function generateStoryId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return `story-${crypto.randomUUID()}`;
+  }
+  return `story-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
 
 export interface StoryStoreState {
   stories: Story[];
@@ -62,14 +84,137 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
     this.notify();
   }
 
+  /** Replace or insert a Story from server truth. */
+  upsertStory(story: Story): void {
+    const existingIndex = this.state.stories.findIndex((row) => row.id === story.id);
+    const stories =
+      existingIndex >= 0
+        ? this.state.stories.map((row, index) => (index === existingIndex ? story : row))
+        : [...this.state.stories, story];
+    this.state = {
+      ...this.state,
+      stories,
+      selectedStoryId: this.state.selectedStoryId ?? story.id,
+    };
+    this.notify();
+  }
+
+  removeStory(storyId: string): void {
+    this.state = {
+      ...this.state,
+      stories: this.state.stories.filter((story) => story.id !== storyId),
+      selectedStoryId:
+        this.state.selectedStoryId === storyId ? null : this.state.selectedStoryId,
+    };
+    this.notify();
+  }
+
+  getStory(storyId: string): Story | undefined {
+    return this.state.stories.find((story) => story.id === storyId);
+  }
+
+  /** Optimistic create for mock auth or pre-reconcile temp rows. */
+  createStory(input: CreateStoryInput): Story {
+    const now = new Date().toISOString();
+    const nextNumber =
+      this.state.stories.reduce((max, story) => Math.max(max, story.number), 0) + 1;
+
+    const story: Story = {
+      id: generateStoryId(),
+      workspace_id: input.workspaceId,
+      team_id: input.teamId,
+      number: nextNumber,
+      identifier: `${TEAM_IDENTIFIER_PREFIX}-${nextNumber}`,
+      title: input.title,
+      description_json: null,
+      description_md: input.descriptionMd ?? null,
+      workflow_state_id: input.workflowStateId ?? WORKFLOW_STATES.todo,
+      priority: input.priority ?? 'none',
+      assignee_id: null,
+      creator_id: CURRENT_USER.id,
+      follower_ids: [],
+      delegate_agent_id: null,
+      epic_id: input.epicId ?? null,
+      milestone_id: null,
+      cycle_id: null,
+      estimate: null,
+      due_date: null,
+      sort_order: nextNumber,
+      is_draft: input.isDraft ?? false,
+      archived_at: null,
+      correlation_id: null,
+      created_at: now,
+      updated_at: now,
+    };
+
+    this.state = {
+      ...this.state,
+      stories: [...this.state.stories, story],
+      selectedStoryId: story.id,
+    };
+    this.notify();
+    return story;
+  }
+
   updateStoryWorkflowState(storyId: string, workflowStateId: string): void {
+    this.applyStoryPatch(storyId, { workflow_state_id: workflowStateId });
+  }
+
+  updateStoryPriority(storyId: string, priority: Story['priority']): void {
+    this.applyStoryPatch(storyId, { priority });
+  }
+
+  updateStoryEpic(storyId: string, epicId: string | null): void {
+    this.applyStoryPatch(storyId, { epic_id: epicId });
+  }
+
+  updateStoryMilestone(storyId: string, milestoneId: string | null): void {
+    this.applyStoryPatch(storyId, { milestone_id: milestoneId });
+  }
+
+  updateStoryCycle(storyId: string, cycleId: string | null): void {
+    this.applyStoryPatch(storyId, { cycle_id: cycleId });
+  }
+
+  /** Public patch for cross-module stores (milestones, cycles). */
+  applyStoryPatchPublic(storyId: string, patch: Partial<Story>): void {
+    this.applyStoryPatch(storyId, patch);
+  }
+
+  /** Shortcut Owner — assigned human (`assignee_id`). */
+  setOwner(storyId: string, ownerId: string | null): void {
+    this.applyStoryPatch(storyId, { assignee_id: ownerId });
+  }
+
+  /** Shortcut Followers — multi-select subscriber list. */
+  setFollowers(storyId: string, followerIds: string[]): void {
+    this.applyStoryPatch(storyId, { follower_ids: [...followerIds] });
+  }
+
+  private applyStoryPatch(storyId: string, patch: Partial<Story>): void {
     this.state = {
       ...this.state,
       stories: this.state.stories.map((story) =>
         story.id === storyId
           ? {
               ...story,
-              workflow_state_id: workflowStateId,
+              ...patch,
+              updated_at: new Date().toISOString(),
+            }
+          : story,
+      ),
+    };
+    this.notify();
+  }
+
+  updateStorySortOrder(storyId: string, sortOrder: number): void {
+    this.state = {
+      ...this.state,
+      stories: this.state.stories.map((story) =>
+        story.id === storyId
+          ? {
+              ...story,
+              sort_order: sortOrder,
               updated_at: new Date().toISOString(),
             }
           : story,
@@ -106,6 +251,10 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
       ),
     };
     this.notify();
+  }
+
+  publishStory(storyId: string): void {
+    this.applyStoryPatch(storyId, { is_draft: false });
   }
 
   updateStoryDescription(storyId: string, descriptionMd: string): void {

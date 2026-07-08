@@ -7,8 +7,10 @@ import {
   RoomProvider,
   ClientSideSuspense,
 } from '@liveblocks/react/suspense';
-import { createCorrelationContext } from '@/lib/correlation';
+import { fetchLiveblocksAuthToken } from '@/lib/liveblocks/auth-endpoint';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
+import { isMockAuthEnabled } from '@/lib/api/config';
+import { useSupabaseSession } from '@/lib/supabase/session-provider';
 import type { JsonObject } from '@liveblocks/client';
 
 export interface CollaborationProviderProps {
@@ -16,29 +18,23 @@ export interface CollaborationProviderProps {
   enabled?: boolean;
 }
 
-async function authEndpoint(room?: string): Promise<{ token: string }> {
-  const { correlation_id } = createCorrelationContext();
-  const response = await fetch('/api/liveblocks-auth', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Landi-Correlation-Id': correlation_id,
-    },
-    body: JSON.stringify({ room }),
-  });
-  return response.json() as Promise<{ token: string }>;
-}
-
 export function CollaborationProvider({
   children,
   enabled = true,
 }: CollaborationProviderProps): React.ReactElement {
+  const { user, isReady: sessionReady } = useSupabaseSession();
+
   if (!enabled || !isLiveblocksConfigured()) {
     return <>{children}</>;
   }
 
+  // Defer Liveblocks auth until Supabase cookies are hydrated on the client.
+  if (!isMockAuthEnabled() && (!sessionReady || !user)) {
+    return <>{children}</>;
+  }
+
   return (
-    <BaseLiveblocksProvider authEndpoint={authEndpoint}>
+    <BaseLiveblocksProvider authEndpoint={fetchLiveblocksAuthToken}>
       {children}
     </BaseLiveblocksProvider>
   );

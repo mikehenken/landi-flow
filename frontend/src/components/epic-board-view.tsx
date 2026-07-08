@@ -97,6 +97,7 @@ export function EpicBoardView({
                     <button
                       key={epic.id}
                       type="button"
+                      data-testid="epic-board-item"
                       onClick={() => onEpicSelect(epic.id)}
                       className={cn(
                         'w-full rounded-lg text-left transition-colors duration-100',

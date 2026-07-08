@@ -50,6 +50,29 @@ class EpicStore extends BaseDomainStore<EpicStoreState> {
     this.notify();
   }
 
+  upsertEpic(epic: Epic): void {
+    const existingIndex = this.state.epics.findIndex((row) => row.id === epic.id);
+    const epics =
+      existingIndex >= 0
+        ? this.state.epics.map((row, index) => (index === existingIndex ? epic : row))
+        : [...this.state.epics, epic];
+    this.state = { ...this.state, epics };
+    this.notify();
+  }
+
+  removeEpic(epicId: string): void {
+    this.state = {
+      ...this.state,
+      epics: this.state.epics.filter((epic) => epic.id !== epicId),
+      selectedEpicId: this.state.selectedEpicId === epicId ? null : this.state.selectedEpicId,
+    };
+    this.notify();
+  }
+
+  getEpic(epicId: string): Epic | undefined {
+    return this.state.epics.find((epic) => epic.id === epicId);
+  }
+
   setEpics(epics: Epic[]): void {
     this.hydrate(epics);
   }
@@ -101,6 +124,42 @@ class EpicStore extends BaseDomainStore<EpicStoreState> {
       ),
     };
     this.notify();
+  }
+
+  createEpic(input: {
+    workspaceId: string;
+    name: string;
+    slug: string;
+    statusId: string;
+    descriptionMd?: string;
+  }): Epic {
+    const now = new Date().toISOString();
+    const epic: Epic = {
+      id: `epic-${crypto.randomUUID()}`,
+      workspace_id: input.workspaceId,
+      name: input.name,
+      slug: input.slug,
+      description_json: null,
+      description_md: input.descriptionMd ?? null,
+      status_id: input.statusId,
+      priority: 'none',
+      lead_id: null,
+      delegate_agent_id: null,
+      start_date: null,
+      target_date: null,
+      progress_cache: null,
+      correlation_id: null,
+      archived_at: null,
+      created_at: now,
+      updated_at: now,
+    };
+    this.state = {
+      ...this.state,
+      epics: [...this.state.epics, epic],
+      selectedEpicId: epic.id,
+    };
+    this.notify();
+    return epic;
   }
 
   setLoading(loading: boolean): void {

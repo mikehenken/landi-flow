@@ -11,8 +11,11 @@ export interface DescriptionEditorProps {
   onChange: (markdown: string) => void;
   placeholder?: string;
   variant?: 'default' | 'compact';
-  className?: string;
+  sectionClassName?: string;
+  editorClassName?: string;
   label?: string;
+  showLabel?: boolean;
+  embeddedCollaboration?: boolean;
 }
 
 /** Wired description field for Epic/Story detail surfaces. */
@@ -24,8 +27,11 @@ export function DescriptionEditor({
   onChange,
   placeholder,
   variant = 'default',
-  className,
+  sectionClassName,
+  editorClassName,
   label = 'Description',
+  showLabel = true,
+  embeddedCollaboration = false,
 }: DescriptionEditorProps): React.ReactElement {
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -50,10 +56,12 @@ export function DescriptionEditor({
   }, []);
 
   return (
-    <section className={className} aria-label={label}>
-      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground-subtle">
-        {label}
-      </h4>
+    <section className={sectionClassName} aria-label={label}>
+      {showLabel ? (
+        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+          {label}
+        </h4>
+      ) : null}
       <CollaborativeDescriptionEditor
         workspaceId={workspaceId}
         entityType={entityType}
@@ -62,6 +70,8 @@ export function DescriptionEditor({
         onChange={handleChange}
         placeholder={placeholder}
         variant={variant}
+        className={editorClassName}
+        embedded={embeddedCollaboration}
         aria-label={`${label} editor`}
       />
     </section>

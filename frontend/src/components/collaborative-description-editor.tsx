@@ -5,6 +5,7 @@ import { InstantMarkdownEditor } from '@landi-flow/ui';
 import { buildEpicRoomId, buildStoryRoomId } from '@landi-flow/collaboration';
 import { useLiveblocksExtension } from '@liveblocks/react-tiptap';
 import { CollaborativeRoom } from '@/components/collaboration/collaboration-provider';
+import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 import { DEMO_WORKSPACE_ID } from '@/lib/seed-data';
 
 export interface CollaborativeDescriptionEditorProps {
@@ -17,11 +18,9 @@ export interface CollaborativeDescriptionEditorProps {
   readOnly?: boolean;
   variant?: 'default' | 'compact';
   className?: string;
+  /** When true, parent already mounted `CollaborativeRoom` for this entity. */
+  embedded?: boolean;
   'aria-label'?: string;
-}
-
-function isLiveblocksConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY);
 }
 
 function buildDescriptionRoomId(
@@ -81,10 +80,23 @@ export function CollaborativeDescriptionEditor({
   readOnly,
   variant = 'default',
   className,
+  embedded = false,
   'aria-label': ariaLabel,
 }: CollaborativeDescriptionEditorProps): React.ReactElement {
   const useCollaboration = isLiveblocksConfigured() && !readOnly;
   const roomId = buildDescriptionRoomId(entityType, entityId, workspaceId);
+
+  const editor = (
+    <CollaborativeEditorInner
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      variant={variant}
+      className={className}
+      aria-label={ariaLabel}
+    />
+  );
 
   if (!useCollaboration) {
     return (
@@ -100,6 +112,10 @@ export function CollaborativeDescriptionEditor({
     );
   }
 
+  if (embedded) {
+    return editor;
+  }
+
   return (
     <CollaborativeRoom
       roomId={roomId}
@@ -108,15 +124,7 @@ export function CollaborativeDescriptionEditor({
         editingTarget: entityId,
       }}
     >
-      <CollaborativeEditorInner
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        variant={variant}
-        className={className}
-        aria-label={ariaLabel}
-      />
+      {editor}
     </CollaborativeRoom>
   );
 }
