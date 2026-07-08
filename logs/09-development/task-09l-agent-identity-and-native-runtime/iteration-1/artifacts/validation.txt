@@ -1,0 +1,4 @@
+lint: PASS (pnpm run lint exit 0, no ESLint warnings)
+e2e agent-native-console: PASS (2/2 after locator fixes)
+e2e agent-delegate-attribution: PASS (2/2)
+integration assign-agent: updated agent id (not re-run — requires MCP worker)

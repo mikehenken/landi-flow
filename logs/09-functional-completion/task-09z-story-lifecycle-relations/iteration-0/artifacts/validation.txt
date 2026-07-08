@@ -1,0 +1,4 @@
+pnpm run lint: PASS
+pnpm test: 2 passed (sub-story-progress.test.ts, schema-isolation.test.ts)
+E2E story-lifecycle-relations.spec.ts: 1 passed (30.7s)
+Screenshot: iteration-0/artifacts/09z-story-lifecycle-relations.png

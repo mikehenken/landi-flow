@@ -1,0 +1,10 @@
+pnpm run brand:optimize-svgs: PASS (logomark 680B, wordmark 851B, JPG checksums in manifest)
+pnpm run brand:regen-logos:dry-run: PASS (exits 0, documents GEMINI_API_KEY workflow)
+pnpm run lint: PASS (frontend ESLint clean; packages/ui tsc --noEmit clean)
+pnpm --filter @landi-flow/frontend prebuild: PASS (SVG+JPG synced to frontend/public)
+Assets: public/assets/logo/logomark-primary.svg, logo-wordmark-horizontal.svg, *.jpg (Phase-07 fallbacks)
+Manifest: public/assets/logo/image-manifest.json (pipeline production_ready, chief_ux_criteria pass, JPG sha256)
+Storybook: Brand/BrandAssetsPreview (5 stories); staticDirs configured for public assets
+Storybook build (full monorepo): KNOWN BLOCKED — pre-existing @/lib/workspace EISDIR in frontend modal stories (unrelated to brand)
+Chief-ux: iteration-1/review.md PASS
+GEMINI_API_KEY: not set — SVG canonical pipeline satisfies OR-path; regen script ready

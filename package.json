@@ -13,8 +13,24 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "verify:rls-gate": "node scripts/verify-rls-gate.mjs",
+    "verify:schema-isolation": "node scripts/verify-schema-isolation.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run tests/integration frontend/src/**/*.integration.test.ts workers/**/src/**/*.test.ts",
+    "test:e2e": "pnpm --filter @landi-flow/frontend test:e2e",
     "storybook": "pnpm --filter @landi-flow/ui storybook",
-    "build-storybook": "pnpm --filter @landi-flow/ui build-storybook"
+    "build-storybook": "pnpm --filter @landi-flow/ui build-storybook",
+    "test:storybook": "pnpm --filter @landi-flow/ui test:storybook",
+    "brand:optimize-svgs": "node scripts/optimize-brand-svgs.mjs",
+    "brand:regen-logos:dry-run": "node scripts/regenerate-brand-logos.mjs --dry-run",
+    "brand:regen-logos": "node scripts/regenerate-brand-logos.mjs",
+    "db:push:remote": "node scripts/db-push-remote.mjs"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@9.15.0"
 }

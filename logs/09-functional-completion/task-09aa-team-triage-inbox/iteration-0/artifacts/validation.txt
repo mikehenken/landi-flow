@@ -1,0 +1,2 @@
+pnpm run lint — PASS (no ESLint warnings or errors)
+pnpm --filter @landi-flow/frontend test:e2e -- team-triage-inbox.spec.ts — 1/1 PASS

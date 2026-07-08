@@ -1,0 +1,27 @@
+task-09k dev-agents-first-class-assignees — iteration 1 gap status
+====================================================================
+Reviewer: self-review only (no independent review per brief)
+Self-score: 0.90
+
+REQUIREMENTS: 5/5 met
+  [x] R1 agents assignable to Stories AND Epics (epics.delegate_agent_id + assign ops)
+  [x] R2 user's own agents via MCP credential system (task-09d Action Bus reused)
+  [x] R3 agents appear as members/assignees alongside humans (unified roster + picker)
+  [x] R4 assign agent to Story -> acts via MCP Action Bus (assign + comment + signal)
+  [x] R5 Epic not Project (nomenclature clean)
+
+GATES:
+  [x] pnpm -r typecheck   exit 0 (7/7 projects)
+  [x] pnpm -r lint        exit 0 (next lint clean)
+  [x] pnpm build-storybook exit 0 (AssigneePicker stories render)
+  [!] pnpm verify:rls-gate FAILS — pre-existing broken script (TS in .mjs); NOT in scope.
+                           Migration adds no tables; RLS/GRANT posture preserved (manual).
+
+OPEN GAPS (Phase-11 / downstream):
+  - G1 No live Supabase apply of migration 0025; no assign->act E2E (no infra here).
+  - G2 verify:rls-gate script itself broken (recommend separate fix).
+  - G3 Roster agent presence is coarse (derived from mcp_enabled; live presence = task-04d).
+  - G4 update_epic does not set delegate_agent_id (by design; use epic.assign op).
+
+NOTE: additive fix to untracked frontend/src/hooks/use-localized-date-time.ts
+      (pre-existing type error unrelated to 09k) to unblock the frontend typecheck gate.

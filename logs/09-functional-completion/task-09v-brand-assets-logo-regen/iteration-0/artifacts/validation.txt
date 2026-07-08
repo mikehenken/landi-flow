@@ -1,0 +1,11 @@
+pnpm run brand:regen-logos: PASS (exit 0)
+  Model: gemini-3.1-flash-image-preview (workflow requests gemini-3.1-pro-image-preview)
+  logomark-primary.jpg: 462955 bytes sha256=aa2150ef36b047e0c4eb4f0fea077cadf6092e84ce00d4bdf9fb0e181c66ca3f
+  logo-wordmark-horizontal.jpg: 261372 bytes sha256=b7cc67c2f72e6490100039e27e67f6d5ca6874117a2279f24a7637bae8ced51f
+  manifest: pipeline.gemini_regen.status=completed generated_at=2026-07-07T12:56:54.300Z
+pnpm run brand:optimize-svgs: PASS
+pnpm --filter @landi-flow/frontend prebuild: PASS (SVG+JPG synced to frontend/public)
+pnpm run lint: PARTIAL — packages/ui tsc clean; frontend fails pre-existing artifact-panel.tsx react/no-children-prop (unrelated to task-09v)
+node scripts/regenerate-brand-logos.mjs --dry-run: PASS (exits 0 when key absent)
+Chief-ux: iteration-0/review.md PASS
+GEMINI_API_KEY: configured locally (not logged)

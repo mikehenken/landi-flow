@@ -14,14 +14,14 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-async function main(): Promise<void> {
+async function main() {
   const { default: pg } = await import('pg');
   const client = new pg.Client({ connectionString: databaseUrl });
 
   try {
     await client.connect();
 
-    const { rows } = await client.query<{ relname: string }>(`
+    const { rows } = await client.query(`
       SELECT c.relname
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: unknown) => {
+main().catch((err) => {
   const message = err instanceof Error ? err.message : String(err);
   console.error(`AR-03 RLS gate error: ${message}`);
   process.exit(1);
