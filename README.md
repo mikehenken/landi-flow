@@ -60,8 +60,11 @@ pnpm install
 cp .env.example .env.local
 # Populate .env.local with values from your secret store (key names only in .env.example)
 
-pnpm dev
+pnpm dev          # http://localhost:3000 (canonical; collides with landing-editor / landi-canvas if those run first)
+pnpm dev:alt      # http://localhost:3100 (recommended when :3000 is taken)
 ```
+
+In VS Code / Cursor: **Terminal → Run Build Task** and choose **Dev (landi-flow :3100)**.
 
 ## Environment
 

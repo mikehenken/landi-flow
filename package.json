@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @landi-flow/frontend dev",
+    "dev:alt": "pnpm --filter @landi-flow/frontend dev:alt",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
