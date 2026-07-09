@@ -125,7 +125,10 @@ function hydrateFromSeed(): void {
 
   customerStore.hydrate(applyMockCustomerAdditions(SEED_CUSTOMERS));
 
-  memberStore.hydrate([]);
+  const existingMembers = memberStore.getServerSnapshot().members;
+  if (existingMembers.length === 0) {
+    memberStore.hydrate([]);
+  }
 
 }
 
@@ -268,7 +271,15 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
 
   if (!ready) {
+    const mockAlreadyHydrated =
+      isMockAuthEnabled() &&
+      typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-app-hydrated') === 'true';
+
     if (storesHydrated && hydratedWorkspaceId === workspace.id) {
+      return <>{children}</>;
+    }
+    if (mockAlreadyHydrated) {
       return <>{children}</>;
     }
     return <WorkspaceContentSkeleton />;
