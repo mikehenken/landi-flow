@@ -30,10 +30,6 @@ interface StoryContextRow {
 
 const DEFAULT_LIMIT = 50;
 
-function storyContextMap(rows: StoryContextRow[]): Map<string, StoryContextRow> {
-  return new Map(rows.map((row) => [row.id, row]));
-}
-
 async function resolveActorNames(
   db: DbClient,
   workspaceId: string,
@@ -165,6 +161,58 @@ function notificationKindPriority(kind: InboxNotificationKind): number {
   }
 }
 
+async function mapActivityRows(
+  db: DbClient,
+  workspaceId: string,
+  rows: DbActivityRow[],
+  storyContext?: StoryContextRow,
+): Promise<ActivityEvent[]> {
+  const storyIds = [...new Set(rows.map((row) => row.story_id).filter(Boolean))] as string[];
+
+  let storiesById = new Map<string, StoryContextRow>();
+  if (storyContext) {
+    storiesById.set(storyContext.id, storyContext);
+  }
+  const unresolvedStoryIds = storyIds.filter((id) => !storiesById.has(id));
+  if (unresolvedStoryIds.length > 0) {
+    const { data: stories, error: storyError } = await db
+      .from('stories')
+      .select('id, identifier, title')
+      .eq('workspace_id', workspaceId)
+      .in('id', unresolvedStoryIds);
+
+    if (storyError) {
+      throw new Error(`Failed to resolve story context for activity: ${storyError.message}`);
+    }
+
+    for (const story of (stories ?? []) as StoryContextRow[]) {
+      storiesById.set(story.id, story);
+    }
+  }
+
+  const actorNames = await resolveActorNames(db, workspaceId, rows);
+
+  return rows.map((row) => {
+    const story = row.story_id ? storiesById.get(row.story_id) : undefined;
+    return {
+      id: row.id,
+      workspace_id: row.workspace_id,
+      story_id: row.story_id,
+      epic_id: row.epic_id,
+      story_identifier: story?.identifier ?? null,
+      story_title: story?.title ?? null,
+      actor_type: row.actor_type,
+      actor_user_id: row.actor_user_id,
+      actor_agent_id: row.actor_agent_id,
+      actor_name: resolveActorName(actorNames, row.actor_user_id, row.actor_agent_id),
+      event_type: row.event_type,
+      payload: row.payload ?? {},
+      correlation_id: row.correlation_id,
+      created_at: row.created_at,
+    };
+  });
+}
+
 export class InboxController extends BaseController {
   /** CAP-015: workspace-wide chronological activity feed. */
   async listActivity(workspaceId: string, limit = DEFAULT_LIMIT): Promise<ActivityEvent[]> {
@@ -181,45 +229,44 @@ export class InboxController extends BaseController {
       throw new Error(`Failed to list activity events: ${error.message}`);
     }
 
-    const rows = (data ?? []) as DbActivityRow[];
-    const storyIds = [...new Set(rows.map((row) => row.story_id).filter(Boolean))] as string[];
+    return mapActivityRows(this.db, workspaceId, (data ?? []) as DbActivityRow[]);
+  }
 
-    let storiesById = new Map<string, StoryContextRow>();
-    if (storyIds.length > 0) {
-      const { data: stories, error: storyError } = await this.db
-        .from('stories')
-        .select('id, identifier, title')
-        .eq('workspace_id', workspaceId)
-        .in('id', storyIds);
+  /** MCP-IDE-003: story-scoped activity (includes engineering signals). */
+  async listStoryActivity(
+    workspaceId: string,
+    storyId: string,
+    limit = DEFAULT_LIMIT,
+  ): Promise<ActivityEvent[]> {
+    await this.assertWorkspaceMember(workspaceId);
 
-      if (storyError) {
-        throw new Error(`Failed to resolve story context for activity: ${storyError.message}`);
-      }
+    const { data: story, error: storyError } = await this.db
+      .from('stories')
+      .select('id, identifier, title')
+      .eq('workspace_id', workspaceId)
+      .eq('id', storyId)
+      .maybeSingle();
 
-      storiesById = storyContextMap((stories ?? []) as StoryContextRow[]);
+    if (storyError) {
+      throw new Error(`Failed to resolve story for activity: ${storyError.message}`);
+    }
+    if (!story) {
+      throw new Error(`Story not found: ${storyId}`);
     }
 
-    const actorNames = await resolveActorNames(this.db, workspaceId, rows);
+    const { data, error } = await this.db
+      .from('activity_events')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .eq('story_id', storyId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-    return rows.map((row) => {
-      const story = row.story_id ? storiesById.get(row.story_id) : undefined;
-      return {
-        id: row.id,
-        workspace_id: row.workspace_id,
-        story_id: row.story_id,
-        epic_id: row.epic_id,
-        story_identifier: story?.identifier ?? null,
-        story_title: story?.title ?? null,
-        actor_type: row.actor_type,
-        actor_user_id: row.actor_user_id,
-        actor_agent_id: row.actor_agent_id,
-        actor_name: resolveActorName(actorNames, row.actor_user_id, row.actor_agent_id),
-        event_type: row.event_type,
-        payload: row.payload ?? {},
-        correlation_id: row.correlation_id,
-        created_at: row.created_at,
-      };
-    });
+    if (error) {
+      throw new Error(`Failed to list story activity events: ${error.message}`);
+    }
+
+    return mapActivityRows(this.db, workspaceId, (data ?? []) as DbActivityRow[], story as StoryContextRow);
   }
 
   /** CAP-035: inbox notifications for the current user (assignments + updates). */

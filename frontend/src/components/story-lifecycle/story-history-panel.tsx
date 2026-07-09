@@ -1,26 +1,36 @@
 'use client';
 
 import * as React from 'react';
-import type { Story } from '@landi-flow/core/types';
+import type { ActivityEvent, Story } from '@landi-flow/core/types';
 import { Button, cn } from '@landi-flow/ui';
 import { History, RotateCcw } from 'lucide-react';
 import { updateStoryDescription } from '@/controllers/story-controller';
 import {
-  deriveStoryActivity,
-  extractRestorableDescription,
-} from '@/lib/story-lifecycle/story-history';
+  formatStoryHistoryEventLabel,
+  isStoryHistorySignalLink,
+} from '@/components/story-lifecycle/story-signals-panel';
+import { extractRestorableDescription } from '@/lib/story-lifecycle/story-history';
 
 export interface StoryHistoryPanelProps {
   story: Story;
   className?: string;
+  onSignalSelect?: (activityEventId: string) => void;
+  activity: ActivityEvent[];
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
 }
 
 /** CAP-011: property/description history with undo restore. */
 export function StoryHistoryPanel({
   story,
   className,
+  onSignalSelect,
+  activity,
+  loading,
+  error,
+  onRetry,
 }: StoryHistoryPanelProps): React.ReactElement {
-  const activity = React.useMemo(() => deriveStoryActivity(story.id), [story.id]);
   const [restoringId, setRestoringId] = React.useState<string | null>(null);
 
   const handleUndo = async (eventId: string, previousMd: string): Promise<void> => {
@@ -34,38 +44,67 @@ export function StoryHistoryPanel({
 
   return (
     <section
-      className={cn('space-y-3', className)}
+      id="history"
+      className={cn('space-y-3 scroll-mt-4', className)}
       data-testid="story-history-panel"
       data-cap="CAP-011"
+      data-story-section="history"
     >
-      <div className="flex items-center gap-2">
-        <History className="h-4 w-4 text-muted-foreground" aria-hidden />
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          History
-        </h3>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <History className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            History
+          </h3>
+        </div>
+        {error ? (
+          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onRetry}>
+            Retry
+          </Button>
+        ) : null}
       </div>
 
-      {activity.length === 0 ? (
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading history…</p>
+      ) : error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : activity.length === 0 ? (
         <p className="text-sm text-muted-foreground">No history yet.</p>
       ) : (
         <ul className="max-h-48 space-y-2 overflow-y-auto">
           {activity.map((event) => {
             const restorable = extractRestorableDescription(event);
+            const signalLink = isStoryHistorySignalLink(event);
             return (
               <li
                 key={event.id}
                 className="rounded-md border border-border bg-surface-elevated/20 px-3 py-2"
                 data-testid="story-history-item"
+                data-event-type={event.event_type}
               >
                 <p className="text-sm text-foreground">
                   <span className="font-medium">{event.actor_name ?? 'System'}</span>{' '}
                   <span className="text-muted-foreground">
-                    {event.event_type.replace(/\./g, ' · ')}
+                    {formatStoryHistoryEventLabel(event)}
                   </span>
                 </p>
                 <time className="text-xs text-muted-foreground" dateTime={event.created_at}>
                   {new Date(event.created_at).toLocaleString()}
                 </time>
+                {signalLink && onSignalSelect ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1 h-7 px-2 text-xs"
+                    onClick={() => onSignalSelect(event.id)}
+                    data-testid="story-history-view-signal"
+                  >
+                    View signal
+                  </Button>
+                ) : null}
                 {restorable ? (
                   <Button
                     type="button"

@@ -28,6 +28,8 @@ import {
   StoryAttachmentsPanel,
 } from '@/components/story-lifecycle/story-attachments-panel';
 import { StoryHistoryPanel } from '@/components/story-lifecycle/story-history-panel';
+import { StorySignalsPanel } from '@/components/story-lifecycle/story-signals-panel';
+import { useStoryActivity } from '@/hooks/use-story-activity';
 import { StoryRelationsPanel } from '@/components/story-lifecycle/story-relations-panel';
 import { SubStoriesList } from '@/components/story-lifecycle/sub-story-progress';
 import { StorySlaBadge } from '@/components/story-sla-badge';
@@ -42,9 +44,11 @@ import {
   updateStoryWorkflowState,
 } from '@/controllers/story-controller';
 import { useAssignableMembers } from '@/hooks/use-assignable-members';
+import { useStoryStore } from '@/hooks/use-story-store';
 import { getDelegateAttributionLabel } from '@/lib/agents/roster-client';
 import { assignAndActRequest } from '@/lib/agents/assign-client';
 import { getEpicStatusCategory } from '@/lib/epic-status';
+import { storyStore } from '@/stores/story-store';
 
 /** Matches create-story-modal description field styling (CAP-004 / task-09p). */
 const STORY_DESCRIPTION_EDITOR_CLASS =
@@ -109,6 +113,13 @@ function StoryInspectorContent({
   suppressHeader: boolean;
 }): React.ReactElement {
   const [agentActivity, setAgentActivity] = React.useState<string | null>(null);
+  const [localHighlightedSignalId, setLocalHighlightedSignalId] = React.useState<string | null>(
+    null,
+  );
+  const { detailFocus } = useStoryStore();
+  const highlightedSignalId =
+    detailFocus.highlightedSignalId ?? localHighlightedSignalId;
+  const storyActivity = useStoryActivity(story);
   const { pickerMembers, getMemberById, getAgentName } = useAssignableMembers();
   const requester = getMemberById(story.creator_id);
   const delegateMember = getMemberById(story.delegate_agent_id);
@@ -186,13 +197,21 @@ function StoryInspectorContent({
             ? `${getAgentName(agentId)} picked up ${story.identifier}${result.live ? '' : ' (mock Action Bus)'}`
             : `Assignment failed: ${result.errorText ?? 'unknown error'}`,
         );
+        if (result.ok) {
+          storyActivity.reload();
+        }
       });
     },
-    [story, getAgentName],
+    [story, getAgentName, storyActivity],
   );
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div
+      className={cn(
+        'flex flex-col',
+        layout === 'inspector' ? 'h-full overflow-y-auto' : undefined,
+      )}
+    >
       {layout === 'inspector' && !suppressHeader ? (
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-medium text-foreground">Properties</h2>
@@ -204,7 +223,7 @@ function StoryInspectorContent({
         </div>
       ) : null}
 
-      <div className={cn('space-y-6', layout === 'detail' ? 'p-4' : 'p-4')}>
+      <div className={cn('space-y-6', layout === 'inspector' && 'p-4')}>
         {story.is_draft ? (
           <div
             className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-2"
@@ -357,7 +376,28 @@ function StoryInspectorContent({
         <SubStoriesList parentStory={story} />
         <StoryRelationsPanel story={story} />
         <StoryAttachmentsPanel story={story} />
-        <StoryHistoryPanel story={story} />
+        <StorySignalsPanel
+          story={story}
+          highlightedSignalId={highlightedSignalId}
+          activity={storyActivity.activity}
+          loading={storyActivity.loading}
+          error={storyActivity.error}
+          onRetry={storyActivity.reload}
+        />
+        <StoryHistoryPanel
+          story={story}
+          activity={storyActivity.activity}
+          loading={storyActivity.loading}
+          error={storyActivity.error}
+          onRetry={storyActivity.reload}
+          onSignalSelect={(activityEventId) => {
+            setLocalHighlightedSignalId(activityEventId);
+            storyStore.setDetailFocus({
+              section: 'signals',
+              highlightedSignalId: activityEventId,
+            });
+          }}
+        />
       </div>
     </div>
   );

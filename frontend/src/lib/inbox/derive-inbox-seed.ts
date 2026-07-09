@@ -128,6 +128,28 @@ function buildActivityFromStory(story: Story): ActivityEvent[] {
       correlation_id: story.correlation_id,
       created_at: story.updated_at,
     });
+
+    events.push({
+      id: `activity-signal-${story.id}`,
+      workspace_id: story.workspace_id,
+      story_id: story.id,
+      epic_id: story.epic_id,
+      story_identifier: story.identifier,
+      story_title: story.title,
+      actor_type: 'agent',
+      actor_user_id: null,
+      actor_agent_id: story.delegate_agent_id,
+      actor_name: 'Cursor Agent',
+      event_type: 'signal.attached',
+      payload: {
+        kind: 'agent_lifecycle',
+        status: 'started',
+        source: 'assignment',
+        correlation_id: story.correlation_id,
+      },
+      correlation_id: story.correlation_id,
+      created_at: story.updated_at,
+    });
   }
 
   return events;

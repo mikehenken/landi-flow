@@ -536,6 +536,12 @@ export async function handleApiRequest(
               }
             }
 
+            if (story && storyRest[0] === 'activity' && storyRest.length === 1 && request.method === 'GET') {
+              const inboxController = controller(InboxController);
+              const data = await inboxController.listStoryActivity(workspaceId, story.id);
+              return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+            }
+
             if (story && storyRest[0] === 'relations') {
               if (storyRest.length === 1 && request.method === 'GET') {
                 const data = await relationController.list(workspaceId, story.id);

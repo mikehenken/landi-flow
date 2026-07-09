@@ -10,11 +10,63 @@ import {
   listArtifactsForStory,
   uploadUserArtifact,
 } from '@/lib/artifacts/artifact-store';
+import { isMockAuthEnabled } from '@/lib/api/config';
+
+export interface ArtifactUploadTriggerProps {
+  storyId?: string | null;
+  epicId?: string | null;
+  onUploaded?: () => void;
+}
+
+/** File upload control for artifact panels and detail section headers. */
+export function ArtifactUploadTrigger({
+  storyId,
+  epicId,
+  onUploaded,
+}: ArtifactUploadTriggerProps): React.ReactElement {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    await uploadUserArtifact({ storyId: storyId ?? undefined, epicId: epicId ?? undefined }, file);
+    onUploaded?.();
+    event.target.value = '';
+  };
+
+  return (
+    <div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={(event) => void handleUpload(event)}
+        data-testid="artifact-upload-input"
+      />
+      <Button
+        type="button"
+        size="sm"
+        variant="secondary"
+        onClick={() => fileInputRef.current?.click()}
+        data-testid="artifact-upload-trigger"
+      >
+        <Upload className="mr-1 h-3.5 w-3.5" />
+        Upload
+      </Button>
+    </div>
+  );
+}
 
 export interface ArtifactPanelProps {
   storyId?: string | null;
   epicId?: string | null;
   className?: string;
+  /** When false, parent section supplies the uppercase header. */
+  showTitle?: boolean;
+  /** When false, parent supplies the upload control (e.g. section actions). */
+  showUpload?: boolean;
 }
 
 const KIND_ICONS: Record<string, string> = {
@@ -109,35 +161,63 @@ export function ArtifactPanel({
   storyId,
   epicId,
   className,
+  showTitle = true,
+  showUpload = true,
 }: ArtifactPanelProps): React.ReactElement {
   const [artifacts, setArtifacts] = React.useState<StoryArtifact[]>([]);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadGeneration, setUploadGeneration] = React.useState(0);
 
   const reload = React.useCallback(() => {
     if (storyId) {
-      setArtifacts(listArtifactsForStory(storyId));
-    } else if (epicId) {
-      setArtifacts(listArtifactsForEpic(epicId));
-    } else {
-      setArtifacts([]);
+      if (isMockAuthEnabled()) {
+        setArtifacts(listArtifactsForStory(storyId));
+        return;
+      }
+      void fetch(`/api/artifacts?story_id=${encodeURIComponent(storyId)}`)
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error(`Failed to load artifacts (${response.status})`);
+          }
+          const json = (await response.json()) as { artifacts?: StoryArtifact[] };
+          setArtifacts(json.artifacts ?? []);
+        })
+        .catch(() => {
+          setArtifacts([]);
+        });
+      return;
     }
+    if (epicId) {
+      if (isMockAuthEnabled()) {
+        setArtifacts(listArtifactsForEpic(epicId));
+        return;
+      }
+      void fetch(`/api/artifacts?epic_id=${encodeURIComponent(epicId)}`)
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error(`Failed to load artifacts (${response.status})`);
+          }
+          const json = (await response.json()) as { artifacts?: StoryArtifact[] };
+          setArtifacts(json.artifacts ?? []);
+        })
+        .catch(() => {
+          setArtifacts([]);
+        });
+      return;
+    }
+    setArtifacts([]);
   }, [storyId, epicId]);
 
   React.useEffect(() => {
     reload();
-  }, [reload]);
+  }, [reload, uploadGeneration]);
 
   const tree = React.useMemo(() => buildArtifactTree(artifacts), [artifacts]);
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    await uploadUserArtifact({ storyId: storyId ?? undefined, epicId: epicId ?? undefined }, file);
-    reload();
-    event.target.value = '';
-  };
+  const handleUploaded = React.useCallback(() => {
+    setUploadGeneration((value) => value + 1);
+  }, []);
+
+  const showHeaderRow = showTitle || showUpload;
 
   return (
     <section
@@ -145,28 +225,18 @@ export function ArtifactPanel({
       data-testid="artifact-panel"
       aria-label="Artifacts"
     >
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Artifacts</h3>
-        <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            onChange={(event) => void handleUpload(event)}
-            data-testid="artifact-upload-input"
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => fileInputRef.current?.click()}
-            data-testid="artifact-upload-trigger"
-          >
-            <Upload className="mr-1 h-3.5 w-3.5" />
-            Upload
-          </Button>
+      {showHeaderRow ? (
+        <div className="flex items-center justify-between gap-2">
+          {showTitle ? <h3 className="text-sm font-semibold">Artifacts</h3> : <span />}
+          {showUpload ? (
+            <ArtifactUploadTrigger
+              storyId={storyId}
+              epicId={epicId}
+              onUploaded={handleUploaded}
+            />
+          ) : null}
         </div>
-      </div>
+      ) : null}
 
       {tree.length === 0 ? (
         <p className="text-xs text-muted-foreground" data-testid="artifact-empty-state">
