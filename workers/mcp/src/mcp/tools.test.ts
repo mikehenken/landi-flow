@@ -38,3 +38,16 @@ describe('MCP tool catalogue (static contract)', () => {
     }
   });
 });
+
+describe('Cursor MCP tool aliases', () => {
+  it('maps dot names to underscore aliases for IDE bridges', async () => {
+    const { toCursorToolAlias, TOOLS_BY_NAME, MCP_TOOLS } = await import('./tools.js');
+    expect(toCursorToolAlias('story.list')).toBe('story_list');
+    expect(toCursorToolAlias('collab.join_story_room')).toBe('collab_join_story_room');
+    expect(toCursorToolAlias('ai.draft_story')).toBe('ai_draft_story');
+    for (const tool of MCP_TOOLS) {
+      const alias = toCursorToolAlias(tool.name);
+      expect(TOOLS_BY_NAME.get(alias)).toBe(tool);
+    }
+  });
+});

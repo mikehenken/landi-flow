@@ -97,6 +97,10 @@ Add a second entry pointing at `https://mcp.flow.landi.build/mcp` with a product
 
 Writes route through the Agent Action Bus; scope + read-only gates are enforced at the tool layer.
 
+## Cursor tool naming
+
+The worker registers canonical **dot** names (`story.list`, `epic.create`). Cursor's MCP bridge exposes them as **underscore** names (`story_list`, `epic_create`) in descriptor files. The worker accepts **both** forms — do not rename tools to underscores in `tools/list`; aliases are resolved at `tools/call` dispatch.
+
 ## Related docs
 
 - [mcp-oauth-linear-clone-schema.md](./mcp-oauth-linear-clone-schema.md) — auth paths + schema isolation

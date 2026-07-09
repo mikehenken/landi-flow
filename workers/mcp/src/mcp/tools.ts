@@ -600,9 +600,22 @@ export const MCP_TOOLS: ToolDefinition[] = [
   },
 ];
 
-export const TOOLS_BY_NAME: Map<string, ToolDefinition> = new Map(
-  MCP_TOOLS.map((tool) => [tool.name, tool])
-);
+/** Cursor MCP descriptors replace dots with underscores (e.g. story.list → story_list). */
+export function toCursorToolAlias(dotName: string): string {
+  return dotName.replace(/\./g, '_');
+}
+
+export const TOOLS_BY_NAME: Map<string, ToolDefinition> = (() => {
+  const map = new Map<string, ToolDefinition>();
+  for (const tool of MCP_TOOLS) {
+    map.set(tool.name, tool);
+    const cursorAlias = toCursorToolAlias(tool.name);
+    if (cursorAlias !== tool.name) {
+      map.set(cursorAlias, tool);
+    }
+  }
+  return map;
+})();
 
 export function toolListForClient(): Array<{
   name: string;
