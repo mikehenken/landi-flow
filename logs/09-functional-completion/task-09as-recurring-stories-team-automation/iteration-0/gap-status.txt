@@ -1,0 +1,5 @@
+task-09as - gap closed 2026-07-09
+lint=PASS
+e2e=recurring-stories-team-automation.spec.ts 1/1 PASS (reload persistence)
+api=/api/recurring-rules live:false verified
+score=0.90 PASS
