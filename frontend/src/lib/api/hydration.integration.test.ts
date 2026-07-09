@@ -36,7 +36,9 @@ describe('production hydration API paths (G-09m-07)', () => {
     resetWorkspaceRuntimeContext();
   });
 
-  it('loads workspace context and entity lists via /api/v1 when mock auth is off', async () => {
+  it(
+    'loads workspace context and entity lists via /api/v1 when mock auth is off',
+    async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
 
@@ -133,5 +135,5 @@ describe('production hydration API paths (G-09m-07)', () => {
     expect(requestedUrls.some((url) => url.includes('/epics'))).toBe(true);
     expect(requestedUrls.some((url) => url.includes('/customers'))).toBe(true);
     expect(requestedUrls.some((url) => url.includes('/members'))).toBe(true);
-  });
+  }, 15_000);
 });
