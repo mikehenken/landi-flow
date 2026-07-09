@@ -18,7 +18,8 @@ if (process.env.LANDI_FORCE_MOCK_AUTH === 'true') {
 }
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: repoRoot,
+  // Vercel build (next-on-pages) resolves app cwd incorrectly when tracing root is the monorepo parent.
+  ...(process.env.VERCEL === '1' ? {} : { outputFileTracingRoot: repoRoot }),
   transpilePackages: ['@landi-flow/ui', '@landi-flow/core', '@landi-flow/auth', '@landi-flow/collaboration'],
   experimental: {
     externalDir: true,
