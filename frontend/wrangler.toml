@@ -1,11 +1,19 @@
 # Cloudflare Workers — Next.js via @opennextjs/cloudflare (staging)
 # Deploy: `pnpm worker:build && wrangler deploy`
-# URL: https://landi-flow-staging.<subdomain>.workers.dev
+# Primary URL: https://canvas.landi.build
+# Fallback: https://landi-flow-staging.<subdomain>.workers.dev
 name = "landi-flow-staging"
 main = ".open-next/worker.js"
 account_id = "dd84ae290b8a011725410e223c0ea928"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+workers_dev = true
+
+# Custom domain (no path/wildcard — Cloudflare Workers custom domain API)
+[[routes]]
+pattern = "canvas.landi.build"
+custom_domain = true
 
 [assets]
 directory = ".open-next/assets"
@@ -15,9 +23,16 @@ binding = "ASSETS"
 binding = "WORKER_SELF_REFERENCE"
 service = "landi-flow-staging"
 
+# Zero-hop API proxy — avoids worker-to-worker HTTP fetch 530 on staging.
+[[services]]
+binding = "FLOW_API"
+service = "landi-flow-api"
+
 [vars]
 # Skip dynamic require of middleware-manifest.json on Workers (OpenNext #1232).
 # next-intl middleware is disabled in minimal mode — locale paths must include /en/ prefix.
 NEXT_PRIVATE_MINIMAL_MODE = "1"
 NEXTJS_ENV = "production"
+NEXT_PUBLIC_SITE_URL = "https://canvas.landi.build"
+NEXT_PUBLIC_ROOT_DOMAIN = "canvas.landi.build"
 FLOW_API_URL = "https://landi-flow-api.mikehenken.workers.dev"

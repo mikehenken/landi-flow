@@ -1,24 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createCorrelationContext } from '@/lib/correlation';
-
-function resolveUpstreamBase(): string | null {
-  const raw =
-    process.env.FLOW_API_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL;
-  if (!raw) {
-    return null;
-  }
-  return raw.replace(/\/$/, '');
-}
+import {
+  fetchFlowApiUpstream,
+  resolveFlowApiUpstreamBase,
+} from '@/lib/api/upstream-fetch';
 
 async function proxyRequest(
   request: NextRequest,
   pathSegments: string[],
 ): Promise<NextResponse> {
-  const upstreamBase = resolveUpstreamBase();
-  if (!upstreamBase) {
+  if (!resolveFlowApiUpstreamBase()) {
     return NextResponse.json(
       { error: 'api_not_configured', message: 'FLOW_API_URL is not configured' },
       { status: 503 },
@@ -56,7 +48,7 @@ async function proxyRequest(
     createCorrelationContext().correlation_id;
   const path = pathSegments.join('/');
   const search = request.nextUrl.search;
-  const upstreamUrl = `${upstreamBase}/api/v1/${path}${search}`;
+  const upstreamPath = `/api/v1/${path}${search}`;
 
   const headers = new Headers();
   headers.set('Authorization', `Bearer ${session.access_token}`);
@@ -75,7 +67,15 @@ async function proxyRequest(
     init.body = await request.text();
   }
 
-  const upstreamResponse = await fetch(upstreamUrl, init);
+  let upstreamResponse: Response;
+  try {
+    upstreamResponse = await fetchFlowApiUpstream(upstreamPath, init);
+  } catch {
+    return NextResponse.json(
+      { error: 'api_not_configured', message: 'FLOW_API_URL is not configured' },
+      { status: 503 },
+    );
+  }
   const body = await upstreamResponse.text();
 
   return new NextResponse(body, {
