@@ -14,7 +14,7 @@ export interface StoryDetailSectionProps {
   sectionId?: string;
 }
 
-/** Uppercase section header matching Relations / PropertyRow detail styling. */
+/** Sentence-case section header for story detail modal sections. */
 export function StoryDetailSection({
   title,
   icon,
@@ -38,7 +38,7 @@ export function StoryDetailSection({
               {icon}
             </span>
           ) : null}
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h3 className="text-sm font-semibold text-foreground">
             {title}
           </h3>
         </div>

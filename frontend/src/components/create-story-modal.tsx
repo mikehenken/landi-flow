@@ -9,6 +9,19 @@ import {
   useTranslations,
 } from '@landi-flow/ui';
 import type { StoryPriority } from '@landi-flow/core/types';
+import {
+  BarChart3,
+  Calendar,
+  CircleDot,
+  Flag,
+  Link2,
+  Star,
+  User,
+  Users,
+  Workflow,
+  X,
+} from 'lucide-react';
+import { MetadataPropertyRow } from '@/components/story-metadata-sidebar';
 import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import { useWorkspace } from '@/lib/workspace';
 import { WORKFLOW_STATES } from '@/lib/workflow-states';
@@ -44,8 +57,7 @@ export interface CreateStoryModalProps {
 }
 
 /**
- * Create Story modal (CAP-004) — title, instant markdown description, Create more toggle.
- * Opened from header button, `C` shortcut, or command palette.
+ * Create Story modal (CAP-004) — Shortcut-style split layout with metadata sidebar.
  */
 export function CreateStoryModal({
   open,
@@ -173,7 +185,7 @@ export function CreateStoryModal({
       onClose={handleClose}
     >
       <div
-        className="flex min-h-full items-start justify-center px-4 py-[12vh]"
+        className="flex min-h-full items-center justify-center p-[5vh_5vw]"
         onClick={(event) => {
           if (event.target === event.currentTarget) {
             handleClose();
@@ -184,88 +196,149 @@ export function CreateStoryModal({
           ref={panelRef}
           role="document"
           className={cn(
-            'w-full max-w-[640px] overflow-hidden rounded-xl border border-border bg-surface-overlay shadow-xl',
+            'flex h-[min(90vh,960px)] max-h-[90vh] w-[min(90vw,1400px)] max-w-[90vw] flex-col overflow-hidden',
+            'rounded-[10px] border border-border/80 bg-[#0b0e14] shadow-2xl',
           )}
         >
-          <form onSubmit={handleSubmit} className="flex flex-col">
-            <header className="border-b border-border px-6 py-4">
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+            <header className="flex shrink-0 items-center justify-between border-b border-border/60 px-6 py-3">
               <h2
                 id="create-story-modal-title"
-                className="text-lg font-semibold text-foreground"
+                className="text-base font-semibold text-foreground"
               >
                 {t('create.title')}
               </h2>
+              <Button type="button" variant="ghost" size="sm" aria-label="Close" onClick={handleClose}>
+                <X className="h-4 w-4" />
+              </Button>
             </header>
 
-            <div className="flex flex-col gap-2 px-6 py-4">
-              {storyTemplates.length > 0 ? (
-                <label className="flex flex-col gap-1 text-sm" data-testid="create-story-template">
-                  <span className="text-muted-foreground">Template (CAP-009)</span>
-                  <select
-                    className="rounded-md border border-border bg-transparent px-2 py-1.5"
-                    value={selectedTemplateId}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setSelectedTemplateId(value);
-                      applyTemplate(value);
-                    }}
-                  >
-                    <option value="">None</option>
-                    {storyTemplates.map((tpl) => (
-                      <option key={tpl.id} value={tpl.id}>
-                        {tpl.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              <Input
-                ref={titleInputRef}
-                data-testid="create-story-title"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder={t('create.title_placeholder')}
-                className="h-10 border-0 bg-transparent px-0 text-lg shadow-none focus-visible:ring-0"
-                aria-label={t('create.title_placeholder')}
-              />
-              <InstantMarkdownEditor
-                key={editorKey}
-                value={descriptionMd}
-                onChange={setDescriptionMd}
-                placeholder={t('create.description_placeholder')}
-                variant="default"
-                aria-label={t('create.description_placeholder')}
-                className="min-h-[120px] rounded-md border border-border bg-white/5 px-3 py-2"
-              />
-              <div
-                data-testid="create-story-property-chips"
-                className="flex flex-wrap items-center gap-2 pt-1"
-                aria-label={t('create.properties_label')}
-              >
-                <StoryStatusPicker
-                  workflowStateId={workflowStateId}
-                  onSelect={setWorkflowStateId}
-                />
-                <StoryPriorityPicker priority={priority} onSelect={setPriority} />
-                <StoryEpicPicker epicId={epicId} onSelect={setEpicId} />
+            <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
+              <div className="min-w-0 overflow-y-auto px-6 py-5">
+                <div className="space-y-5">
+                  {storyTemplates.length > 0 ? (
+                    <label className="flex flex-col gap-1 text-sm" data-testid="create-story-template">
+                      <span className="text-muted-foreground">Template (CAP-009)</span>
+                      <select
+                        className="rounded-md border border-border bg-transparent px-2 py-1.5"
+                        value={selectedTemplateId}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setSelectedTemplateId(value);
+                          applyTemplate(value);
+                        }}
+                      >
+                        <option value="">None</option>
+                        {storyTemplates.map((tpl) => (
+                          <option key={tpl.id} value={tpl.id}>
+                            {tpl.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-sm text-muted-foreground">Story Title</span>
+                    <Input
+                      ref={titleInputRef}
+                      data-testid="create-story-title"
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      placeholder={t('create.title_placeholder')}
+                      className="h-10 border-border/60 bg-white/[0.03]"
+                      aria-label={t('create.title_placeholder')}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-sm text-muted-foreground">
+                      Description <span className="italic">Optional</span>
+                    </span>
+                    <InstantMarkdownEditor
+                      key={editorKey}
+                      value={descriptionMd}
+                      onChange={setDescriptionMd}
+                      placeholder={t('create.description_placeholder')}
+                      variant="default"
+                      aria-label={t('create.description_placeholder')}
+                      className="min-h-[160px] rounded-md border border-border/60 bg-white/[0.03] px-3 py-2"
+                    />
+                  </label>
+                </div>
               </div>
+
+              <aside className="min-w-0 overflow-y-auto border-l border-border/60 bg-surface/30 px-4 py-5">
+                <div
+                  data-testid="create-story-property-chips"
+                  className="space-y-0.5"
+                  aria-label={t('create.properties_label')}
+                >
+                  <MetadataPropertyRow icon={<Users className="h-4 w-4" />} label="Team">
+                    <span>Team 1</span>
+                  </MetadataPropertyRow>
+                  <MetadataPropertyRow icon={<Workflow className="h-4 w-4" />} label="Workflow">
+                    <span className="text-muted-foreground">Product Development</span>
+                  </MetadataPropertyRow>
+                  <MetadataPropertyRow icon={<CircleDot className="h-4 w-4" />} label="State">
+                    <StoryStatusPicker
+                      workflowStateId={workflowStateId}
+                      onSelect={setWorkflowStateId}
+                    />
+                  </MetadataPropertyRow>
+                  <MetadataPropertyRow icon={<Link2 className="h-4 w-4" />} label="Project">
+                    <span className="text-muted-foreground">None</span>
+                  </MetadataPropertyRow>
+                  <MetadataPropertyRow icon={<Flag className="h-4 w-4" />} label="Epic">
+                    <StoryEpicPicker epicId={epicId} onSelect={setEpicId} />
+                  </MetadataPropertyRow>
+                  <MetadataPropertyRow icon={<Calendar className="h-4 w-4" />} label="Iteration">
+                    <span className="text-muted-foreground">None</span>
+                  </MetadataPropertyRow>
+                  <MetadataPropertyRow icon={<Star className="h-4 w-4" />} label="Type">
+                    <span>Feature</span>
+                  </MetadataPropertyRow>
+                  <MetadataPropertyRow icon={<User className="h-4 w-4" />} label="Requester">
+                    <span className="text-muted-foreground">You</span>
+                  </MetadataPropertyRow>
+                  <MetadataPropertyRow icon={<User className="h-4 w-4" />} label="Owner">
+                    <span className="text-muted-foreground">Nobody</span>
+                  </MetadataPropertyRow>
+                  <MetadataPropertyRow icon={<BarChart3 className="h-4 w-4" />} label="Estimate">
+                    <span className="text-muted-foreground">Unestimated</span>
+                  </MetadataPropertyRow>
+                  <MetadataPropertyRow icon={<Calendar className="h-4 w-4" />} label="Due">
+                    <span className="text-muted-foreground">No date</span>
+                  </MetadataPropertyRow>
+                </div>
+
+                <div className="mt-4 border-t border-border/60 pt-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-foreground">Custom Fields</h4>
+                    <span className="text-xs text-primary">Edit</span>
+                  </div>
+                  <MetadataPropertyRow icon={<Star className="h-4 w-4" />} label="Priority">
+                    <StoryPriorityPicker priority={priority} onSelect={setPriority} />
+                  </MetadataPropertyRow>
+                </div>
+              </aside>
             </div>
 
-            <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-border px-6 py-4">
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-                <input
-                  type="checkbox"
-                  data-testid="create-story-create-more"
-                  checked={createMore}
-                  onChange={(event) => setCreateMore(event.target.checked)}
-                  className="h-4 w-4 rounded border-border bg-white/5 accent-primary"
-                />
-                {t('create.create_more')}
-              </label>
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="secondary" onClick={handleClose}>
-                  {t('create.cancel')}
-                </Button>
+            <footer className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-t border-border/60 px-6 py-4">
+              <Button type="button" variant="ghost" onClick={handleClose}>
+                Discard Draft
+              </Button>
+              <div className="flex items-center gap-4">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    data-testid="create-story-create-more"
+                    checked={createMore}
+                    onChange={(event) => setCreateMore(event.target.checked)}
+                    className="h-4 w-4 rounded border-border bg-white/5 accent-primary"
+                  />
+                  {t('create.create_more')}
+                </label>
                 <Button type="submit" data-testid="create-story-submit">
                   {t('create.submit')}
                 </Button>

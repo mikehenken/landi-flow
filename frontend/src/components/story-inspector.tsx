@@ -29,20 +29,11 @@ import {
 } from '@/components/story-lifecycle/story-attachments-panel';
 import { StoryHistoryPanel } from '@/components/story-lifecycle/story-history-panel';
 import { StorySignalsPanel } from '@/components/story-lifecycle/story-signals-panel';
-import { useStoryActivity } from '@/hooks/use-story-activity';
 import { StoryRelationsPanel } from '@/components/story-lifecycle/story-relations-panel';
 import { SubStoriesList } from '@/components/story-lifecycle/sub-story-progress';
 import { StorySlaBadge } from '@/components/story-sla-badge';
 import { publishStory } from '@/controllers/story-controller';
-import {
-  updateStoryDelegateAgent,
-  updateStoryDescription,
-  updateStoryEpic,
-  updateStoryFollowers,
-  updateStoryOwner,
-  updateStoryPriority,
-  updateStoryWorkflowState,
-} from '@/controllers/story-controller';
+import { useStoryPropertyHandlers } from '@/hooks/use-story-property-handlers';
 import { useAssignableMembers } from '@/hooks/use-assignable-members';
 import { useStoryStore } from '@/hooks/use-story-store';
 import { getDelegateAttributionLabel } from '@/lib/agents/roster-client';
@@ -112,98 +103,13 @@ function StoryInspectorContent({
   embeddedCollaboration: boolean;
   suppressHeader: boolean;
 }): React.ReactElement {
-  const [agentActivity, setAgentActivity] = React.useState<string | null>(null);
   const [localHighlightedSignalId, setLocalHighlightedSignalId] = React.useState<string | null>(
     null,
   );
   const { detailFocus } = useStoryStore();
   const highlightedSignalId =
     detailFocus.highlightedSignalId ?? localHighlightedSignalId;
-  const storyActivity = useStoryActivity(story);
-  const { pickerMembers, getMemberById, getAgentName } = useAssignableMembers();
-  const requester = getMemberById(story.creator_id);
-  const delegateMember = getMemberById(story.delegate_agent_id);
-  const delegateAttribution = getDelegateAttributionLabel(delegateMember);
-
-  const handleDescriptionChange = React.useCallback(
-    (markdown: string) => {
-      void updateStoryDescription(story.workspace_id, story, markdown);
-    },
-    [story],
-  );
-
-  const handleSelectOwner = React.useCallback(
-    (userId: string | null) => {
-      void updateStoryOwner(story.workspace_id, story, userId);
-      void assignAndActRequest({
-        entity: 'story',
-        entityId: story.id,
-        workspaceId: story.workspace_id,
-        humanId: userId,
-        entityLabel: story.identifier,
-      });
-    },
-    [story],
-  );
-
-  const handleFollowersChange = React.useCallback(
-    (followerIds: string[]) => {
-      void updateStoryFollowers(story.workspace_id, story, followerIds);
-    },
-    [story],
-  );
-
-  const handleStatusChange = React.useCallback(
-    (workflowStateId: string) => {
-      void updateStoryWorkflowState(story.workspace_id, story, workflowStateId);
-    },
-    [story],
-  );
-
-  const handlePriorityChange = React.useCallback(
-    (priority: Story['priority']) => {
-      void updateStoryPriority(story.workspace_id, story, priority);
-    },
-    [story],
-  );
-
-  const handleEpicChange = React.useCallback(
-    (epicId: string | null) => {
-      void updateStoryEpic(story.workspace_id, story, epicId);
-    },
-    [story],
-  );
-
-  const handleSelectAgent = React.useCallback(
-    (agentId: string | null) => {
-      void updateStoryDelegateAgent(story.workspace_id, story, agentId);
-      if (agentId) {
-        setAgentActivity(`${getAgentName(agentId)} is acting via the Action Bus…`);
-      } else {
-        setAgentActivity(null);
-      }
-      void assignAndActRequest({
-        entity: 'story',
-        entityId: story.id,
-        workspaceId: story.workspace_id,
-        delegateAgentId: agentId,
-        entityLabel: story.identifier,
-      }).then((result) => {
-        if (!agentId) {
-          return;
-        }
-        setAgentActivity(
-          result.ok
-            ? `${getAgentName(agentId)} picked up ${story.identifier}${result.live ? '' : ' (mock Action Bus)'}`
-            : `Assignment failed: ${result.errorText ?? 'unknown error'}`,
-        );
-        if (result.ok) {
-          storyActivity.reload();
-        }
-      });
-    },
-    [story, getAgentName, storyActivity],
-  );
+  const handlers = useStoryPropertyHandlers(story);
 
   return (
     <div
@@ -257,7 +163,7 @@ function StoryInspectorContent({
             entityType="story"
             entityId={story.id}
             value={story.description_md}
-            onChange={handleDescriptionChange}
+            onChange={handlers.handleDescriptionChange}
             placeholder="Add acceptance criteria — paste markdown instantly…"
             variant="default"
             sectionClassName={layout === 'detail' ? undefined : 'mt-3'}
@@ -265,21 +171,6 @@ function StoryInspectorContent({
             showLabel={layout !== 'detail'}
             embeddedCollaboration={embeddedCollaboration}
           />
-          {layout === 'detail' ? (
-            <div
-              data-testid="story-detail-property-chips"
-              className="flex flex-wrap items-center gap-2 pt-3"
-              aria-label="Story properties"
-            >
-              <StoryStatusPicker
-                workflowStateId={story.workflow_state_id}
-                onSelect={handleStatusChange}
-              />
-              <StoryPriorityPicker priority={story.priority} onSelect={handlePriorityChange} />
-              <StoryEpicPicker epicId={story.epic_id} onSelect={handleEpicChange} />
-              <StorySlaBadge workspaceId={story.workspace_id} story={story} />
-            </div>
-          ) : null}
         </section>
 
         {layout === 'inspector' ? (
@@ -287,39 +178,39 @@ function StoryInspectorContent({
             <PropertyRow label="Status">
               <StoryStatusPicker
                 workflowStateId={story.workflow_state_id}
-                onSelect={handleStatusChange}
+                onSelect={handlers.handleStatusChange}
               />
             </PropertyRow>
 
             <PropertyRow label="Priority">
-              <StoryPriorityPicker priority={story.priority} onSelect={handlePriorityChange} />
+              <StoryPriorityPicker priority={story.priority} onSelect={handlers.handlePriorityChange} />
             </PropertyRow>
 
             <PropertyRow label="Epic">
-              <StoryEpicPicker epicId={story.epic_id} onSelect={handleEpicChange} />
+              <StoryEpicPicker epicId={story.epic_id} onSelect={handlers.handleEpicChange} />
             </PropertyRow>
           </>
         ) : null}
 
         <PropertyRow label="Owner">
           <OwnerPicker
-            members={pickerMembers}
+            members={handlers.pickerMembers}
             ownerId={story.assignee_id}
-            onSelect={handleSelectOwner}
+            onSelect={handlers.handleSelectOwner}
           />
         </PropertyRow>
 
         <PropertyRow label="Requester">
-          {requester ? (
+          {handlers.requester ? (
             <MemberChip
               member={{
-                kind: requester.kind,
-                id: requester.id,
-                name: requester.name,
-                avatar_url: requester.avatar_url,
-                presence: requester.presence,
-                subtitle: requester.subtitle,
-                runtime: requester.runtime ?? undefined,
+                kind: handlers.requester.kind,
+                id: handlers.requester.id,
+                name: handlers.requester.name,
+                avatar_url: handlers.requester.avatar_url,
+                presence: handlers.requester.presence,
+                subtitle: handlers.requester.subtitle,
+                runtime: handlers.requester.runtime ?? undefined,
               }}
             />
           ) : (
@@ -329,37 +220,37 @@ function StoryInspectorContent({
 
         <PropertyRow label="Followers">
           <FollowersPicker
-            members={pickerMembers}
+            members={handlers.pickerMembers}
             followerIds={story.follower_ids}
-            onChange={handleFollowersChange}
+            onChange={handlers.handleFollowersChange}
           />
         </PropertyRow>
 
         <PropertyRow label="Agent delegate">
           <AgentDelegatePicker
-            members={pickerMembers}
+            members={handlers.pickerMembers}
             agentId={story.delegate_agent_id}
-            onSelectAgent={handleSelectAgent}
+            onSelectAgent={handlers.handleSelectAgent}
           />
-          {story.delegate_agent_id && delegateAttribution ? (
+          {story.delegate_agent_id && handlers.delegateAttribution ? (
             <p className="mt-1.5 text-xs text-foreground-subtle" data-testid="delegate-attribution-badge">
-              {delegateMember?.runtime === 'attribution_only' ? (
+              {handlers.delegateMember?.runtime === 'attribution_only' ? (
                 <span className="rounded bg-white/5 px-1.5 py-0.5 text-primary">
-                  {delegateAttribution}
+                  {handlers.delegateAttribution}
                 </span>
-              ) : delegateMember?.runtime === 'external_mcp' &&
-                delegateMember.connection_state === 'connected' ? (
+              ) : handlers.delegateMember?.runtime === 'external_mcp' &&
+                handlers.delegateMember.connection_state === 'connected' ? (
                 <span className="rounded bg-status-inProgress/10 px-1.5 py-0.5 text-status-inProgress">
-                  Active delegate — {getAgentName(story.delegate_agent_id)} acts via MCP
+                  Active delegate — acts via MCP
                 </span>
               ) : (
-                delegateAttribution
+                handlers.delegateAttribution
               )}
             </p>
           ) : null}
-          {agentActivity ? (
+          {handlers.agentActivity ? (
             <p className="mt-1 text-xs text-primary" role="status">
-              {agentActivity}
+              {handlers.agentActivity}
             </p>
           ) : null}
         </PropertyRow>
@@ -379,17 +270,17 @@ function StoryInspectorContent({
         <StorySignalsPanel
           story={story}
           highlightedSignalId={highlightedSignalId}
-          activity={storyActivity.activity}
-          loading={storyActivity.loading}
-          error={storyActivity.error}
-          onRetry={storyActivity.reload}
+          activity={handlers.storyActivity.activity}
+          loading={handlers.storyActivity.loading}
+          error={handlers.storyActivity.error}
+          onRetry={handlers.storyActivity.reload}
         />
         <StoryHistoryPanel
           story={story}
-          activity={storyActivity.activity}
-          loading={storyActivity.loading}
-          error={storyActivity.error}
-          onRetry={storyActivity.reload}
+          activity={handlers.storyActivity.activity}
+          loading={handlers.storyActivity.loading}
+          error={handlers.storyActivity.error}
+          onRetry={handlers.storyActivity.reload}
           onSignalSelect={(activityEventId) => {
             setLocalHighlightedSignalId(activityEventId);
             storyStore.setDetailFocus({

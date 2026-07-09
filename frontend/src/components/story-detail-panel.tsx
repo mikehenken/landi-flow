@@ -131,6 +131,16 @@ function StoryDetailModal({
   onTogglePin,
   onToggleExpand,
 }: StoryDetailModalProps): React.ReactElement {
+  const headerActions = (
+    <StoryDetailModalControls
+      isPinned={isPinned}
+      isExpanded={isExpanded}
+      onClose={onClose}
+      onTogglePin={onTogglePin}
+      onToggleExpand={onToggleExpand}
+    />
+  );
+
   return (
     <dialog
       ref={dialogRef}
@@ -148,8 +158,8 @@ function StoryDetailModal({
     >
       <div
         className={cn(
-          'flex min-h-full justify-stretch p-0 sm:justify-end sm:p-4',
-          isExpanded ? 'items-stretch' : 'items-stretch sm:items-start sm:py-[8vh]',
+          'flex min-h-full',
+          isExpanded ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-[5vh_5vw]',
         )}
         onClick={(event) => {
           if (event.target === event.currentTarget && !isPinned) {
@@ -159,27 +169,79 @@ function StoryDetailModal({
       >
         <div
           className={cn(
-            'flex max-h-full flex-col overflow-hidden border border-border bg-surface-elevated shadow-xl',
+            'relative flex min-h-0 w-full flex-col overflow-hidden border border-border/80 shadow-2xl',
+            'bg-[#0b0e14]',
             isExpanded
-              ? 'h-full w-full rounded-none sm:rounded-lg'
-              : 'h-full w-full max-w-none rounded-none sm:h-[min(720px,calc(100vh-2rem))] sm:max-w-2xl sm:rounded-lg',
+              ? 'h-full max-h-full rounded-none'
+              : 'h-[min(90vh,960px)] max-h-[90vh] w-[min(90vw,1400px)] max-w-[90vw] rounded-[10px]',
           )}
         >
-          <StoryDetailPanelHeader
-            story={story}
-            isPinned={isPinned}
-            isExpanded={isExpanded}
-            showExpand
-            onClose={onClose}
-            onTogglePin={onTogglePin}
-            onToggleExpand={onToggleExpand}
-          />
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <StoryDetailBody story={story} className="h-full" />
-          </div>
+          <span id="story-detail-modal-title" className="sr-only">
+            {story.identifier} — {story.title}
+          </span>
+          <StoryDetailBody story={story} headerActions={headerActions} />
         </div>
       </div>
     </dialog>
+  );
+}
+
+interface StoryDetailModalControlsProps {
+  isPinned: boolean;
+  isExpanded: boolean;
+  onClose: () => void;
+  onTogglePin: () => void;
+  onToggleExpand: () => void;
+}
+
+function StoryDetailModalControls({
+  isPinned,
+  isExpanded,
+  onClose,
+  onTogglePin,
+  onToggleExpand,
+}: StoryDetailModalControlsProps): React.ReactElement {
+  const t = useTranslations('navigation');
+
+  return (
+    <>
+      <StoryDetailLayoutToggle compact />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-pressed={isPinned}
+        aria-label={isPinned ? t('story_detail.unpin') : t('story_detail.pin')}
+        title={isPinned ? t('story_detail.unpin') : t('story_detail.pin')}
+        onClick={onTogglePin}
+      >
+        {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-pressed={isExpanded}
+        aria-label={isExpanded ? t('story_detail.collapse') : t('story_detail.expand')}
+        title={isExpanded ? t('story_detail.collapse') : t('story_detail.expand')}
+        onClick={onToggleExpand}
+      >
+        {isExpanded ? (
+          <Minimize2 className="h-4 w-4" />
+        ) : (
+          <Maximize2 className="h-4 w-4" />
+        )}
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-label={t('story_detail.close')}
+        onClick={onClose}
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </>
   );
 }
 
@@ -278,20 +340,30 @@ export function StoryDetailSidebarPanel({
 }: StoryDetailSidebarPanelProps): React.ReactElement {
   const { isPinned, setPinned } = useStoryDetailLayout();
 
+  const headerActions = (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-pressed={isPinned}
+        aria-label={isPinned ? 'Unpin story' : 'Pin story'}
+        onClick={() => setPinned((prev) => !prev)}
+      >
+        {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+      </Button>
+      <Button type="button" variant="ghost" size="sm" aria-label="Close story" onClick={onClose}>
+        <X className="h-4 w-4" />
+      </Button>
+    </>
+  );
+
   return (
     <aside
       data-testid="story-detail-sidebar"
-      className="flex h-full w-full flex-col border-t border-border lg:w-[360px] lg:border-s lg:border-t-0"
+      className="flex h-full w-full min-h-0 flex-col border-t border-border lg:w-[min(90vw,1200px)] lg:border-s lg:border-t-0"
     >
-      <StoryDetailPanelHeader
-        story={story}
-        isPinned={isPinned}
-        onClose={onClose}
-        onTogglePin={() => setPinned((prev) => !prev)}
-      />
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <StoryDetailBody story={story} className="h-full" />
-      </div>
+      <StoryDetailBody story={story} headerActions={headerActions} />
     </aside>
   );
 }

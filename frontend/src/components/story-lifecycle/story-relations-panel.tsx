@@ -84,8 +84,8 @@ export function StoryRelationsPanel({
     >
       <div className="flex items-center gap-2">
         <Link2 className="h-4 w-4 text-muted-foreground" aria-hidden />
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Relations
+        <h3 className="text-sm font-semibold text-foreground">
+          Story Relationships
         </h3>
       </div>
 

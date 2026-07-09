@@ -19,6 +19,8 @@ export interface StorySignalsPanelProps {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  /** When true, list grows with parent scroll instead of nested max-height. */
+  unifiedScroll?: boolean;
 }
 
 function SignalRow({
@@ -85,6 +87,7 @@ export function StorySignalsPanel({
   loading,
   error,
   onRetry,
+  unifiedScroll = false,
 }: StorySignalsPanelProps): React.ReactElement {
   const signals = React.useMemo(() => extractEngineeringSignals(activity), [activity]);
 
@@ -108,7 +111,7 @@ export function StorySignalsPanel({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Radio className="h-4 w-4 text-muted-foreground" aria-hidden />
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h3 className="text-sm font-semibold text-foreground">
             Signals
           </h3>
         </div>
@@ -130,7 +133,7 @@ export function StorySignalsPanel({
           No engineering signals yet — attach via MCP <code className="text-xs">signal.attach</code> or agent assignment.
         </p>
       ) : (
-        <ul className="max-h-56 space-y-2 overflow-y-auto">
+        <ul className={cn('space-y-2', !unifiedScroll && 'max-h-56 overflow-y-auto')}>
           {signals.map((signal) => (
             <SignalRow
               key={signal.id}

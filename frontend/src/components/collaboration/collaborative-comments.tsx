@@ -10,6 +10,8 @@ export interface CollaborativeCommentsProps {
   className?: string;
   /** When false, parent section supplies the uppercase header. */
   showTitle?: boolean;
+  /** Composer placeholder; defaults to an entity-specific prompt. */
+  placeholder?: string;
 }
 
 /** Collaborative comment threads via Liveblocks Comments product. */
@@ -17,7 +19,10 @@ export function CollaborativeComments({
   entityLabel = 'Entity',
   className,
   showTitle = true,
+  placeholder,
 }: CollaborativeCommentsProps): React.ReactElement {
+  const composerPlaceholder =
+    placeholder ?? `Add a comment on this ${entityLabel.toLowerCase()}…`;
   const { threads } = useThreads();
   const createThread = useCreateThread();
   const createComment = useCreateComment();
@@ -62,7 +67,7 @@ export function CollaborativeComments({
         <Input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder={`Add a comment on this ${entityLabel.toLowerCase()}…`}
+          placeholder={composerPlaceholder}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
               event.preventDefault();

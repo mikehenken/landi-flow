@@ -19,6 +19,8 @@ export interface StoryHistoryPanelProps {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  /** When true, list grows with parent scroll instead of nested max-height. */
+  unifiedScroll?: boolean;
 }
 
 /** CAP-011: property/description history with undo restore. */
@@ -30,6 +32,7 @@ export function StoryHistoryPanel({
   loading,
   error,
   onRetry,
+  unifiedScroll = false,
 }: StoryHistoryPanelProps): React.ReactElement {
   const [restoringId, setRestoringId] = React.useState<string | null>(null);
 
@@ -53,8 +56,8 @@ export function StoryHistoryPanel({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <History className="h-4 w-4 text-muted-foreground" aria-hidden />
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            History
+          <h3 className="text-sm font-semibold text-foreground">
+            Story Activity
           </h3>
         </div>
         {error ? (
@@ -73,7 +76,7 @@ export function StoryHistoryPanel({
       ) : activity.length === 0 ? (
         <p className="text-sm text-muted-foreground">No history yet.</p>
       ) : (
-        <ul className="max-h-48 space-y-2 overflow-y-auto">
+        <ul className={cn('space-y-2', !unifiedScroll && 'max-h-48 overflow-y-auto')}>
           {activity.map((event) => {
             const restorable = extractRestorableDescription(event);
             const signalLink = isStoryHistorySignalLink(event);

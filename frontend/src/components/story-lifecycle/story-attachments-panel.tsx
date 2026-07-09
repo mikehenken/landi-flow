@@ -55,7 +55,7 @@ export function StoryAttachmentsPanel({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Paperclip className="h-4 w-4 text-muted-foreground" aria-hidden />
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h3 className="text-sm font-semibold text-foreground">
             Attachments
           </h3>
         </div>
