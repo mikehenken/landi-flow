@@ -8,9 +8,7 @@ import { useTranslations } from '@landi-flow/ui';
 
 import { AppShell } from '@/components/app-shell';
 
-import { AgentChatPanel } from '@/components/agent-chat-panel';
-
-import { AgentRosterPanel } from '@/components/agent-roster-panel';
+import { AgentChatPanelLazy, AgentRosterPanelLazy } from '@/components/lazy-agent-panels';
 
 import {
 
@@ -111,7 +109,7 @@ export default function WorkspaceAgentsPage(): React.ReactElement {
 
       inspectorSlot={
 
-        <AgentRosterPanel
+        <AgentRosterPanelLazy
 
           selectedAgentId={selectedAgent.id}
 
@@ -123,7 +121,7 @@ export default function WorkspaceAgentsPage(): React.ReactElement {
 
     >
 
-      <AgentChatPanel agent={selectedAgent} workspaceId={workspace.id} />
+      <AgentChatPanelLazy agent={selectedAgent} workspaceId={workspace.id} />
 
     </AppShell>
 

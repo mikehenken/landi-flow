@@ -68,31 +68,25 @@ function resetHydrationForWorkspaceChange(nextWorkspaceId: string): void {
 
 
 async function hydrateFromApi(workspaceId: string): Promise<void> {
+  const hasExistingData =
+    storyStore.getServerSnapshot().stories.length > 0 ||
+    epicStore.getServerSnapshot().epics.length > 0;
 
-  epicStore.setLoading(true);
-
-  storyStore.setLoading(true);
-
-  customerStore.setLoading(true);
-
-  memberStore.setLoading(true);
-
-
+  if (!hasExistingData) {
+    epicStore.setLoading(true);
+    storyStore.setLoading(true);
+    customerStore.setLoading(true);
+    memberStore.setLoading(true);
+  }
 
   try {
-
     await loadWorkspaceRuntimeContext(workspaceId);
 
     const [epics, stories, customers, members] = await Promise.all([
-
       loadEpics(workspaceId),
-
       loadStories(workspaceId),
-
       loadCustomers(workspaceId),
-
       loadWorkspaceMembers(workspaceId),
-
     ]);
 
     epicStore.hydrate(epics);
@@ -274,6 +268,9 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
 
   if (!ready) {
+    if (storesHydrated && hydratedWorkspaceId === workspace.id) {
+      return <>{children}</>;
+    }
     return <WorkspaceContentSkeleton />;
   }
 

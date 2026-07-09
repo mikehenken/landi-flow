@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { AppShell } from '@/components/app-shell';
 import { BoardToolbar } from '@/components/board-toolbar';
-import { CollaborativeBoard } from '@/components/collaboration';
+import { CollaborativeBoardLazy } from '@/components/collaboration/lazy-collaborative-board';
 import { StoryDetailSidebarPanel } from '@/components/story-detail-panel';
 import {
   StoriesViewProvider,
@@ -88,7 +88,7 @@ function StoriesBoardBody(): React.ReactElement {
           />
         ) : null}
         <div className="min-h-0 flex-1 overflow-hidden">
-          <CollaborativeBoard
+          <CollaborativeBoardLazy
             workspaceId={workspace.id}
             teamId={teamId}
             stories={visibleStories}

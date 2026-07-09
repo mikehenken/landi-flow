@@ -91,10 +91,11 @@ import { WorkspaceSwitcher } from '@/components/navigation/workspace-switcher';
 import { KeyboardShortcutsOverlay } from '@/components/navigation/keyboard-shortcuts-overlay';
 import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import type { ResolvedWorkspace } from '@/lib/workspace/registry';
+import { useWorkspacePageMeta, useWorkspaceShellContext } from '@/components/workspace-shell-provider';
 
 
 
-export interface AppShellProps {
+export interface AppShellFrameProps {
 
   children: React.ReactNode;
 
@@ -110,9 +111,13 @@ export interface AppShellProps {
 
 
 
+export type AppShellProps = AppShellFrameProps;
+
+
+
 /** Three-panel workspace shell with command palette, i18n, and white-label theming. */
 
-export function AppShell({
+export function AppShellFrame({
 
   children,
 
@@ -122,7 +127,7 @@ export function AppShell({
 
   inspectorSlot,
 
-}: AppShellProps): React.ReactElement {
+}: AppShellFrameProps): React.ReactElement {
 
   const router = useRouter();
 
@@ -171,6 +176,8 @@ export function AppShell({
 
   const [awaitingGSecondary, setAwaitingGSecondary] = React.useState(false);
 
+  const [, startNavigationTransition] = React.useTransition();
+
 
 
   const selectedStory = stories.find((s) => s.id === selectedStoryId) ?? null;
@@ -185,7 +192,11 @@ export function AppShell({
 
     (href: string) => {
 
-      router.push(href);
+      startNavigationTransition(() => {
+
+        router.push(href);
+
+      });
 
     },
 
@@ -645,8 +656,6 @@ export function AppShell({
 
           shortcutHint: gKeyHintsVisible ? 'I' : undefined,
 
-          onClick: () => navigate('/workspace/inbox'),
-
         },
 
         {
@@ -663,8 +672,6 @@ export function AppShell({
 
           shortcutHint: gKeyHintsVisible ? 'S' : undefined,
 
-          onClick: () => navigate('/workspace/stories'),
-
         },
 
         {
@@ -678,8 +685,6 @@ export function AppShell({
           icon: <User className="h-4 w-4" />,
 
           active: pathname === '/workspace/my-issues',
-
-          onClick: () => navigate('/workspace/my-issues'),
 
         },
 
@@ -695,8 +700,6 @@ export function AppShell({
 
           active: pathname.includes('/triage'),
 
-          onClick: () => navigate(`/workspace/team/${DEMO_TEAM_ID}/triage`),
-
         },
 
         {
@@ -711,8 +714,6 @@ export function AppShell({
 
           active: pathname.startsWith('/workspace/stories/board'),
 
-          onClick: () => navigate('/workspace/stories/board'),
-
         },
 
         {
@@ -726,8 +727,6 @@ export function AppShell({
           icon: <LayoutList className="h-4 w-4" />,
 
           active: pathname.startsWith('/workspace/stories/drafts'),
-
-          onClick: () => navigate('/workspace/stories/drafts'),
 
         },
 
@@ -744,8 +743,6 @@ export function AppShell({
           active: pathname.startsWith('/workspace/agents'),
 
           shortcutHint: gKeyHintsVisible ? 'A' : undefined,
-
-          onClick: () => navigate('/workspace/agents'),
 
         },
 
@@ -775,8 +772,6 @@ export function AppShell({
 
           epicStore.selectEpic(epic.id);
 
-          navigate(`/workspace/epics/${epic.id}`);
-
         },
 
       })),
@@ -803,8 +798,6 @@ export function AppShell({
 
           active: pathname === '/workspace/views',
 
-          onClick: () => navigate('/workspace/views'),
-
         },
 
         {
@@ -821,8 +814,6 @@ export function AppShell({
 
           shortcutHint: gKeyHintsVisible ? 'E' : undefined,
 
-          onClick: () => navigate('/workspace/epics'),
-
         },
 
         {
@@ -836,8 +827,6 @@ export function AppShell({
           icon: <Target className="h-4 w-4" />,
 
           active: pathname.startsWith('/workspace/initiatives'),
-
-          onClick: () => navigate('/workspace/initiatives'),
 
         },
 
@@ -853,8 +842,6 @@ export function AppShell({
 
           active: pathname === '/workspace/pulse',
 
-          onClick: () => navigate('/workspace/pulse'),
-
         },
 
         {
@@ -869,8 +856,6 @@ export function AppShell({
 
           active: pathname === '/workspace/roadmap',
 
-          onClick: () => navigate('/workspace/roadmap'),
-
         },
 
         {
@@ -884,8 +869,6 @@ export function AppShell({
           icon: <Users className="h-4 w-4" />,
 
           active: pathname === '/workspace/customers',
-
-          onClick: () => navigate('/workspace/customers'),
 
         },
 
@@ -939,6 +922,8 @@ export function AppShell({
             sections={sidebarSections}
 
             collapsed={effectiveSidebarCollapsed}
+
+            linkComponent={Link}
 
             onToggleCollapse={() => {
               if (!isMobile) {
@@ -1205,3 +1190,48 @@ export function AppShell({
 
 }
 
+
+
+/** Registers page chrome on the persistent shell, or renders a standalone frame. */
+
+export function AppShell({
+
+  children,
+
+  viewTitle,
+
+  breadcrumbs = [],
+
+  inspectorSlot,
+
+}: AppShellProps): React.ReactElement {
+
+  const shellContext = useWorkspaceShellContext();
+
+  useWorkspacePageMeta({ viewTitle, breadcrumbs, inspectorSlot });
+
+  if (shellContext) {
+
+    return <>{children}</>;
+
+  }
+
+  return (
+
+    <AppShellFrame
+
+      viewTitle={viewTitle}
+
+      breadcrumbs={breadcrumbs}
+
+      inspectorSlot={inspectorSlot}
+
+    >
+
+      {children}
+
+    </AppShellFrame>
+
+  );
+
+}

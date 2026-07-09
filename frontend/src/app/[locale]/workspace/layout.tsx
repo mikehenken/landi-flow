@@ -1,12 +1,12 @@
-﻿import { StoreHydrator } from '@/components/store-hydrator';
+﻿import { WorkspaceLayoutClient } from '@/components/workspace-layout-client';
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
 }
 
-/** Domain store hydration runs only under authenticated workspace routes. */
+/** Persistent PM shell + domain store hydration for workspace routes. */
 export default function WorkspaceLayout({
   children,
 }: WorkspaceLayoutProps): React.ReactElement {
-  return <StoreHydrator>{children}</StoreHydrator>;
+  return <WorkspaceLayoutClient>{children}</WorkspaceLayoutClient>;
 }

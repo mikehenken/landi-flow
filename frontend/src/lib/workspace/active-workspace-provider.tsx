@@ -102,7 +102,6 @@ export function ActiveWorkspaceProvider({
       ...(patch.icon_url !== undefined ? { icon_url: patch.icon_url } : {}),
     };
   });
-  const [ready, setReady] = React.useState(isMockAuthEnabled());
   const [error, setError] = React.useState<string | null>(null);
   const [resolveAttempt, setResolveAttempt] = React.useState(0);
   const [redirectingToLogin, setRedirectingToLogin] = React.useState(false);
@@ -145,7 +144,6 @@ export function ActiveWorkspaceProvider({
 
   React.useEffect(() => {
     if (isMockAuthEnabled()) {
-      setReady(true);
       return;
     }
 
@@ -163,12 +161,10 @@ export function ActiveWorkspaceProvider({
       lastResolveAttemptRef.current === resolveAttempt;
 
     if (alreadyResolvedForAttempt) {
-      setReady(true);
       return;
     }
 
     lastResolveAttemptRef.current = resolveAttempt;
-    setReady(false);
     setError(null);
 
     let cancelled = false;
@@ -228,10 +224,6 @@ export function ActiveWorkspaceProvider({
         resolvedUserIdRef.current = null;
         resolvedWorkspaceIdRef.current = null;
         setError(workspaceResolveErrorMessage(resolveError));
-      } finally {
-        if (!cancelled) {
-          setReady(true);
-        }
       }
     })();
 
@@ -248,10 +240,18 @@ export function ActiveWorkspaceProvider({
     );
   }
 
-  if ((!sessionReady || !ready || redirectingToLogin) && !isMockAuthEnabled()) {
+  if (redirectingToLogin && !isMockAuthEnabled()) {
     return (
       <div className="flex h-full min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
-        {redirectingToLogin ? 'Redirecting to sign in.' : 'Loading workspace.'}
+        Redirecting to sign in.
+      </div>
+    );
+  }
+
+  if (!sessionReady && !isMockAuthEnabled()) {
+    return (
+      <div className="flex h-full min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
+        Loading workspace.
       </div>
     );
   }
