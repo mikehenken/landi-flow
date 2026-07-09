@@ -70,19 +70,29 @@ async function pickPort(candidates) {
 /**
  * Resolve pnpm's Next.js CLI shim. Direct `node .../next/dist/bin/next` breaks
  * under pnpm because @next/env is not on NODE_PATH without the shim.
+ * In the monorepo, binaries may be hoisted to the workspace root.
  * @param {string} appDir
  */
 function resolveNextCli(appDir) {
-  const unixBin = path.join(appDir, 'node_modules', '.bin', 'next');
-  const winBin = path.join(appDir, 'node_modules', '.bin', 'next.CMD');
-  if (process.platform === 'win32' && fs.existsSync(winBin)) {
-    return winBin;
+  const repoRoot = path.join(appDir, '..');
+  const candidates = [
+    path.join(appDir, 'node_modules', '.bin'),
+    path.join(repoRoot, 'node_modules', '.bin'),
+  ];
+
+  for (const binDir of candidates) {
+    const unixBin = path.join(binDir, 'next');
+    const winBin = path.join(binDir, 'next.CMD');
+    if (process.platform === 'win32' && fs.existsSync(winBin)) {
+      return winBin;
+    }
+    if (fs.existsSync(unixBin)) {
+      return unixBin;
+    }
   }
-  if (fs.existsSync(unixBin)) {
-    return unixBin;
-  }
+
   throw new Error(
-    `[dev] Next.js CLI not found under ${appDir}/node_modules/.bin. Run pnpm install from repo root.`,
+    '[dev] Next.js CLI not found under frontend or repo-root node_modules/.bin. Run pnpm install from repo root.',
   );
 }
 
