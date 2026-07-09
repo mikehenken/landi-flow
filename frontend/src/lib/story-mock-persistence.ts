@@ -3,10 +3,22 @@ import type { Story } from '@landi-flow/core/types';
 export const MOCK_STORY_PATCHES_STORAGE_KEY = 'landi-flow:mock-story-patches';
 export const MOCK_STORY_ADDITIONS_STORAGE_KEY = 'landi-flow:mock-story-additions';
 
-type StoryPatchMap = Record<
-  string,
-  Partial<Pick<Story, 'sort_order' | 'priority' | 'workflow_state_id' | 'milestone_id' | 'cycle_id'>>
+type StoryPatchFields = Partial<
+  Pick<
+    Story,
+    | 'sort_order'
+    | 'priority'
+    | 'workflow_state_id'
+    | 'milestone_id'
+    | 'cycle_id'
+    | 'assignee_id'
+    | 'title'
+    | 'description_md'
+    | 'epic_id'
+  >
 >;
+
+type StoryPatchMap = Record<string, StoryPatchFields>;
 
 function readPatchMap(): StoryPatchMap {
   if (typeof window === 'undefined') {
@@ -59,10 +71,20 @@ export function applyMockStoryPatches(stories: Story[]): Story[] {
   });
 }
 
-export function persistMockStoryPatch(
-  storyId: string,
-  patch: Partial<Pick<Story, 'sort_order' | 'priority' | 'workflow_state_id' | 'milestone_id' | 'cycle_id'>>,
-): void {
+export function persistMockStoryPatch(storyId: string, patch: StoryPatchFields): void {
+  const additions = readStoryAdditions();
+  const additionIndex = additions.findIndex((row) => row.id === storyId);
+  if (additionIndex >= 0) {
+    const updated: Story = {
+      ...additions[additionIndex],
+      ...patch,
+      updated_at: new Date().toISOString(),
+    };
+    additions[additionIndex] = updated;
+    writeStoryAdditions(additions);
+    return;
+  }
+
   const map = readPatchMap();
   map[storyId] = { ...map[storyId], ...patch };
   writePatchMap(map);

@@ -21,6 +21,8 @@ import { loadStories } from '@/controllers/story-controller';
 import { isWorkspaceUuid, useWorkspace } from '@/lib/workspace';
 
 import { SEED_CUSTOMERS, SEED_EPICS, SEED_STORIES } from '@/lib/seed-data';
+import { applyMockCustomerAdditions } from '@/lib/customer-mock-persistence';
+import { applyMockEpicAdditions } from '@/lib/epic-mock-persistence';
 import { applyMockStoryPatches } from '@/lib/story-mock-persistence';
 
 import { customerStore } from '@/stores/customer-store';
@@ -123,11 +125,11 @@ async function hydrateFromApi(workspaceId: string): Promise<void> {
 
 function hydrateFromSeed(): void {
 
-  epicStore.hydrate(SEED_EPICS);
+  epicStore.hydrate(applyMockEpicAdditions(SEED_EPICS));
 
   storyStore.hydrate(applyMockStoryPatches(SEED_STORIES));
 
-  customerStore.hydrate(SEED_CUSTOMERS);
+  customerStore.hydrate(applyMockCustomerAdditions(SEED_CUSTOMERS));
 
   memberStore.hydrate([]);
 
@@ -152,6 +154,7 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
   const { workspace } = useWorkspace();
 
   const { user, isReady: sessionReady } = useSupabaseSession();
+  const userId = user?.id ?? null;
 
   const [ready, setReady] = React.useState(
     () => storesHydrated && hydratedWorkspaceId === workspace.id,
@@ -198,7 +201,7 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
 
 
-    if (!user) {
+    if (!userId) {
 
       setHydrationError('Authentication required');
 
@@ -266,7 +269,7 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
     });
 
-  }, [workspace.id, sessionReady, user]);
+  }, [workspace.id, sessionReady, userId]);
 
 
 

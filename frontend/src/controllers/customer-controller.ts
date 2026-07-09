@@ -2,6 +2,7 @@ import type { CustomerRecord } from '@/lib/seed-data';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { apiFetch, apiList } from '@/lib/api/client';
 import { mapCustomerRow, type DbCustomerRow } from '@/lib/api/mappers';
+import { applyMockCustomerAdditions, persistMockCustomerAddition } from '@/lib/customer-mock-persistence';
 import { SEED_CUSTOMERS } from '@/lib/seed-data';
 import { customerStore } from '@/stores/customer-store';
 
@@ -15,7 +16,7 @@ export interface CreateCustomerInput {
 
 export async function loadCustomers(workspaceId: string): Promise<CustomerRecord[]> {
   if (isMockAuthEnabled()) {
-    return SEED_CUSTOMERS;
+    return applyMockCustomerAdditions(SEED_CUSTOMERS);
   }
   const rows = await apiList<DbCustomerRow>(`workspaces/${workspaceId}/customers`);
   return rows.map(mapCustomerRow);
@@ -32,6 +33,7 @@ export async function createCustomer(input: CreateCustomerInput): Promise<Custom
       status: 'active',
     };
     customerStore.upsertCustomer(customer);
+    persistMockCustomerAddition(customer);
     return customer;
   }
 

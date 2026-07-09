@@ -13,6 +13,7 @@ import {
   CollaborativeRoom,
   PresenceAvatars,
 } from '@/components/collaboration';
+import { isMockAuthEnabled } from '@/lib/api/config';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 
 export interface StoryDetailBodyProps {
@@ -25,7 +26,7 @@ export function StoryDetailBody({
   story,
   className,
 }: StoryDetailBodyProps): React.ReactElement {
-  const liveblocksReady = isLiveblocksConfigured();
+  const liveblocksReady = isLiveblocksConfigured() && !isMockAuthEnabled();
   const hydrated = React.useMemo(
     () => (liveblocksReady ? hydrateStoryRoom(story) : null),
     [liveblocksReady, story],

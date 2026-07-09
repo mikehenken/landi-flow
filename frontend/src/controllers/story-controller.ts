@@ -1,6 +1,6 @@
 import type { Story, StoryPriority } from '@landi-flow/core/types';
 import { isMockAuthEnabled } from '@/lib/api/config';
-import { persistMockStoryPatch } from '@/lib/story-mock-persistence';
+import { persistMockStoryAddition, persistMockStoryPatch } from '@/lib/story-mock-persistence';
 import { apiFetch, apiList } from '@/lib/api/client';
 import { mapStoryRow, type DbStoryRow } from '@/lib/api/mappers';
 import {
@@ -51,7 +51,9 @@ export async function loadStories(workspaceId: string, teamId?: string): Promise
 
 export async function createStory(input: CreateStoryInput): Promise<Story> {
   if (isMockAuthEnabled()) {
-    return storyStore.createStory(input);
+    const story = storyStore.createStory(input);
+    persistMockStoryAddition(story);
+    return story;
   }
 
   await loadWorkspaceRuntimeContext(input.workspaceId);
@@ -189,6 +191,7 @@ export async function updateStoryOwner(
   const previous = story.assignee_id;
   storyStore.setOwner(story.id, assigneeId);
   if (isMockAuthEnabled()) {
+    persistMockStoryPatch(story.id, { assignee_id: assigneeId });
     return;
   }
   try {

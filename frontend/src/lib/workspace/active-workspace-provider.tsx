@@ -85,6 +85,12 @@ export function ActiveWorkspaceProvider({
   const router = useRouter();
   const onAuthPage = isPublicAuthPath(pathname);
   const { user, isReady: sessionReady } = useSupabaseSession();
+  const userId = user?.id ?? null;
+  const pathnameRef = React.useRef(pathname);
+  pathnameRef.current = pathname;
+  const resolvedUserIdRef = React.useRef<string | null>(null);
+  const resolvedWorkspaceIdRef = React.useRef<string | null>(null);
+  const lastResolveAttemptRef = React.useRef(-1);
   const [workspace, setWorkspace] = React.useState<ResolvedWorkspace>(() => {
     if (!isMockAuthEnabled()) {
       return initialWorkspace;
@@ -113,6 +119,31 @@ export function ActiveWorkspaceProvider({
   );
 
   React.useEffect(() => {
+    if (isMockAuthEnabled() || onAuthPage) {
+      return;
+    }
+
+    if (!sessionReady) {
+      return;
+    }
+
+    if (userId) {
+      setRedirectingToLogin(false);
+      return;
+    }
+
+    resolvedUserIdRef.current = null;
+    resolvedWorkspaceIdRef.current = null;
+    lastResolveAttemptRef.current = -1;
+    setRedirectingToLogin(true);
+    setError(null);
+    router.replace({
+      pathname: '/auth/login',
+      query: { redirect: loginRedirectPath(pathnameRef.current) },
+    });
+  }, [onAuthPage, router, sessionReady, userId]);
+
+  React.useEffect(() => {
     if (isMockAuthEnabled()) {
       setReady(true);
       return;
@@ -122,24 +153,23 @@ export function ActiveWorkspaceProvider({
       return;
     }
 
-    if (!sessionReady) {
+    if (!sessionReady || !userId || !user) {
       return;
     }
 
+    const alreadyResolvedForAttempt =
+      resolvedUserIdRef.current === userId &&
+      resolvedWorkspaceIdRef.current !== null &&
+      lastResolveAttemptRef.current === resolveAttempt;
+
+    if (alreadyResolvedForAttempt) {
+      setReady(true);
+      return;
+    }
+
+    lastResolveAttemptRef.current = resolveAttempt;
     setReady(false);
     setError(null);
-
-    if (!user) {
-      setRedirectingToLogin(true);
-      setError(null);
-      router.replace({
-        pathname: '/auth/login',
-        query: { redirect: loginRedirectPath(pathname) },
-      });
-      return;
-    }
-
-    setRedirectingToLogin(false);
 
     let cancelled = false;
 
@@ -161,6 +191,8 @@ export function ActiveWorkspaceProvider({
                 if (!cancelled) {
                   setWorkspace(toResolvedWorkspace(match));
                   persistWorkspaceCookie(match.id);
+                  resolvedUserIdRef.current = userId;
+                  resolvedWorkspaceIdRef.current = match.id;
                 }
                 return;
               }
@@ -171,16 +203,20 @@ export function ActiveWorkspaceProvider({
               if (!cancelled) {
                 setWorkspace(toResolvedWorkspace(existingMembership));
                 persistWorkspaceCookie(existingMembership.id);
+                resolvedUserIdRef.current = userId;
+                resolvedWorkspaceIdRef.current = existingMembership.id;
               }
               return;
             }
 
-            const resolved = await ensureUserWorkspace(user.id, displayName);
+            const resolved = await ensureUserWorkspace(userId, displayName);
             if (cancelled) {
               return;
             }
             setWorkspace(toResolvedWorkspace(resolved));
             persistWorkspaceCookie(resolved.id);
+            resolvedUserIdRef.current = userId;
+            resolvedWorkspaceIdRef.current = resolved.id;
           })(),
           WORKSPACE_RESOLVE_TIMEOUT_MS,
           'Workspace resolve',
@@ -189,6 +225,8 @@ export function ActiveWorkspaceProvider({
         if (cancelled) {
           return;
         }
+        resolvedUserIdRef.current = null;
+        resolvedWorkspaceIdRef.current = null;
         setError(workspaceResolveErrorMessage(resolveError));
       } finally {
         if (!cancelled) {
@@ -200,7 +238,7 @@ export function ActiveWorkspaceProvider({
     return () => {
       cancelled = true;
     };
-  }, [initialWorkspace.id, onAuthPage, pathname, resolveAttempt, router, sessionReady, user]);
+  }, [initialWorkspace.id, onAuthPage, resolveAttempt, sessionReady, user, userId]);
 
   if (onAuthPage && !isMockAuthEnabled()) {
     return (

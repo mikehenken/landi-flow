@@ -106,13 +106,13 @@ const SEED_TAXONOMY: TaxonomySettings = {
       id: 'emoji-ship',
       name: 'Ship it',
       shortcode: ':ship:',
-      image_url: '/assets/brand/logo-mark.png',
+      image_url: '/assets/logo/logomark-primary.svg',
     },
     {
       id: 'emoji-triage',
       name: 'Triage',
       shortcode: ':triage:',
-      image_url: '/assets/brand/logo-mark.png',
+      image_url: '/assets/logo/logomark-primary.svg',
     },
   ],
 };

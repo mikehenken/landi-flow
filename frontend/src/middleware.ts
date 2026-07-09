@@ -110,7 +110,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (user && isAuthPage(pathname)) {
+  // MOCK_AUTH dev shell: allow auth pages to render for visual-regression capture.
+  if (user && isAuthPage(pathname) && !mockAuth) {
     return NextResponse.redirect(
       new URL(localeAwarePath(locale, '/workspace/inbox'), request.url),
     );

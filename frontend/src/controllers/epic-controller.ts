@@ -4,6 +4,7 @@ import { apiFetch, apiList } from '@/lib/api/client';
 import { mapEpicRow, type DbEpicRow } from '@/lib/api/mappers';
 import { getDefaultEpicStatusId, loadWorkspaceRuntimeContext } from '@/lib/api/workspace-context';
 import { EPIC_STATUS_IDS } from '@/lib/epic-status';
+import { persistMockEpicAddition } from '@/lib/epic-mock-persistence';
 import { epicStore } from '@/stores/epic-store';
 
 function slugify(name: string): string {
@@ -55,6 +56,7 @@ export async function createEpic(input: CreateEpicInput): Promise<Epic> {
     };
     epicStore.upsertEpic(epic);
     epicStore.selectEpic(epic.id);
+    persistMockEpicAddition(epic);
     return epic;
   }
 

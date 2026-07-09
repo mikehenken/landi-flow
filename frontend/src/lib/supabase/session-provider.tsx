@@ -64,6 +64,18 @@ export function SupabaseSessionProvider({
 
   const [isReady, setIsReady] = React.useState(isMockAuthEnabled());
 
+  /** Stable `user` reference across TOKEN_REFRESHED — avoids remounting the app tree on tab focus. */
+  const [stableUser, setStableUser] = React.useState<User | null>(null);
+
+  React.useEffect(() => {
+    const nextUser = session?.user ?? null;
+    if (!nextUser) {
+      setStableUser(null);
+      return;
+    }
+    setStableUser((previous) => (previous?.id === nextUser.id ? previous : nextUser));
+  }, [session]);
+
 
 
   React.useEffect(() => {
@@ -210,13 +222,13 @@ export function SupabaseSessionProvider({
 
       session,
 
-      user: session?.user ?? null,
+      user: stableUser,
 
       isReady,
 
     }),
 
-    [session, isReady],
+    [session, stableUser, isReady],
 
   );
 
