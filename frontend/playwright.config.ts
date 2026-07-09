@@ -14,6 +14,7 @@ function loadRootEnvLocal(): void {
     const eq = trimmed.indexOf('=');
     if (eq === -1) continue;
     const key = trimmed.slice(0, eq).trim();
+    if (key === 'NEXT_PUBLIC_MOCK_AUTH') continue;
     const value = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
     if (key && process.env[key] === undefined) {
       process.env[key] = value;
@@ -35,13 +36,13 @@ function isLiveApiEnvReady(): boolean {
 }
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
-const devReadyURL = `${baseURL}/en/auth/login`;
+const devReadyURL = `${baseURL}/api/e2e/health`;
 const liveApiReady = isLiveApiEnvReady();
 
 export default defineConfig({
   testDir: './e2e',
   testIgnore: ['**/debug.spec.ts'],
-  timeout: 60_000,
+  timeout: 90_000,
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,

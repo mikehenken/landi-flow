@@ -12,8 +12,10 @@ test.describe('Artifact system backend (ART-001)', () => {
     const json = (await response.json()) as {
       ok: boolean;
       artifacts: Array<{ id: string; artifact_kind: string }>;
+      live: boolean;
     };
     expect(json.ok).toBe(true);
+    expect(json.live).toBe(false);
     expect(json.artifacts.length).toBeGreaterThan(0);
     expect(json.artifacts[0]?.artifact_kind).toBeDefined();
   });

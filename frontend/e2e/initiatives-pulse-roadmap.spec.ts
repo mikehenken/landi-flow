@@ -6,7 +6,18 @@ const LOG_DIR =
 test.describe('Initiatives, Pulse & roadmap (CAP-056–065)', () => {
   test.setTimeout(180_000);
 
-  test('initiatives list and detail', async ({ page }) => {
+  test('initiatives list and detail', async ({ page, request }) => {
+    const apiResponse = await request.get('/api/initiatives?workspace_id=ws-acme-agency');
+    expect(apiResponse.ok()).toBeTruthy();
+    const apiJson = (await apiResponse.json()) as {
+      ok: boolean;
+      initiatives: unknown[];
+      settings: { enabled: boolean };
+      live: boolean;
+    };
+    expect(apiJson.ok).toBe(true);
+    expect(apiJson.live).toBe(false);
+
     await waitForAppReady(page);
     await page.goto('/en/workspace/initiatives', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('html[data-app-hydrated="true"]', { timeout: 60_000 });

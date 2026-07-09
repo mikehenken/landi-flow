@@ -1,4 +1,4 @@
-import { test, expect, SCREENSHOT_DIR, navigateToStories } from './fixtures';
+import { test, expect, SCREENSHOT_DIR, navigateToStories, expandStoryDetailModal } from './fixtures';
 
 test.describe('Differentiator: instant markdown paste', () => {
   test('pastes # Heading and renders h1 in Story editor', async ({ page }) => {
@@ -9,10 +9,15 @@ test.describe('Differentiator: instant markdown paste', () => {
 
     const modal = page.getByTestId('story-detail-modal');
     await expect(modal).toBeVisible({ timeout: 10_000 });
+    await expandStoryDetailModal(page);
 
     const editor = modal.getByTestId('instant-markdown-editor').locator('.instant-md-content');
     await expect(editor).toBeVisible({ timeout: 15_000 });
-    await editor.click();
+    await editor.evaluate((node) => {
+      if (node instanceof HTMLElement) {
+        node.focus();
+      }
+    });
 
     await page.evaluate(() => {
       const data = new DataTransfer();

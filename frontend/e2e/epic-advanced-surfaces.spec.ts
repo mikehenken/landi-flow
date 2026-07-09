@@ -6,7 +6,20 @@ const LOG_DIR =
 test.describe('Epic advanced surfaces (CAP-045,046,047)', () => {
   test.setTimeout(180_000);
 
-  test('epic detail customers, views, and team sub-tabs', async ({ page }) => {
+  test('epic detail customers, views, and team sub-tabs', async ({ page, request }) => {
+    const apiResponse = await request.get('/api/epic-surfaces?epic_id=epic-001');
+    expect(apiResponse.ok()).toBeTruthy();
+    const apiJson = (await apiResponse.json()) as {
+      ok: boolean;
+      customers: unknown[];
+      teams: unknown[];
+      attached_views: unknown[];
+      live: boolean;
+    };
+    expect(apiJson.ok).toBe(true);
+    expect(apiJson.live).toBe(false);
+    expect(apiJson.teams.length).toBeGreaterThanOrEqual(1);
+
     await waitForAppReady(page);
     await page.goto('/en/workspace/epics/epic-001', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('html[data-app-hydrated="true"]', { timeout: 60_000 });

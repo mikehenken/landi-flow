@@ -51,25 +51,41 @@ function freePort(targetPort) {
 }
 
 const fileEnv = loadRootEnvLocal();
-freePort(port);
 
-const devEnv = {
-  ...process.env,
-  ...fileEnv,
-  NEXT_PUBLIC_MOCK_AUTH: 'true',
-  NEXT_PUBLIC_OBS_ENABLE_CLIENT_REPORTING: 'true',
-  NEXT_PUBLIC_MOCK_ASKS_WEBHOOK_SECRET: 'e2e-asks-secret',
-  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? `http://localhost:${port}`,
-  NEXT_PUBLIC_ROOT_DOMAIN: fileEnv.NEXT_PUBLIC_ROOT_DOMAIN?.trim() || 'localhost',
-};
+async function main() {
+  freePort(port);
 
-const child = spawn('pnpm', ['run', 'dev'], {
-  cwd: frontendDir,
-  env: devEnv,
-  stdio: 'inherit',
-  shell: true,
-});
+  // Allow Windows TIME_WAIT / process teardown before rebinding :3000.
+  const postKillDelayMs = process.platform === 'win32' ? 4_000 : 0;
+  if (postKillDelayMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, postKillDelayMs));
+  }
 
-child.on('exit', (code, signal) => {
-  process.exit(code ?? (signal ? 1 : 0));
+  const devEnv = {
+    ...process.env,
+    ...fileEnv,
+    PORT: String(port),
+    LANDI_FORCE_MOCK_AUTH: 'true',
+    NEXT_PUBLIC_MOCK_AUTH: 'true',
+    NEXT_PUBLIC_OBS_ENABLE_CLIENT_REPORTING: 'true',
+    NEXT_PUBLIC_MOCK_ASKS_WEBHOOK_SECRET: 'e2e-asks-secret',
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? `http://localhost:${port}`,
+    NEXT_PUBLIC_ROOT_DOMAIN: fileEnv.NEXT_PUBLIC_ROOT_DOMAIN?.trim() || 'localhost',
+  };
+
+  const child = spawn('node', ['scripts/dev.mjs', '--port', String(port)], {
+    cwd: frontendDir,
+    env: devEnv,
+    stdio: 'inherit',
+    shell: false,
+  });
+
+  child.on('exit', (code, signal) => {
+    process.exit(code ?? (signal ? 1 : 0));
+  });
+}
+
+main().catch((error) => {
+  console.error('[e2e-dev-mock] Failed to start:', error instanceof Error ? error.message : error);
+  process.exit(1);
 });
