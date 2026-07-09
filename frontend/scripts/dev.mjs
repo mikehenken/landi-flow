@@ -115,7 +115,8 @@ function spawnNextDev(appDir, port, childEnv) {
     });
   }
 
-  return spawn('sh', [nextCli, ...args], {
+  // pnpm .bin/next is a Node shebang script — execute directly (not via `sh`).
+  return spawn(nextCli, args, {
     cwd: appDir,
     env: childEnv,
     stdio: 'inherit',
