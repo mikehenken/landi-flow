@@ -505,6 +505,10 @@ async function main() {
       id++
     );
     const verdict = classifyResult(tool.name, resp, isWrite);
+    if (tool.name === 'comment.create' && verdict.status === 'pass') {
+      const entity = resp.json?.result?.structuredContent?.entity;
+      if (entity && typeof entity.id === 'string') context.commentParentId = entity.id;
+    }
     results.push({ tool: tool.name, isWrite, ...verdict });
     const icon =
       verdict.status === 'pass' || verdict.status === 'pass-expected-input'
