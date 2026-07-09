@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { AUTH_ENV_KEYS } from '@landi-flow/auth/env';
 import { LINEAR_CLONE_SCHEMA } from '@landi-flow/auth/schema';
 
+export const runtime = 'edge';
+
 const ALLOWED_REDIRECT_HOSTS = ['localhost', '127.0.0.1', 'landi.build', 'dev.landi.build'];
 
 function applySessionCookies(
