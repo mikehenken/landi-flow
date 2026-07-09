@@ -16,5 +16,7 @@ binding = "WORKER_SELF_REFERENCE"
 service = "landi-flow-staging"
 
 [vars]
-# Public runtime vars — set encrypted secrets via `wrangler secret put` (names only in docs).
-# FLOW_API_URL, NEXT_PUBLIC_* are injected at build time from CI / .dev.vars.
+# Skip dynamic require of middleware-manifest.json on Workers (OpenNext #1232).
+# next-intl middleware is disabled in minimal mode — locale paths must include /en/ prefix.
+NEXT_PRIVATE_MINIMAL_MODE = "1"
+NEXTJS_ENV = "production"
