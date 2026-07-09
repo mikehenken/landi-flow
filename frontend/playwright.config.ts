@@ -44,6 +44,14 @@ const ciStudyMatrixSpecs = process.env.CI
   ? ['**/fhitm-matrix.spec.ts', '**/task-10b-visual-regression.spec.ts', '**/task-10b-retry-failed.spec.ts']
   : [];
 
+const mockWebServer = {
+  command: 'node scripts/e2e-dev-mock.mjs',
+  url: devReadyURL,
+  reuseExistingServer: !process.env.CI,
+  timeout: 180_000,
+  cwd: __dirname,
+};
+
 export default defineConfig({
   testDir: './e2e',
   testIgnore: ['**/debug.spec.ts', ...ciStudyMatrixSpecs],
@@ -54,6 +62,8 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { open: 'never', outputFolder: '../test-results/playwright-report' }]],
   outputDir: '../test-results/playwright',
+  // Top-level webServer in CI — project-scoped servers were not blocking test start in GHA.
+  webServer: process.env.CI ? mockWebServer : undefined,
   use: {
     baseURL,
     trace: 'on-first-retry',
@@ -64,12 +74,7 @@ export default defineConfig({
       name: 'chromium-mock',
       grepInvert: /@requires-live-api/,
       use: { ...devices['Desktop Chrome'] },
-      webServer: {
-        command: 'node scripts/e2e-dev-mock.mjs',
-        url: devReadyURL,
-        reuseExistingServer: !process.env.CI,
-        timeout: 180_000,
-      },
+      ...(!process.env.CI ? { webServer: mockWebServer } : {}),
     },
     {
       name: 'chromium-live-api',
@@ -82,6 +87,7 @@ export default defineConfig({
               url: devReadyURL,
               reuseExistingServer: !process.env.CI,
               timeout: 180_000,
+              cwd: __dirname,
             },
           }
         : {}),

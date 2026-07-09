@@ -16,6 +16,7 @@
  *   PORT=3200 node scripts/dev.mjs
  */
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -66,6 +67,52 @@ async function pickPort(candidates) {
   return candidates[candidates.length - 1];
 }
 
+/**
+ * Resolve pnpm's Next.js CLI shim. Direct `node .../next/dist/bin/next` breaks
+ * under pnpm because @next/env is not on NODE_PATH without the shim.
+ * @param {string} appDir
+ */
+function resolveNextCli(appDir) {
+  const unixBin = path.join(appDir, 'node_modules', '.bin', 'next');
+  const winBin = path.join(appDir, 'node_modules', '.bin', 'next.CMD');
+  if (process.platform === 'win32' && fs.existsSync(winBin)) {
+    return winBin;
+  }
+  if (fs.existsSync(unixBin)) {
+    return unixBin;
+  }
+  throw new Error(
+    `[dev] Next.js CLI not found under ${appDir}/node_modules/.bin. Run pnpm install from repo root.`,
+  );
+}
+
+/**
+ * Spawn `next dev` via the pnpm .bin shim so peer deps resolve in CI/subprocesses.
+ * @param {string} appDir
+ * @param {number} port
+ * @param {NodeJS.ProcessEnv} childEnv
+ */
+function spawnNextDev(appDir, port, childEnv) {
+  const nextCli = resolveNextCli(appDir);
+  const args = ['dev', '--port', String(port)];
+
+  if (process.platform === 'win32') {
+    return spawn('cmd.exe', ['/d', '/s', '/c', nextCli, ...args], {
+      cwd: appDir,
+      env: childEnv,
+      stdio: 'inherit',
+      shell: false,
+    });
+  }
+
+  return spawn('sh', [nextCli, ...args], {
+    cwd: appDir,
+    env: childEnv,
+    stdio: 'inherit',
+    shell: false,
+  });
+}
+
 async function main() {
   const fromEnv = Number.parseInt(process.env.PORT ?? '', 10);
   const fromArg = parsePortFromArgs(process.argv.slice(2));
@@ -98,13 +145,11 @@ async function main() {
   }
   console.log('');
 
-  const nextBin = path.join(frontendDir, 'node_modules', 'next', 'dist', 'bin', 'next');
+  const child = spawnNextDev(frontendDir, port, childEnv);
 
-  const child = spawn(process.execPath, [nextBin, 'dev', '--port', String(port)], {
-    cwd: frontendDir,
-    env: childEnv,
-    stdio: 'inherit',
-    shell: false,
+  child.on('error', (error) => {
+    console.error('[dev] Failed to spawn Next.js:', error.message);
+    process.exit(1);
   });
 
   child.on('exit', (code, signal) => {

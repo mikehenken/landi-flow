@@ -57,8 +57,13 @@ jobs:
         run: pnpm exec playwright install chromium --with-deps
         working-directory: frontend
 
+      - name: Sync public assets for E2E
+        run: node scripts/sync-public-assets.mjs
+        working-directory: frontend
+
       - name: E2E tests (mock auth)
         run: pnpm run test:e2e
+        working-directory: frontend
         env:
           CI: true
           NEXT_PUBLIC_MOCK_AUTH: 'true'

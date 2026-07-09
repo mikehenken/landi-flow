@@ -3,7 +3,7 @@
  * Playwright webServer entry for chromium-mock — kills stale :3000, forces MOCK_AUTH=true
  * even when landi-flow/.env.local sets NEXT_PUBLIC_MOCK_AUTH empty.
  */
-import { execSync, spawn } from 'node:child_process';
+import { execSync, spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -50,9 +50,31 @@ function freePort(targetPort) {
   }
 }
 
+function runPredevSync() {
+  const syncScript = path.join(scriptDir, 'sync-public-assets.mjs');
+  if (!fs.existsSync(syncScript)) {
+    console.warn('[e2e-dev-mock] sync-public-assets.mjs missing; skipping predev sync.');
+    return;
+  }
+  const result = spawnSync(process.execPath, [syncScript], {
+    cwd: frontendDir,
+    env: process.env,
+    stdio: 'inherit',
+  });
+  if (result.error) {
+    throw new Error(`[e2e-dev-mock] sync-public-assets failed: ${result.error.message}`);
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      `[e2e-dev-mock] sync-public-assets exited with code ${result.status ?? 'unknown'}`,
+    );
+  }
+}
+
 const fileEnv = loadRootEnvLocal();
 
 async function main() {
+  runPredevSync();
   freePort(port);
 
   // Allow Windows TIME_WAIT / process teardown before rebinding :3000.
@@ -73,14 +95,30 @@ async function main() {
     NEXT_PUBLIC_ROOT_DOMAIN: fileEnv.NEXT_PUBLIC_ROOT_DOMAIN?.trim() || 'localhost',
   };
 
-  const child = spawn('node', ['scripts/dev.mjs', '--port', String(port)], {
+  const devScript = path.join(scriptDir, 'dev.mjs');
+  if (!fs.existsSync(devScript)) {
+    throw new Error(`[e2e-dev-mock] Missing dev launcher at ${devScript}`);
+  }
+
+  const child = spawn(process.execPath, [devScript, '--port', String(port)], {
     cwd: frontendDir,
     env: devEnv,
     stdio: 'inherit',
     shell: false,
   });
 
+  child.on('error', (error) => {
+    console.error('[e2e-dev-mock] Failed to spawn dev.mjs:', error.message);
+    process.exit(1);
+  });
+
   child.on('exit', (code, signal) => {
+    if (code !== 0 && code !== null) {
+      console.error(`[e2e-dev-mock] dev server exited with code ${code}`);
+    }
+    if (signal) {
+      console.error(`[e2e-dev-mock] dev server terminated by signal ${signal}`);
+    }
     process.exit(code ?? (signal ? 1 : 0));
   });
 }
