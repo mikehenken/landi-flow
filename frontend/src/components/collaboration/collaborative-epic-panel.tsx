@@ -12,6 +12,7 @@ import {
   useOthers,
 } from '@liveblocks/react/suspense';
 import { Input, EpicBadge, cn } from '@landi-flow/ui';
+import { isMockAuthEnabled } from '@/lib/api/config';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 import { getEpicStatusCategory } from '@/lib/epic-status';
 import { CollaborativeRoom } from './collaboration-provider';
@@ -32,7 +33,7 @@ export function CollaborativeEpicPanel({
   children,
   className,
 }: CollaborativeEpicPanelProps): React.ReactElement {
-  const liveblocksReady = isLiveblocksConfigured();
+  const liveblocksReady = isLiveblocksConfigured() && !isMockAuthEnabled();
   const storyOrder = React.useMemo(
     () => epicStories.map((story) => story.id),
     [epicStories],

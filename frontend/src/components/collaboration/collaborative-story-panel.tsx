@@ -12,6 +12,7 @@ import {
   useOthers,
 } from '@liveblocks/react/suspense';
 import { Input, cn } from '@landi-flow/ui';
+import { isMockAuthEnabled } from '@/lib/api/config';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 import { CollaborativeRoom } from './collaboration-provider';
 import { CursorOverlay, PresenceAvatars } from './presence-cursors';
@@ -27,7 +28,7 @@ export function CollaborativeStoryPanel({
   story,
   className,
 }: CollaborativeStoryPanelProps): React.ReactElement {
-  const liveblocksReady = isLiveblocksConfigured();
+  const liveblocksReady = isLiveblocksConfigured() && !isMockAuthEnabled();
   const hydrated = React.useMemo(
     () => (liveblocksReady ? hydrateStoryRoom(story) : null),
     [liveblocksReady, story],

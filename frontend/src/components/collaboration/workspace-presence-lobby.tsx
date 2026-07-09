@@ -4,6 +4,7 @@ import * as React from 'react';
 import { buildWorkspaceLobbyRoomId } from '@landi-flow/collaboration';
 import { useOthers } from '@liveblocks/react/suspense';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
+import { isMockAuthEnabled } from '@/lib/api/config';
 import { CollaborativeRoom } from './collaboration-provider';
 import { PresenceAvatars } from './presence-cursors';
 
@@ -15,7 +16,7 @@ export interface WorkspacePresenceLobbyProps {
 export function WorkspacePresenceLobby({
   workspaceId,
 }: WorkspacePresenceLobbyProps): React.ReactElement | null {
-  if (!isLiveblocksConfigured()) {
+  if (!isLiveblocksConfigured() || isMockAuthEnabled()) {
     return null;
   }
 

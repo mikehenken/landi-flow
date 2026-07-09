@@ -24,7 +24,7 @@ export function CollaborationProvider({
 }: CollaborationProviderProps): React.ReactElement {
   const { user, isReady: sessionReady } = useSupabaseSession();
 
-  if (!enabled || !isLiveblocksConfigured()) {
+  if (!enabled || !isLiveblocksConfigured() || isMockAuthEnabled()) {
     return <>{children}</>;
   }
 
@@ -55,7 +55,7 @@ export function CollaborativeRoom({
   children,
   fallback,
 }: CollaborativeRoomProps): React.ReactElement {
-  if (!isLiveblocksConfigured()) {
+  if (!isLiveblocksConfigured() || isMockAuthEnabled()) {
     return <>{children}</>;
   }
 

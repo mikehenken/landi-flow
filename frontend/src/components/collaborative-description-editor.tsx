@@ -5,6 +5,7 @@ import { InstantMarkdownEditor } from '@landi-flow/ui';
 import { buildEpicRoomId, buildStoryRoomId } from '@landi-flow/collaboration';
 import { useLiveblocksExtension } from '@liveblocks/react-tiptap';
 import { CollaborativeRoom } from '@/components/collaboration/collaboration-provider';
+import { isMockAuthEnabled } from '@/lib/api/config';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 import { DEMO_WORKSPACE_ID } from '@/lib/seed-data';
 
@@ -83,7 +84,8 @@ export function CollaborativeDescriptionEditor({
   embedded = false,
   'aria-label': ariaLabel,
 }: CollaborativeDescriptionEditorProps): React.ReactElement {
-  const useCollaboration = isLiveblocksConfigured() && !readOnly;
+  const useCollaboration =
+    isLiveblocksConfigured() && !readOnly && !isMockAuthEnabled();
   const roomId = buildDescriptionRoomId(entityType, entityId, workspaceId);
 
   const editor = (
