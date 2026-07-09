@@ -26,7 +26,11 @@
     "brand:optimize-svgs": "node scripts/optimize-brand-svgs.mjs",
     "brand:regen-logos:dry-run": "node scripts/regenerate-brand-logos.mjs --dry-run",
     "brand:regen-logos": "node scripts/regenerate-brand-logos.mjs",
-    "db:push:remote": "node scripts/db-push-remote.mjs"
+    "db:push:remote": "node scripts/db-push-remote.mjs",
+    "mcp:sync-dev-vars": "node scripts/sync-mcp-dev-vars.mjs",
+    "mcp:dev": "pnpm --filter @landi-flow/mcp-worker dev",
+    "mcp:issue-dev-key": "node scripts/issue-mcp-dev-key.mjs",
+    "mcp:test-tools": "node scripts/test-mcp-tools.mjs"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
