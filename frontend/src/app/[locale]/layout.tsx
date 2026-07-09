@@ -11,7 +11,7 @@ import {
   getWorkspaceById,
   resolveWorkspaceFromHost,
 } from '@/lib/workspace/registry';
-import { routing, type AppLocale } from '@/i18n/routing';
+import { routing } from '@/i18n/routing';
 import { isRtlLocale } from '@landi-flow/ui';
 import '../globals.css';
 
@@ -35,10 +35,6 @@ export const runtime = 'edge';
 interface LocaleLayoutProps {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
-}
-
-export function generateStaticParams(): Array<{ locale: AppLocale }> {
-  return routing.locales.map((locale) => ({ locale }));
 }
 
 export default async function LocaleLayout({
