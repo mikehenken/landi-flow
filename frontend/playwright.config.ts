@@ -39,9 +39,14 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
 const devReadyURL = `${baseURL}/api/e2e/health`;
 const liveApiReady = isLiveApiEnvReady();
 
+/** Study-orchestration matrix captures read landi-labs paths (sibling repo — absent in CI). */
+const ciStudyMatrixSpecs = process.env.CI
+  ? ['**/fhitm-matrix.spec.ts', '**/task-10b-visual-regression.spec.ts', '**/task-10b-retry-failed.spec.ts']
+  : [];
+
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: ['**/debug.spec.ts'],
+  testIgnore: ['**/debug.spec.ts', ...ciStudyMatrixSpecs],
   timeout: 90_000,
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
