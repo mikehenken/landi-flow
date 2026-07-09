@@ -76,9 +76,27 @@ File: `.cursor/mcp.json` (committed — no secrets).
 
 Reload Cursor MCP after setting `LANDI_FLOW_MCP_TOKEN` and starting the worker.
 
-## Production (when deployed)
+## Staging (deployed)
 
-Add a second entry pointing at `https://mcp.flow.landi.build/mcp` with a production-issued `lcf_sk_*` or OAuth `lcf_at_*` token. Production is **not deployed** as of this doc — use local dev.
+Add a second entry pointing at the staging MCP worker with a staging-issued `lcf_sk_*` or OAuth `lcf_at_*` token:
+
+```json
+{
+  "mcpServers": {
+    "landi-flow-staging": {
+      "transport": "http",
+      "url": "https://landi-flow-mcp.mikehenken.workers.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:LANDI_FLOW_MCP_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Issue keys via `POST https://landi-flow-mcp.mikehenken.workers.dev/api/mcp/keys` with a Supabase JWT.
+
+Production custom domain (`mcp.flow.landi.build`) is not configured yet.
 
 ## Tool catalogue (22 tools)
 

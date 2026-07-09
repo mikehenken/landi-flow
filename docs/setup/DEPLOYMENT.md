@@ -1,45 +1,56 @@
 # landi-flow — Deployment
 
-**Target platform:** Cloudflare Workers (API + MCP + frontend staging).
+**Target platform:** Cloudflare Workers (API + MCP + frontend staging via OpenNext).
+
+## Staging URLs
+
+| Component | Worker name | URL |
+|-----------|-------------|-----|
+| Frontend | `landi-flow-staging` | https://landi-flow-staging.mikehenken.workers.dev |
+| API | `landi-flow-api` | https://landi-flow-api.mikehenken.workers.dev |
+| MCP | `landi-flow-mcp` | https://landi-flow-mcp.mikehenken.workers.dev |
+
+Generic pattern: `https://<worker>.<subdomain>.workers.dev` where `<subdomain>` is your account label (e.g. `mikehenken`).
 
 ## Components
 
-| Component | Path | Cloudflare name | Default URL |
-|-----------|------|-----------------|-------------|
-| API Worker | `workers/api/` | `landi-flow-api` | `https://landi-flow-api.<subdomain>.workers.dev` |
-| MCP Worker | `workers/mcp/` | `landi-flow-mcp` | `https://landi-flow-mcp.<subdomain>.workers.dev` |
-| Frontend (staging) | `frontend/` | `landi-flow-staging` | `https://landi-flow-staging.<subdomain>.workers.dev` |
-
-Replace `<subdomain>` with your account workers.dev label (e.g. `mikehenken`).
+| Component | Path | Build | Deploy command |
+|-----------|------|-------|----------------|
+| API Worker | `workers/api/` | TypeScript (esbuild) | `npx wrangler deploy` |
+| MCP Worker | `workers/mcp/` | TypeScript (esbuild) | `npx wrangler deploy` |
+| Frontend Worker | `frontend/` | OpenNext → `.open-next/` | `pnpm worker:build && npx wrangler deploy` |
 
 ## CI/CD
 
-- **Test:** `.github/workflows/test.yml` — typecheck, vitest, Playwright E2E on PR/push
-- **Deploy:** `.github/workflows/deploy.yml` — Workers on `develop` push; frontend via `workflow_dispatch` + `deploy_frontend`
+Workflows in `.github/workflows/`:
 
-### GitHub repository configuration
+| Workflow | Trigger | Jobs |
+|----------|---------|------|
+| `test.yml` | PR + push to `develop`/`master`/`feature/**` | typecheck, vitest, Playwright E2E |
+| `deploy.yml` | Push to `develop` | Deploy API + MCP Workers |
+| `deploy.yml` | `workflow_dispatch` + **Deploy frontend** | OpenNext build + deploy `landi-flow-staging` |
 
-Set these as **repository secrets** (never commit values):
+### GitHub repository secrets
 
 | Secret | Purpose |
 |--------|---------|
-| `CLOUDFLARE_API_TOKEN` | Wrangler deploy (Workers) |
+| `CLOUDFLARE_API_TOKEN` | Wrangler deploy |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
 
-Optional **repository variables**:
+### GitHub repository variables (build-time, public)
 
 | Variable | Purpose |
 |----------|---------|
 | `CLOUDFLARE_WORKERS_DEV_SUBDOMAIN` | workers.dev label for deploy summary URLs |
-| `NEXT_PUBLIC_SUPABASE_URL` | Frontend build (public) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Frontend build (public) |
-| `NEXT_PUBLIC_SITE_URL` | Canonical staging URL (defaults to `landi-flow-staging` worker) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Frontend build |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Frontend build |
+| `NEXT_PUBLIC_SITE_URL` | Canonical staging URL |
 | `NEXT_PUBLIC_ROOT_DOMAIN` | Auth cookie domain root |
 | `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY` | Liveblocks public key |
-| `NEXT_PUBLIC_MOCK_AUTH` | `false` on staging for 13r HITM |
-| `FLOW_API_URL` | API Worker base URL for Next.js proxy routes |
+| `NEXT_PUBLIC_MOCK_AUTH` | `false` on staging |
+| `FLOW_API_URL` | API Worker base URL for Next.js proxy |
 
-### Worker runtime secrets
+## Worker runtime secrets
 
 Set via `wrangler secret put <NAME>` in each worker directory. **Key names only** — never print or commit values.
 
@@ -81,47 +92,22 @@ cd workers/mcp && npx wrangler secret list
 cd frontend && npx wrangler secret list
 ```
 
-## Local / manual deploy
+## Frontend (OpenNext → Cloudflare Worker)
 
-```bash
-# From repo root — install once
-pnpm install --frozen-lockfile
+Next.js 15 with `@opennextjs/cloudflare` deploys to Worker `landi-flow-staging`.
 
-# API Worker
-cd workers/api
-npx wrangler deploy
+**Why Workers (not Pages):** Cloudflare Pages project limit on the staging account; OpenNext on Workers is the active path.
 
-# MCP Worker
-cd workers/mcp
-npx wrangler deploy
-
-# Frontend staging Worker (OpenNext)
-cd frontend
-pnpm worker:build
-npx wrangler deploy
-
-# Health check
-curl https://landi-flow-api.<subdomain>.workers.dev/api/v1/health
-```
-
-Do **not** run `wrangler secret put` with placeholder values in agent sessions. Use existing production/staging secrets only.
-
-## Frontend (Cloudflare Workers via OpenNext)
-
-The frontend uses Next.js 15 with `@opennextjs/cloudflare` for staging deployment on Worker `landi-flow-staging`.
-
-**Why Workers (not Pages):** Cloudflare Pages project limit reached on the staging account; Workers deploy avoids creating a new Pages project and is the [recommended OpenNext path](https://opennext.js.org/cloudflare).
-
-### Build (local / CI)
+### Build
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm --filter @landi-flow/frontend typecheck
-pnpm --filter @landi-flow/frontend build          # standard Next.js build (local dev)
-pnpm --filter @landi-flow/frontend worker:build   # OpenNext → .open-next/ (Linux CI)
+pnpm --filter @landi-flow/frontend build          # standard Next.js (local dev)
+pnpm --filter @landi-flow/frontend worker:build   # OpenNext → .open-next/ (CI/Linux)
 ```
 
-Local dev is unchanged: `pnpm --filter @landi-flow/frontend dev` (port 3000).
+Local dev unchanged: `pnpm --filter @landi-flow/frontend dev`.
 
 ### Deploy (manual)
 
@@ -131,37 +117,71 @@ pnpm worker:deploy
 # or: pnpm worker:build && npx wrangler deploy
 ```
 
-### CI deploy
-
-`.github/workflows/deploy.yml` → `workflow_dispatch` with **Deploy frontend** enabled runs `worker:build` and `wrangler deploy` to **`landi-flow-staging`**.
-
 ### Config files
 
-- `frontend/wrangler.toml` — Worker `landi-flow-staging`, OpenNext output paths
-- `frontend/open-next.config.ts` — OpenNext Cloudflare adapter config
-- `frontend/next.config.ts` — monorepo transpile + `initOpenNextCloudflareForDev()` for bindings in dev
-- `public/_headers` — static asset cache headers (synced to `frontend/public/`)
+| File | Role |
+|------|------|
+| `frontend/wrangler.toml` | Worker name, OpenNext output paths, `FLOW_API_URL` var |
+| `frontend/open-next.config.ts` | OpenNext Cloudflare adapter |
+| `frontend/next.config.ts` | Monorepo transpile + `initOpenNextCloudflareForDev()` |
 
-### Legacy Pages path (optional, not used in CI)
+**OpenNext staging flags** (in `wrangler.toml` `[vars]`):
 
-`@cloudflare/next-on-pages` scripts (`pages:build`, `pages:deploy`) remain for reference but are blocked by Pages project quota. Do not use for staging until quota is increased or a project is retired.
+- `NEXT_PRIVATE_MINIMAL_MODE=1` — skips middleware manifest dynamic require
+- `FLOW_API_URL` — API Worker URL for server-side proxy
 
-## Staging checklist (Phase 12 → 13r)
+Locale paths must include prefix (e.g. `/en/auth/login`) while minimal mode is active.
 
-- [ ] PR CI green (`test.yml`)
-- [x] Workers deployed; `/api/v1/health` returns 200
-- [x] MCP OAuth secrets configured (root + OAuth metadata return 200)
-- [x] Frontend OpenNext adapter added (`@opennextjs/cloudflare`)
-- [ ] Frontend Worker deploy executed (CI `deploy_frontend` or manual)
-- [ ] `NEXT_PUBLIC_MOCK_AUTH=false` on staging Worker build
+### Legacy Pages path (not used)
+
+`pages:build` / `pages:deploy` scripts are deprecated (exit 1). Do not use until Pages quota is available.
+
+## Local / manual deploy (all Workers)
+
+```bash
+pnpm install --frozen-lockfile
+
+cd workers/api && npx wrangler deploy
+cd workers/mcp && npx wrangler deploy
+cd frontend && pnpm worker:build && npx wrangler deploy
+
+curl https://landi-flow-api.mikehenken.workers.dev/api/v1/health
+```
+
+Do **not** run `wrangler secret put` with placeholder values in agent sessions.
+
+## Supabase Auth (staging)
+
+Add redirect URL in Supabase Auth → URL configuration:
+
+```
+https://landi-flow-staging.mikehenken.workers.dev/auth/callback
+```
+
+## Staging checklist
+
+- [x] API Worker deployed; `/api/v1/health` → 200
+- [x] MCP Worker deployed; `/` → 200
+- [x] Frontend OpenNext adapter (`@opennextjs/cloudflare`)
+- [x] Frontend Worker deployed; `/en/auth/login` → 200
 - [ ] Frontend Worker runtime secrets (`LIVEBLOCKS_SECRET_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
-- [x] URLs recorded in `landi-labs/.../outputs/13r-live-hitm/deployment-report.md`
+- [ ] Supabase Auth redirect URL configured
+- [ ] `NEXT_PUBLIC_MOCK_AUTH=false` on staging build
 
 ## Rollback
 
+Per Worker:
+
 ```bash
-cd workers/api && npx wrangler deployments list
+cd workers/api    # or workers/mcp, frontend
+npx wrangler deployments list
 npx wrangler rollback [VERSION_ID]
 ```
 
-Repeat for `workers/mcp` and `frontend` (landi-flow-staging). Pages rollback N/A for Worker path.
+Repeat for each surface. Pages rollback N/A — frontend is on Workers.
+
+## Related
+
+- [Developer guide](../README.md)
+- [Cursor MCP setup](./cursor-mcp.md)
+- Study deployment report: `outputs/13r-live-hitm/deployment-report.md`
