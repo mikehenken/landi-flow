@@ -2,6 +2,7 @@ import type { NextConfig } from 'next';
 import { loadEnvConfig } from '@next/env';
 import path from 'node:path';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
@@ -42,4 +43,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+const config = withNextIntl(nextConfig);
+
+export default config;
+
+/** Local dev parity with Cloudflare Pages (next-on-pages). */
+if (process.env.NODE_ENV === 'development') {
+  void setupDevPlatform();
+}
