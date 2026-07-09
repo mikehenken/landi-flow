@@ -5,6 +5,11 @@ import type {
   WorkspaceMemberRole,
   WorkspaceMemberStatus,
 } from '@landi-flow/core/types';
+import {
+  fetchAuthEmailsByUserIds,
+  MemberInviteError,
+  resolveOrInviteUserByEmail,
+} from '../lib/member-invite.js';
 import { BaseController } from './base-controller.js';
 
 export interface WorkspaceMemberWithProfile extends WorkspaceMember {
@@ -14,7 +19,8 @@ export interface WorkspaceMemberWithProfile extends WorkspaceMember {
 }
 
 export interface MemberInviteInput {
-  user_id: string;
+  email: string;
+  display_name?: string;
   role?: WorkspaceMemberRole;
   status?: WorkspaceMemberStatus;
 }
@@ -69,12 +75,20 @@ export class MemberController extends BaseController {
       });
     }
 
+    let emailByUserId = new Map<string, string>();
+    try {
+      emailByUserId = await fetchAuthEmailsByUserIds(this.env, userIds);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load member emails';
+      throw new Error(message);
+    }
+
     return rows.map((member) => {
       const profile = profileByUserId.get(member.user_id);
       return {
         ...member,
         display_name: profile?.display_name ?? null,
-        email: null,
+        email: emailByUserId.get(member.user_id) ?? null,
         avatar_url: profile?.avatar_url ?? null,
       };
     });
@@ -84,24 +98,61 @@ export class MemberController extends BaseController {
     workspaceId: string,
     input: MemberInviteInput,
     ctx: CorrelationContext,
-  ): Promise<{ member: WorkspaceMember; correlation_id: string; outbox_event_id: string | null }> {
+  ): Promise<{
+    member: WorkspaceMemberWithProfile;
+    correlation_id: string;
+    outbox_event_id: string | null;
+  }> {
     await this.assertWorkspaceAdmin(workspaceId);
+
+    const resolved = await resolveOrInviteUserByEmail(this.env, {
+      email: input.email,
+      displayName: input.display_name,
+    });
+
+    if (resolved.userId === this.userId) {
+      throw new MemberInviteError('You cannot invite yourself', 'self_invite');
+    }
+
+    const { data: existingMember, error: existingError } = await this.db
+      .from('workspace_members')
+      .select('id, status')
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', resolved.userId)
+      .maybeSingle();
+
+    if (existingError) {
+      throw new Error(`Failed to check existing membership: ${existingError.message}`);
+    }
+
+    if (existingMember) {
+      throw new MemberInviteError('This user is already a workspace member', 'already_member');
+    }
 
     const { entity, outbox_event_id } = await this.mutateWithOutbox<WorkspaceMember>(
       workspaceId,
       ENTITY_TOPICS.WORKSPACE_UPDATED,
-      { action: 'member_invited', user_id: input.user_id },
+      { action: 'member_invited', email: resolved.email, user_id: resolved.userId },
       ctx,
       'invite_workspace_member',
       {
-        user_id: input.user_id,
+        user_id: resolved.userId,
         role: input.role ?? 'member',
         status: input.status ?? 'pending',
         invited_by: this.userId,
       },
     );
 
-    return { member: entity, correlation_id: ctx.correlation_id, outbox_event_id };
+    return {
+      member: {
+        ...entity,
+        display_name: input.display_name?.trim() || null,
+        email: resolved.email,
+        avatar_url: null,
+      },
+      correlation_id: ctx.correlation_id,
+      outbox_event_id,
+    };
   }
 
   async update(

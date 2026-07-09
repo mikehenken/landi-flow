@@ -1,6 +1,7 @@
 import type { ApiWorkerEnv } from '../middleware/auth.js';
 import { createDbClient, type DbClient } from '../lib/db.js';
 import { isAuthorizationError } from '../lib/authorization.js';
+import { isMemberInviteError } from '../lib/member-invite.js';
 import { correlationFromRequest, errorResponse, jsonResponse } from '../lib/http.js';
 import { logAndSinkObsError } from '../lib/obs-logger.js';
 import { WorkspaceController } from '../controllers/workspace-controller.js';
@@ -597,6 +598,9 @@ export async function handleApiRequest(
   } catch (err) {
     if (isAuthorizationError(err)) {
       return errorResponse('forbidden', err.message, 403, correlationId);
+    }
+    if (isMemberInviteError(err)) {
+      return errorResponse(err.code, err.message, 400, correlationId);
     }
     const message = err instanceof Error ? err.message : 'Internal server error';
     const status = message.includes('not found') ? 404 : 500;

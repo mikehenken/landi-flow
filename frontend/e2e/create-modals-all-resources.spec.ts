@@ -143,6 +143,30 @@ mockTest.describe('Create modals dropdown (mock auth)', () => {
       fullPage: true,
     });
   });
+
+  mockTest('member invite shows pending row during session', async ({ page }) => {
+    const uniqueEmail = `e2e-member-${Date.now()}@example.com`;
+
+    await page.goto('/en/workspace/settings/members', { waitUntil: 'domcontentloaded' });
+    await waitForHydratedWorkspace(page);
+
+    await page.getByTestId('members-invite-button').click();
+    await expect(page.getByTestId('create-member-modal')).toBeVisible({ timeout: 10_000 });
+    await page.getByTestId('create-member-email').fill(uniqueEmail);
+    await page.getByTestId('create-member-submit').click();
+    await expect(page.getByTestId('create-member-modal')).not.toBeVisible({
+      timeout: APP_READY_TIMEOUT_MS,
+    });
+
+    const invitedRow = page.getByTestId('workspace-member-row').filter({ hasText: uniqueEmail });
+    await mockExpect(invitedRow).toBeVisible({ timeout: APP_READY_TIMEOUT_MS });
+    await mockExpect(invitedRow).toContainText('pending');
+
+    await page.screenshot({
+      path: `${ARTIFACT_DIR}/09n-member-invited-mock.png`,
+      fullPage: true,
+    });
+  });
 });
 
 test.describe('Create modals persistence @requires-live-api', () => {

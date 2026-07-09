@@ -35,7 +35,7 @@ function useDismissOnOutside(
 }
 
 /**
- * Invite Member modal (CAP-004) — Supabase user UUID and role chip picker.
+ * Invite Member modal (CAP-004) — email invite with optional name and role picker.
  */
 export function CreateMemberModal({
   open,
@@ -44,8 +44,9 @@ export function CreateMemberModal({
   const { workspace } = useWorkspace();
   const t = useTranslations('members');
   const panelRef = React.useRef<HTMLDivElement>(null);
-  const userIdInputRef = React.useRef<HTMLInputElement>(null);
-  const [userId, setUserId] = React.useState('');
+  const emailInputRef = React.useRef<HTMLInputElement>(null);
+  const [email, setEmail] = React.useState('');
+  const [displayName, setDisplayName] = React.useState('');
   const [role, setRole] = React.useState<WorkspaceMemberRole>('member');
   const [rolePickerOpen, setRolePickerOpen] = React.useState(false);
   const rolePickerRef = React.useRef<HTMLDivElement>(null);
@@ -54,7 +55,8 @@ export function CreateMemberModal({
 
   const handleClose = React.useCallback((): void => {
     onOpenChange(false);
-    setUserId('');
+    setEmail('');
+    setDisplayName('');
     setRole('member');
     setRolePickerOpen(false);
     setError(null);
@@ -65,7 +67,7 @@ export function CreateMemberModal({
     open,
     onOpenChange: handleClose,
     panelRef,
-    initialFocusRef: userIdInputRef,
+    initialFocusRef: emailInputRef,
   });
 
   useDismissOnOutside(rolePickerOpen, rolePickerRef, () => setRolePickerOpen(false));
@@ -73,9 +75,9 @@ export function CreateMemberModal({
   const handleSubmit = React.useCallback(
     (event: React.FormEvent<HTMLFormElement>): void => {
       event.preventDefault();
-      const trimmedUserId = userId.trim();
-      if (!trimmedUserId) {
-        userIdInputRef.current?.focus();
+      const trimmedEmail = email.trim();
+      if (!trimmedEmail) {
+        emailInputRef.current?.focus();
         return;
       }
 
@@ -84,7 +86,8 @@ export function CreateMemberModal({
 
       void inviteMember({
         workspaceId: workspace.id,
-        userId: trimmedUserId,
+        email: trimmedEmail,
+        displayName: displayName.trim() || undefined,
         role,
         status: 'pending',
       })
@@ -100,7 +103,7 @@ export function CreateMemberModal({
           setSubmitting(false);
         });
     },
-    [userId, role, workspace.id, handleClose],
+    [email, displayName, role, workspace.id, handleClose],
   );
 
   return (
@@ -145,16 +148,32 @@ export function CreateMemberModal({
 
             <div className="flex flex-col gap-3 px-6 py-4">
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="create-member-user-id" className="text-sm text-muted-foreground">
-                  {t('create.user_id_label')}
+                <label htmlFor="create-member-email" className="text-sm text-muted-foreground">
+                  {t('create.email_label')}
                 </label>
                 <Input
-                  ref={userIdInputRef}
-                  id="create-member-user-id"
-                  data-testid="create-member-user-id"
-                  value={userId}
-                  onChange={(event) => setUserId(event.target.value)}
-                  placeholder={t('create.user_id_placeholder')}
+                  ref={emailInputRef}
+                  id="create-member-email"
+                  type="email"
+                  autoComplete="email"
+                  data-testid="create-member-email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder={t('create.email_placeholder')}
+                  disabled={submitting}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="create-member-display-name" className="text-sm text-muted-foreground">
+                  {t('create.display_name_label')}
+                </label>
+                <Input
+                  id="create-member-display-name"
+                  data-testid="create-member-display-name"
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  placeholder={t('create.display_name_placeholder')}
                   disabled={submitting}
                 />
               </div>

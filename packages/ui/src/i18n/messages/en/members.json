@@ -1,8 +1,10 @@
 {
   "create": {
     "title": "Invite member",
-    "user_id_label": "Supabase user ID",
-    "user_id_placeholder": "Enter user UUID to invite",
+    "email_label": "Email address",
+    "email_placeholder": "colleague@company.com",
+    "display_name_label": "Name (optional)",
+    "display_name_placeholder": "Jane Doe",
     "properties_label": "Member properties",
     "cancel": "Cancel",
     "submit": "Invite",

@@ -34,7 +34,8 @@ function MembersPageBody(): React.ReactElement {
 
   const handleRemove = React.useCallback(
     async (member: WorkspaceMemberWithProfile) => {
-      if (!window.confirm(`Remove ${member.display_name ?? member.user_id} from workspace?`)) {
+      const label = member.display_name ?? member.email ?? 'this member';
+      if (!window.confirm(`Remove ${label} from workspace?`)) {
         return;
       }
       setBusyId(member.id);
@@ -84,9 +85,10 @@ function MembersPageBody(): React.ReactElement {
               >
                 <div>
                   <p className="font-medium text-foreground">
-                    {member.display_name ?? member.user_id}
+                    {member.display_name ?? member.email ?? 'Invited member'}
                   </p>
                   <p className="text-xs text-muted-foreground">
+                    {member.email && member.display_name ? `${member.email} · ` : ''}
                     {member.role} · {member.status}
                   </p>
                 </div>
