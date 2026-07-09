@@ -6,6 +6,7 @@ import { AppShell } from '@/components/app-shell';
 import { SettingsSubnav } from '@/components/settings-subnav';
 import { StoryDetailLayoutSettingRow } from '@/components/story-detail-layout-toggle';
 import {
+  BillingSettingsPanel,
   ImportExportPanel,
   SecuritySettingsPanel,
   SlaRulesPanel,
@@ -87,6 +88,18 @@ export function WorkspaceSettingsImportPage(): React.ReactElement {
       <div className="flex h-full flex-col gap-6 p-6 lg:flex-row">
         <aside className="lg:w-48"><SettingsSubnav /></aside>
         <div className="min-w-0 flex-1"><ImportExportPanel /></div>
+      </div>
+    </AppShell>
+  );
+}
+
+export function WorkspaceSettingsBillingPage(): React.ReactElement {
+  const t = useTranslations('navigation');
+  return (
+    <AppShell viewTitle="Billing" breadcrumbs={[t('views.workspace'), t('settings.title'), 'Billing']}>
+      <div className="flex h-full flex-col gap-6 p-6 lg:flex-row">
+        <aside className="lg:w-48"><SettingsSubnav /></aside>
+        <div className="min-w-0 flex-1"><BillingSettingsPanel /></div>
       </div>
     </AppShell>
   );

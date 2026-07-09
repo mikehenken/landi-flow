@@ -15,7 +15,41 @@ import {
   updateNotificationPrefs,
   updateProfile,
 } from '@/controllers/settings-completion-controller';
+import { useShellSidebarPreference } from '@/hooks/use-shell-sidebar-preference';
 import { useWorkspace } from '@/lib/workspace';
+import { StoryDetailLayoutSettingRow } from '@/components/story-detail-layout-toggle';
+
+export function PersonalPreferencesPanel(): React.ReactElement {
+  const { collapsed, setCollapsed } = useShellSidebarPreference();
+
+  return (
+    <section
+      className="rounded-lg border border-border bg-card p-6"
+      data-testid="personal-preferences-panel"
+      data-cap="CAP-109"
+    >
+      <h2 className="mb-4 text-lg font-medium">Preferences (CAP-109)</h2>
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-foreground">Navigation sidebar</h3>
+          <p className="text-sm text-muted-foreground">
+            Default sidebar state persists across workspace navigation (FHITM-B07).
+          </p>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={collapsed}
+              onChange={(event) => setCollapsed(event.target.checked)}
+              data-testid="shell-sidebar-collapsed-pref"
+            />
+            Start with sidebar collapsed
+          </label>
+        </div>
+        <StoryDetailLayoutSettingRow />
+      </div>
+    </section>
+  );
+}
 
 export function PersonalProfilePanel({
   initialDisplayName,

@@ -228,6 +228,41 @@ export function SlaRulesPanel({ className }: { className?: string }): React.Reac
   );
 }
 
+/** Workspace billing summary — mock-friendly surface for CAP-082 / CAP-107. */
+export function BillingSettingsPanel(): React.ReactElement {
+  const { workspace } = useWorkspace();
+
+  return (
+    <section className="rounded-lg border border-border bg-card p-6" data-testid="billing-settings-panel">
+      <h2 className="mb-4 text-lg font-medium">Billing (CAP-082)</h2>
+      <dl className="grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-muted-foreground">Workspace</dt>
+          <dd className="font-medium">{workspace.name}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Plan</dt>
+          <dd className="font-medium" data-testid="billing-plan-label">
+            Team (mock)
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Seats</dt>
+          <dd className="font-medium">5 included</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Status</dt>
+          <dd className="font-medium text-emerald-400">Active</dd>
+        </div>
+      </dl>
+      <p className="mt-4 text-xs text-muted-foreground">
+        Stripe billing integration is configured at the controller layer. This panel surfaces plan metadata for
+        workspace admins during mock-auth review.
+      </p>
+    </section>
+  );
+}
+
 export function ImportExportPanel(): React.ReactElement {
   const { workspace } = useWorkspace();
   const [csvText, setCsvText] = React.useState('title,description,priority\nImported story,From CSV,medium');

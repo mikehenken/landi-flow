@@ -13,6 +13,7 @@ const SETTINGS_LINKS = [
   { href: '/workspace/settings/members', key: 'members' as const },
   { href: '/workspace/settings/teams', label: 'Teams' },
   { href: '/workspace/settings/security', label: 'Security' },
+  { href: '/workspace/settings/billing', label: 'Billing' },
   { href: '/workspace/settings/apps', label: 'Apps' },
   { href: '/workspace/settings/import', label: 'Import' },
   { href: '/workspace/settings/taxonomy', label: 'Taxonomy' },
