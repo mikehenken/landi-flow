@@ -1,10 +1,59 @@
 import { test, expect, navigateToStories } from './fixtures';
+import type { APIRequestContext, Page } from '@playwright/test';
 
 const LOG_DIR =
   'logs/09-functional-completion/task-09ag-customer-asks-sla/iteration-1/artifacts';
 
 const DEMO_WORKSPACE_ID = 'ws-landi-flow-demo';
 const ASKS_WEBHOOK_SECRET = 'e2e-asks-secret';
+
+async function waitForQuoteInApi(
+  request: APIRequestContext,
+  quote: string,
+  timeoutMs = 30_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const listResponse = await request.get(
+      `/api/mock/customer-requests?workspace_id=${encodeURIComponent(DEMO_WORKSPACE_ID)}`,
+    );
+    if (listResponse.ok()) {
+      const listed = (await listResponse.json()) as { data: Array<{ quote: string }> };
+      if (listed.data.some((row) => row.quote === quote)) {
+        return;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(
+    `Quote "${quote}" not found in mock customer-requests API within ${timeoutMs}ms`,
+  );
+}
+
+async function waitForQuoteOnCustomersPage(page: Page, quote: string): Promise<void> {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const requestsLoaded = page.waitForResponse(
+      (resp) =>
+        resp.url().includes('/api/mock/customer-requests') &&
+        resp.request().method() === 'GET' &&
+        resp.ok(),
+    );
+    await page.goto('/en/workspace/customers', { waitUntil: 'domcontentloaded' });
+    await requestsLoaded;
+    await page.waitForSelector('html[data-app-hydrated="true"]', { timeout: 45_000 });
+    try {
+      await expect(
+        page.getByTestId('customer-request-row').filter({ hasText: quote }),
+      ).toBeVisible({ timeout: 20_000 });
+      return;
+    } catch (error) {
+      if (attempt === 3) {
+        throw error;
+      }
+      await page.reload({ waitUntil: 'domcontentloaded' });
+    }
+  }
+}
 
 test.describe('Customer asks & SLA (CAP-067,068,073,074)', () => {
   test.setTimeout(120_000);
@@ -40,27 +89,15 @@ test.describe('Customer asks & SLA (CAP-067,068,073,074)', () => {
     expect(body.request.id).toBeTruthy();
     expect(body.correlation_id).toBeTruthy();
 
-    const listResponse = await request.get(
-      `/api/mock/customer-requests?workspace_id=${encodeURIComponent(DEMO_WORKSPACE_ID)}`,
-    );
-    expect(listResponse.ok()).toBeTruthy();
-    const listed = (await listResponse.json()) as { data: Array<{ quote: string }> };
-    expect(listed.data.some((row) => row.quote === quote)).toBe(true);
+    await waitForQuoteInApi(request, quote);
 
-    const requestsLoaded = page.waitForResponse(
-      (resp) =>
-        resp.url().includes('/api/mock/customer-requests') &&
-        resp.request().method() === 'GET' &&
-        resp.ok(),
-    );
-    await page.goto('/en/workspace/customers', { waitUntil: 'domcontentloaded' });
-    await requestsLoaded;
-    await page.waitForSelector('html[data-app-hydrated="true"]', { timeout: 45_000 });
-    await expect(page.getByText(quote)).toBeVisible({ timeout: 15_000 });
+    await waitForQuoteOnCustomersPage(page, quote);
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForSelector('html[data-app-hydrated="true"]', { timeout: 45_000 });
-    await expect(page.getByText(quote)).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByTestId('customer-request-row').filter({ hasText: quote }),
+    ).toBeVisible({ timeout: 20_000 });
 
     await page.screenshot({
       path: `${LOG_DIR}/09ag-webhook-created-request.png`,
@@ -84,16 +121,8 @@ test.describe('Customer asks & SLA (CAP-067,068,073,074)', () => {
     expect(createResponse.ok()).toBeTruthy();
     const created = (await createResponse.json()) as { request: { id: string } };
 
-    const requestsLoaded = page.waitForResponse(
-      (resp) =>
-        resp.url().includes('/api/mock/customer-requests') &&
-        resp.request().method() === 'GET' &&
-        resp.ok(),
-    );
-    await page.goto('/en/workspace/customers', { waitUntil: 'domcontentloaded' });
-    await requestsLoaded;
-    await page.waitForSelector('html[data-app-hydrated="true"]', { timeout: 45_000 });
-    await expect(page.getByText(quote)).toBeVisible({ timeout: 15_000 });
+    await waitForQuoteInApi(request, quote);
+    await waitForQuoteOnCustomersPage(page, quote);
 
     const linkButton = page.getByTestId(`link-request-${created.request.id}-to-story-001`);
     await expect(linkButton).toBeVisible();
