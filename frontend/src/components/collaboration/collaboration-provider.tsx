@@ -13,6 +13,25 @@ import { isMockAuthEnabled } from '@/lib/api/config';
 import { useSupabaseSession } from '@/lib/supabase/session-provider';
 import type { JsonObject } from '@liveblocks/client';
 
+/** True only when `LiveblocksProvider` is mounted (session ready + keys configured). */
+const LiveblocksActiveContext = React.createContext(false);
+
+export function useLiveblocksActive(): boolean {
+  return React.useContext(LiveblocksActiveContext);
+}
+
+function CollaborationInactiveShell({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <LiveblocksActiveContext.Provider value={false}>
+      {children}
+    </LiveblocksActiveContext.Provider>
+  );
+}
+
 export interface CollaborationProviderProps {
   children: React.ReactNode;
   enabled?: boolean;
@@ -25,18 +44,20 @@ export function CollaborationProvider({
   const { user, isReady: sessionReady } = useSupabaseSession();
 
   if (!enabled || !isLiveblocksConfigured() || isMockAuthEnabled()) {
-    return <>{children}</>;
+    return <CollaborationInactiveShell>{children}</CollaborationInactiveShell>;
   }
 
   // Defer Liveblocks auth until Supabase cookies are hydrated on the client.
   if (!isMockAuthEnabled() && (!sessionReady || !user)) {
-    return <>{children}</>;
+    return <CollaborationInactiveShell>{children}</CollaborationInactiveShell>;
   }
 
   return (
-    <BaseLiveblocksProvider authEndpoint={fetchLiveblocksAuthToken}>
-      {children}
-    </BaseLiveblocksProvider>
+    <LiveblocksActiveContext.Provider value={true}>
+      <BaseLiveblocksProvider authEndpoint={fetchLiveblocksAuthToken}>
+        {children}
+      </BaseLiveblocksProvider>
+    </LiveblocksActiveContext.Provider>
   );
 }
 
@@ -55,7 +76,9 @@ export function CollaborativeRoom({
   children,
   fallback,
 }: CollaborativeRoomProps): React.ReactElement {
-  if (!isLiveblocksConfigured() || isMockAuthEnabled()) {
+  const liveblocksActive = useLiveblocksActive();
+
+  if (!isLiveblocksConfigured() || isMockAuthEnabled() || !liveblocksActive) {
     return <>{children}</>;
   }
 
