@@ -34,6 +34,7 @@ import {
   Layers,
   LayoutList,
   Map,
+  PanelRight,
   Radio,
   Search,
   Settings,
@@ -81,10 +82,12 @@ import { useKeyboardNavigation } from '@/hooks/use-keyboard-navigation';
 import { useIsMobile } from '@/hooks/use-media-query';
 
 import { useShellSidebarPreference } from '@/hooks/use-shell-sidebar-preference';
+import { useShellInspectorPreference } from '@/hooks/use-shell-inspector-preference';
+import { resolveInspectorContent } from '@/lib/shell-inspector-content';
+import { InspectorPaneShell } from '@/components/inspector-pane-shell';
 
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { useWorkspace, getWorkspaceLogoUrl, getWorkspaceTheme } from '@/lib/workspace';
-import { isEpicDetailRoute } from '@/lib/route-matchers';
 import { LocaleSwitcher } from '@/components/locale-switcher';
 import { StoryDetailLayoutRoot } from '@/components/story-detail-panel';
 import { WorkspaceSwitcher } from '@/components/navigation/workspace-switcher';
@@ -155,12 +158,12 @@ export function AppShellFrame({
 
   const { collapsed: sidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } =
     useShellSidebarPreference();
+  const { open: inspectorOpen, setOpen: setInspectorOpen, toggleOpen: toggleInspectorOpen } =
+    useShellInspectorPreference();
 
   const isMobile = useIsMobile();
 
   const effectiveSidebarCollapsed = isMobile ? true : sidebarCollapsed;
-
-  const [inspectorOpen, setInspectorOpen] = React.useState(true);
 
   const [commandOpen, setCommandOpen] = React.useState(false);
 
@@ -551,7 +554,7 @@ export function AppShellFrame({
       }
     },
 
-    onToggleInspector: () => setInspectorOpen((prev) => !prev),
+    onToggleInspector: () => toggleInspectorOpen(),
 
     onCreateStory: openCreateStory,
 
@@ -623,14 +626,6 @@ export function AppShellFrame({
       window.location.reload();
     }
   }, []);
-
-
-
-  React.useEffect(() => {
-    if (isMobile) {
-      setInspectorOpen(false);
-    }
-  }, [isMobile]);
 
 
 
@@ -880,18 +875,84 @@ export function AppShellFrame({
 
 
 
-  const onStoriesRoute = pathname.includes('/stories');
+  const inspectorContent = React.useMemo(
+    () =>
+      resolveInspectorContent({
+        pathname,
+        hasInspectorSlot: Boolean(inspectorSlot),
+        selectedStoryId,
+        selectedEpicId,
+      }),
+    [pathname, inspectorSlot, selectedStoryId, selectedEpicId],
+  );
 
-  /** Story detail (modal or page aside) owns properties — avoid double sidebar (task-09p). */
-  const showStoryInspector =
-    pathname.includes('/inbox') ||
-    (onStoriesRoute && !selectedStoryId) ||
-    (Boolean(selectedStoryId) && !onStoriesRoute);
+  const { hasContent: hasInspectorContent, showStoryInspector, showEpicInspector } =
+    inspectorContent;
 
-  const showEpicInspector =
-    pathname.startsWith('/workspace/epics') &&
-    !isEpicDetailRoute(pathname) &&
-    !showStoryInspector;
+  const showInspectorPanel = hasInspectorContent && inspectorOpen && !isMobile;
+
+  const handleHideInspector = React.useCallback((): void => {
+    setInspectorOpen(false);
+  }, [setInspectorOpen]);
+
+  const handleShowInspector = React.useCallback((): void => {
+    setInspectorOpen(true);
+  }, [setInspectorOpen]);
+
+  const inspectorBody = React.useMemo((): React.ReactNode => {
+    if (inspectorSlot) {
+      return (
+        <InspectorPaneShell embeddedHeader onHide={handleHideInspector}>
+          {inspectorSlot}
+        </InspectorPaneShell>
+      );
+    }
+
+    if (showStoryInspector && selectedStory) {
+      return (
+        <InspectorPaneShell
+          title="Properties"
+          onHide={handleHideInspector}
+          onClose={() => {
+            storyStore.selectStory(null);
+            setInspectorOpen(false);
+          }}
+        >
+          <StoryInspector story={selectedStory} suppressHeader layout="inspector" />
+        </InspectorPaneShell>
+      );
+    }
+
+    if (showEpicInspector && selectedEpic) {
+      return (
+        <InspectorPaneShell
+          title="Epic Details"
+          onHide={handleHideInspector}
+          onClose={() => {
+            epicStore.selectEpic(null);
+            setInspectorOpen(false);
+          }}
+        >
+          <EpicInspector
+            epic={selectedEpic}
+            storyCount={epicStoryCount}
+            suppressHeader
+          />
+        </InspectorPaneShell>
+      );
+    }
+
+    return null;
+  }, [
+    inspectorSlot,
+    showStoryInspector,
+    selectedStory,
+    showEpicInspector,
+    selectedEpic,
+    epicStoryCount,
+    handleHideInspector,
+    setInspectorOpen,
+  ]);
 
 
 
@@ -1059,6 +1120,22 @@ export function AppShellFrame({
 
             </div>
 
+            {hasInspectorContent && !inspectorOpen && !isMobile ? (
+              <button
+                type="button"
+                data-testid="inspector-show-toggle"
+                onClick={handleShowInspector}
+                aria-label="Show properties panel"
+                className={cn(
+                  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border',
+                  'text-muted-foreground hover:bg-white/5 hover:text-foreground',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                )}
+              >
+                <PanelRight className="h-4 w-4" aria-hidden />
+              </button>
+            ) : null}
+
             <CreateResourceDropdown
               onCreateStory={openCreateStory}
               onCreateEpic={openCreateEpic}
@@ -1074,59 +1151,11 @@ export function AppShellFrame({
         }
 
         inspector={
-
-          inspectorOpen ? (
-
+          showInspectorPanel && inspectorBody ? (
             <ObsErrorBoundary fallbackMessage="Unable to render the properties panel.">
-
-              {inspectorSlot ? (
-
-                inspectorSlot
-
-              ) : showStoryInspector ? (
-
-                <StoryInspector
-
-                  story={selectedStory}
-
-                  onClose={() => {
-
-                    storyStore.selectStory(null);
-
-                    setInspectorOpen(false);
-
-                  }}
-
-                />
-
-              ) : showEpicInspector ? (
-
-                <EpicInspector
-
-                  epic={selectedEpic}
-
-                  storyCount={epicStoryCount}
-
-                  onClose={() => {
-
-                    epicStore.selectEpic(null);
-
-                    setInspectorOpen(false);
-
-                  }}
-
-                />
-
-              ) : (
-
-                <StoryInspector story={null} />
-
-              )}
-
+              {inspectorBody}
             </ObsErrorBoundary>
-
           ) : null
-
         }
 
       >

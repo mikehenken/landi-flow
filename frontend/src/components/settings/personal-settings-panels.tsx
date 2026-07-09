@@ -16,11 +16,13 @@ import {
   updateProfile,
 } from '@/controllers/settings-completion-controller';
 import { useShellSidebarPreference } from '@/hooks/use-shell-sidebar-preference';
+import { useShellInspectorPreference } from '@/hooks/use-shell-inspector-preference';
 import { useWorkspace } from '@/lib/workspace';
 import { StoryDetailLayoutSettingRow } from '@/components/story-detail-layout-toggle';
 
 export function PersonalPreferencesPanel(): React.ReactElement {
   const { collapsed, setCollapsed } = useShellSidebarPreference();
+  const { open: inspectorOpen, setOpen: setInspectorOpen } = useShellInspectorPreference();
 
   return (
     <section
@@ -43,6 +45,21 @@ export function PersonalPreferencesPanel(): React.ReactElement {
               data-testid="shell-sidebar-collapsed-pref"
             />
             Start with sidebar collapsed
+          </label>
+        </div>
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-foreground">Properties panel</h3>
+          <p className="text-sm text-muted-foreground">
+            When content is available, show the right properties sidebar by default.
+          </p>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={inspectorOpen}
+              onChange={(event) => setInspectorOpen(event.target.checked)}
+              data-testid="shell-inspector-open-pref"
+            />
+            Show properties panel when available
           </label>
         </div>
         <StoryDetailLayoutSettingRow />

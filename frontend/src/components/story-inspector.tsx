@@ -59,6 +59,8 @@ export interface StoryInspectorProps {
   layout?: StoryInspectorLayout;
   /** When true, description editor skips nested CollaborativeRoom (parent provides room). */
   embeddedCollaboration?: boolean;
+  /** When true, parent shell renders the header row (title + hide toggle). */
+  suppressHeader?: boolean;
 }
 
 /** Right properties panel (280px) for selected Story metadata. */
@@ -68,6 +70,7 @@ export function StoryInspector({
   onClose,
   layout = 'inspector',
   embeddedCollaboration = false,
+  suppressHeader = false,
 }: StoryInspectorProps): React.ReactElement {
   if (!story) {
     return (
@@ -86,6 +89,7 @@ export function StoryInspector({
       onClose={onClose}
       layout={layout}
       embeddedCollaboration={embeddedCollaboration}
+      suppressHeader={suppressHeader}
     />
   );
 }
@@ -95,12 +99,14 @@ function StoryInspectorContent({
   onClose,
   layout,
   embeddedCollaboration,
+  suppressHeader,
 }: {
   story: Story;
   epic?: Epic | null;
   onClose?: () => void;
   layout: StoryInspectorLayout;
   embeddedCollaboration: boolean;
+  suppressHeader: boolean;
 }): React.ReactElement {
   const [agentActivity, setAgentActivity] = React.useState<string | null>(null);
   const { pickerMembers, getMemberById, getAgentName } = useAssignableMembers();
@@ -187,7 +193,7 @@ function StoryInspectorContent({
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
-      {layout === 'inspector' ? (
+      {layout === 'inspector' && !suppressHeader ? (
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-medium text-foreground">Properties</h2>
           {onClose ? (
@@ -377,12 +383,15 @@ export interface EpicInspectorProps {
   epic: Epic | null;
   storyCount: number;
   onClose?: () => void;
+  /** When true, parent shell renders the header row (title + hide toggle). */
+  suppressHeader?: boolean;
 }
 
 export function EpicInspector({
   epic,
   storyCount,
   onClose,
+  suppressHeader = false,
 }: EpicInspectorProps): React.ReactElement {
   if (!epic) {
     return (
@@ -395,7 +404,12 @@ export function EpicInspector({
   }
 
   return (
-    <EpicInspectorContent epic={epic} storyCount={storyCount} onClose={onClose} />
+    <EpicInspectorContent
+      epic={epic}
+      storyCount={storyCount}
+      onClose={onClose}
+      suppressHeader={suppressHeader}
+    />
   );
 }
 
@@ -403,10 +417,12 @@ function EpicInspectorContent({
   epic,
   storyCount,
   onClose,
+  suppressHeader,
 }: {
   epic: Epic;
   storyCount: number;
   onClose?: () => void;
+  suppressHeader: boolean;
 }): React.ReactElement {
   const [agentActivity, setAgentActivity] = React.useState<string | null>(null);
   const { pickerMembers, getAgentName, getMemberById } = useAssignableMembers();
@@ -464,14 +480,16 @@ function EpicInspectorContent({
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <h2 className="text-sm font-medium text-foreground">Epic Details</h2>
-        {onClose ? (
-          <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close inspector">
-            ✕
-          </Button>
-        ) : null}
-      </div>
+      {!suppressHeader ? (
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="text-sm font-medium text-foreground">Epic Details</h2>
+          {onClose ? (
+            <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close inspector">
+              ✕
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="space-y-6 p-4">
         <EpicBadge
           name={epic.name}
