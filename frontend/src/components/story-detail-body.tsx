@@ -4,10 +4,12 @@ import * as React from 'react';
 import type { Story } from '@landi-flow/core/types';
 import { hydrateStoryRoom } from '@landi-flow/collaboration';
 import type { JsonObject } from '@liveblocks/client';
+import { Paperclip } from 'lucide-react';
 import { cn } from '@landi-flow/ui';
-import { ArtifactPanel } from '@/components/artifacts/artifact-panel';
+import { ArtifactPanel, ArtifactUploadTrigger } from '@/components/artifacts/artifact-panel';
 import { UnifiedCommentsPanel } from '@/components/comments/unified-comments-panel';
 import { StoryInspector } from '@/components/story-inspector';
+import { StoryDetailSection } from '@/components/story-detail-section';
 import {
   CollaborativeComments,
   CollaborativeRoom,
@@ -21,11 +23,12 @@ export interface StoryDetailBodyProps {
   className?: string;
 }
 
-/** Story detail content: properties inspector + optional Liveblocks presence/comments. */
+/** Story detail content: properties inspector, artifacts, and a single comments surface. */
 export function StoryDetailBody({
   story,
   className,
 }: StoryDetailBodyProps): React.ReactElement {
+  const [artifactRevision, setArtifactRevision] = React.useState(0);
   const liveblocksReady = isLiveblocksConfigured() && !isMockAuthEnabled();
   const hydrated = React.useMemo(
     () => (liveblocksReady ? hydrateStoryRoom(story) : null),
@@ -33,30 +36,56 @@ export function StoryDetailBody({
   );
 
   return (
-    <div className={cn('flex min-h-0 flex-col', className)} data-testid="story-detail-body">
+    <div className={cn('space-y-6 p-4', className)} data-testid="story-detail-body">
       <StoryInspector story={story} layout="detail" />
-      <div className="shrink-0 space-y-6 border-t border-border px-4 py-4">
-        <ArtifactPanel storyId={story.id} />
-        <UnifiedCommentsPanel storyId={story.id} />
-      </div>
+
+      <StoryDetailSection
+        title="Artifacts"
+        icon={<Paperclip className="h-4 w-4" />}
+        sectionId="artifacts"
+        testId="story-detail-artifacts-section"
+        actions={
+          <ArtifactUploadTrigger
+            storyId={story.id}
+            onUploaded={() => setArtifactRevision((value) => value + 1)}
+          />
+        }
+      >
+        <ArtifactPanel
+          key={artifactRevision}
+          storyId={story.id}
+          showTitle={false}
+          showUpload={false}
+        />
+      </StoryDetailSection>
+
       {liveblocksReady && hydrated !== null ? (
         <CollaborativeRoom
           roomId={hydrated.roomId}
           initialStorage={hydrated.initialStorage as unknown as JsonObject}
           fallback={
-            <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
-              Collaboration unavailable — properties remain editable offline.
-            </p>
+            <StoryDetailSection title="Comments" sectionId="comments" testId="story-detail-comments-section">
+              <p className="text-xs text-muted-foreground">
+                Collaboration unavailable — comments remain available offline below.
+              </p>
+              <UnifiedCommentsPanel storyId={story.id} showTitle={false} />
+            </StoryDetailSection>
           }
         >
-          <div className="shrink-0 border-t border-border px-4 py-4">
-            <div className="mb-3 flex items-center justify-end gap-2">
-              <PresenceAvatars />
-            </div>
-            <CollaborativeComments entityLabel="Story" />
-          </div>
+          <StoryDetailSection
+            title="Comments"
+            sectionId="comments"
+            actions={<PresenceAvatars />}
+            testId="story-detail-comments-section"
+          >
+            <CollaborativeComments entityLabel="Story" showTitle={false} />
+          </StoryDetailSection>
         </CollaborativeRoom>
-      ) : null}
+      ) : (
+        <StoryDetailSection title="Comments" sectionId="comments" testId="story-detail-comments-section">
+          <UnifiedCommentsPanel storyId={story.id} showTitle={false} />
+        </StoryDetailSection>
+      )}
     </div>
   );
 }

@@ -8,12 +8,15 @@ import type { CollabUserMeta } from '@landi-flow/collaboration';
 export interface CollaborativeCommentsProps {
   entityLabel?: string;
   className?: string;
+  /** When false, parent section supplies the uppercase header. */
+  showTitle?: boolean;
 }
 
 /** Collaborative comment threads via Liveblocks Comments product. */
 export function CollaborativeComments({
   entityLabel = 'Entity',
   className,
+  showTitle = true,
 }: CollaborativeCommentsProps): React.ReactElement {
   const { threads } = useThreads();
   const createThread = useCreateThread();
@@ -52,8 +55,8 @@ export function CollaborativeComments({
   };
 
   return (
-    <section className={cn('space-y-4', className)} aria-label="Collaborative comments">
-      <h3 className="text-sm font-semibold text-foreground">Comments</h3>
+    <section className={cn('space-y-3', className)} aria-label="Collaborative comments">
+      {showTitle ? <h3 className="text-sm font-semibold text-foreground">Comments</h3> : null}
 
       <div className="flex gap-2">
         <Input

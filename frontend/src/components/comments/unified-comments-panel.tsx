@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { CommentRecord } from '@landi-flow/core/types';
-import { Button, Input } from '@landi-flow/ui';
+import { Button, Input, cn } from '@landi-flow/ui';
 import { CommentAttributionBadge } from '@/components/comments/comment-attribution-badge';
 import {
   createComment,
@@ -15,6 +15,8 @@ export interface UnifiedCommentsPanelProps {
   storyId?: string | null;
   epicId?: string | null;
   className?: string;
+  /** When false, parent section supplies the uppercase header. */
+  showTitle?: boolean;
 }
 
 function authorLabel(comment: CommentRecord): string {
@@ -39,6 +41,7 @@ export function UnifiedCommentsPanel({
   storyId,
   epicId,
   className,
+  showTitle = true,
 }: UnifiedCommentsPanelProps): React.ReactElement {
   const [comments, setComments] = React.useState<CommentRecord[]>([]);
   const [draft, setDraft] = React.useState('');
@@ -79,9 +82,9 @@ export function UnifiedCommentsPanel({
       data-testid="unified-comments-panel"
       aria-label="Comments with attribution"
     >
-      <h3 className="text-sm font-semibold mb-3">Comments</h3>
+      {showTitle ? <h3 className="mb-3 text-sm font-semibold">Comments</h3> : null}
 
-      <div className="flex gap-2 mb-4">
+      <div className={cn('flex gap-2', showTitle ? 'mb-4' : 'mb-3')}>
         <Input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
