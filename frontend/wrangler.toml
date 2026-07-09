@@ -20,3 +20,4 @@ service = "landi-flow-staging"
 # next-intl middleware is disabled in minimal mode — locale paths must include /en/ prefix.
 NEXT_PRIVATE_MINIMAL_MODE = "1"
 NEXTJS_ENV = "production"
+FLOW_API_URL = "https://landi-flow-api.mikehenken.workers.dev"
