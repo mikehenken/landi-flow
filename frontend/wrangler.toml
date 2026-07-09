@@ -1,7 +1,7 @@
 # Cloudflare Pages — Next.js via @cloudflare/next-on-pages
 # Deploy: `pnpm pages:build && wrangler pages deploy .vercel/output/static --project-name=landi-flow`
+# Note: Pages projects must NOT set account_id here — pass via wrangler-action / CLI flags.
 name = "landi-flow"
-account_id = "dd84ae290b8a011725410e223c0ea928"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"

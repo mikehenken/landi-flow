@@ -137,7 +137,7 @@ GitHub Actions uses **repository variables** (public only) for the build step �
 
 ### Config files
 
-- `frontend/wrangler.toml` — Pages project name + `pages_build_output_dir`
+- `frontend/wrangler.toml` — Pages project name + `pages_build_output_dir` (no `account_id` — Pages rejects it)
 - `frontend/next.config.ts` — monorepo transpile (unchanged); use `pnpm pages:dev` for local Pages preview
 
 ## Staging checklist (Phase 12 → 13r)
