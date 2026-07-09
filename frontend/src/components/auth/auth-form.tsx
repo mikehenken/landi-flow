@@ -28,15 +28,14 @@ export function AuthForm({ mode, redirectPath = '/workspace/inbox' }: AuthFormPr
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const oauthRedirect = buildOAuthRedirectUrl(redirectPath);
-
   async function handleOAuth(provider: OAuthProvider): Promise<void> {
     setError(null);
     setLoading(true);
     const supabase = createClient();
+    const redirectTo = buildOAuthRedirectUrl(redirectPath, window.location.origin);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: oauthRedirect },
+      options: { redirectTo },
     });
     setLoading(false);
     if (oauthError) {
@@ -51,11 +50,12 @@ export function AuthForm({ mode, redirectPath = '/workspace/inbox' }: AuthFormPr
     const supabase = createClient();
 
     if (mode === 'signup') {
+      const emailRedirectTo = buildOAuthRedirectUrl(redirectPath, window.location.origin);
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: oauthRedirect,
+          emailRedirectTo,
           data: displayName ? { full_name: displayName } : undefined,
         },
       });

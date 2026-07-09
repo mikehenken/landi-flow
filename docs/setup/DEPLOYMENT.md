@@ -171,6 +171,41 @@ https://landi-flow-staging.mikehenken.workers.dev/auth/callback
 
 Use the primary `canvas.landi.build` URL once DNS resolves. Keep the workers.dev fallback until cutover is verified.
 
+### OAuth redirect URL (localhost bug)
+
+OAuth `redirectTo` is set in the **client bundle** at interaction time from `window.location.origin`, not from build-time `NEXT_PUBLIC_SITE_URL`. That prevents local `.env.local` values (e.g. `http://localhost:3100`) from leaking into production when a dev build is deployed.
+
+**Still required for CI builds:**
+
+| When | Set `NEXT_PUBLIC_SITE_URL` to |
+|------|-------------------------------|
+| GitHub Actions `deploy-frontend` | `https://canvas.landi.build` (repo variable or default in workflow) |
+| Manual `worker:build` before deploy | Export env **or** rely on browser origin at OAuth click time |
+
+**Verify Worker runtime vars** (not secrets — in `wrangler.toml` `[vars]` or `wrangler secret list`):
+
+```bash
+cd frontend
+npx wrangler secret list   # should NOT override NEXT_PUBLIC_SITE_URL with localhost
+```
+
+If a stale Worker secret sets `NEXT_PUBLIC_SITE_URL=http://localhost:3000`, remove or update it:
+
+```bash
+cd frontend
+npx wrangler secret delete NEXT_PUBLIC_SITE_URL   # only if wrongly set as secret
+# Prefer [vars] in wrangler.toml: NEXT_PUBLIC_SITE_URL = "https://canvas.landi.build"
+```
+
+After code or env changes, redeploy:
+
+```bash
+pnpm --filter @landi-flow/frontend worker:build
+cd frontend && npx wrangler deploy
+```
+
+**Do not** run `wrangler secret put NEXT_PUBLIC_SITE_URL` with placeholder localhost values in agent sessions without explicit user approval.
+
 ### Custom domain DNS
 
 Worker deploy binds `canvas.landi.build` via `[[routes]]` + `custom_domain = true` in `frontend/wrangler.toml`. If the hostname does not resolve after deploy, add a proxied DNS record in the **landi.build** zone (Cloudflare dashboard → DNS) or ensure the deploy API token has **Zone.DNS.Edit** + **Workers Routes** permissions.
