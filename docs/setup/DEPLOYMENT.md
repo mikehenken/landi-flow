@@ -88,34 +88,67 @@ curl https://landi-flow-api.<subdomain>.workers.dev/api/v1/health
 
 Do **not** run `wrangler secret put` with placeholder values in agent sessions. Use existing production/staging secrets only.
 
-## Frontend (Cloudflare Pages) — pending adapter
+## Frontend (Cloudflare Pages)
 
-The frontend is Next.js 15 with App Router, `next-intl`, and monorepo workspace packages. Vanilla `next build` output is **not** directly uploadable to Pages.
+The frontend uses Next.js 15 with `@cloudflare/next-on-pages` for Cloudflare Pages deployment.
 
-Before enabling the `deploy_frontend` workflow input:
+### Build (local / CI)
 
-1. Add `@cloudflare/next-on-pages` (or OpenNext for Cloudflare) to `frontend/`
-2. Create a Cloudflare Pages project (e.g. `landi-flow`)
-3. Configure Pages environment variables (public only in client):
+```bash
+# From repo root
+pnpm install --frozen-lockfile
+pnpm --filter @landi-flow/frontend typecheck
+pnpm --filter @landi-flow/frontend build          # standard Next.js build (verified)
+pnpm --filter @landi-flow/frontend pages:build    # next build + next-on-pages (Linux CI)
+```
 
-| Variable | Purpose |
-|----------|---------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
-| `NEXT_PUBLIC_SITE_URL` | Canonical app URL |
-| `NEXT_PUBLIC_ROOT_DOMAIN` | Root domain for auth redirects |
-| `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY` | Liveblocks public key |
-| `FLOW_API_URL` | Deployed API Worker base URL |
-| `NEXT_PUBLIC_MOCK_AUTH` | `false` on staging for 13r HITM |
+**Note:** `pages:build` requires Linux/macOS (Vercel CLI + next-on-pages are unreliable on Windows).
+
+### Deploy (manual)
+
+```bash
+cd frontend
+pnpm run pages:build
+pnpm run pages:deploy
+# or: npx wrangler pages deploy .vercel/output/static --project-name=landi-flow
+```
+
+### CI deploy
+
+`.github/workflows/deploy.yml` → `workflow_dispatch` with **Deploy frontend** enabled runs `pages:build` and `wrangler pages deploy` to project **`landi-flow`**.
+
+### Pages environment variables
+
+Set in **Cloudflare Pages → landi-flow → Settings → Environment variables** (encrypted for server-only keys):
+
+| Variable | Scope | Purpose |
+|----------|-------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Build + runtime | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Build + runtime | Supabase anon key |
+| `NEXT_PUBLIC_SITE_URL` | Build + runtime | Canonical app URL |
+| `NEXT_PUBLIC_ROOT_DOMAIN` | Build + runtime | Root domain for auth redirects |
+| `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY` | Build + runtime | Liveblocks public key |
+| `NEXT_PUBLIC_MOCK_AUTH` | Build + runtime | `false` on staging for 13r HITM |
+| `FLOW_API_URL` | Runtime | Deployed API Worker base URL |
+| `LIVEBLOCKS_SECRET_KEY` | Runtime (encrypted) | Liveblocks auth route |
+| `SUPABASE_SERVICE_ROLE_KEY` | Runtime (encrypted) | Server routes / liveblocks-auth |
+
+GitHub Actions uses **repository variables** (public only) for the build step — see deploy workflow `env:` block.
+
+### Config files
+
+- `frontend/wrangler.toml` — Pages project name + `pages_build_output_dir`
+- `frontend/next.config.ts` — monorepo transpile + `setupDevPlatform()` for local dev
 
 ## Staging checklist (Phase 12 → 13r)
 
 - [ ] PR CI green (`test.yml`)
-- [ ] Workers deployed; `/api/v1/health` returns 200
-- [ ] MCP OAuth secrets configured (MCP may 500 until secrets set)
-- [ ] Frontend Pages deploy enabled (after adapter)
-- [ ] `NEXT_PUBLIC_MOCK_AUTH=false` on staging
-- [ ] URLs recorded in `landi-labs/.../outputs/13r-live-hitm/deployment-report.md`
+- [x] Workers deployed; `/api/v1/health` returns 200
+- [x] MCP OAuth secrets configured (root + OAuth metadata return 200)
+- [x] Frontend Pages adapter added (`@cloudflare/next-on-pages`)
+- [ ] Frontend Pages deploy executed (CI `deploy_frontend` or manual)
+- [ ] `NEXT_PUBLIC_MOCK_AUTH=false` on staging Pages
+- [x] URLs recorded in `landi-labs/.../outputs/13r-live-hitm/deployment-report.md`
 
 ## Rollback
 
