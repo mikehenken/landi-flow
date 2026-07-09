@@ -11,6 +11,16 @@ export interface SidebarNavItem {
   active?: boolean;
   shortcutHint?: string;
   onClick?: () => void;
+  prefetch?: boolean;
+}
+
+export interface SidebarLinkComponentProps {
+  href: string;
+  className?: string;
+  children: React.ReactNode;
+  'aria-current'?: React.AriaAttributes['aria-current'];
+  onClick?: () => void;
+  prefetch?: boolean;
 }
 
 export interface SidebarSection {
@@ -26,6 +36,8 @@ export interface SidebarProps extends React.HTMLAttributes<HTMLElement> {
   footer?: React.ReactNode;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  /** Client router link (e.g. next-intl Link) for SPA navigation + prefetch. */
+  linkComponent?: React.ComponentType<SidebarLinkComponentProps>;
 }
 
 /**
@@ -39,6 +51,7 @@ export function Sidebar({
   footer,
   collapsed = false,
   onToggleCollapse,
+  linkComponent: LinkComponent,
   className,
   ...props
 }: SidebarProps): React.ReactElement {
@@ -85,7 +98,11 @@ export function Sidebar({
             <ul className="space-y-0.5">
               {section.items.map((item) => (
                 <li key={item.id}>
-                  <SidebarNavButton item={item} collapsed={collapsed} />
+                  <SidebarNavButton
+                    item={item}
+                    collapsed={collapsed}
+                    linkComponent={LinkComponent}
+                  />
                 </li>
               ))}
             </ul>
@@ -114,11 +131,13 @@ export function Sidebar({
 interface SidebarNavButtonProps {
   item: SidebarNavItem;
   collapsed: boolean;
+  linkComponent?: React.ComponentType<SidebarLinkComponentProps>;
 }
 
 function SidebarNavButton({
   item,
   collapsed,
+  linkComponent: LinkComponent,
 }: SidebarNavButtonProps): React.ReactElement {
   const content = (
     <>
@@ -147,6 +166,20 @@ function SidebarNavButton({
       ? 'bg-white/10 font-medium text-foreground'
       : 'font-normal text-muted-foreground hover:bg-white/5 hover:text-foreground',
   );
+
+  if (item.href && LinkComponent) {
+    return (
+      <LinkComponent
+        href={item.href}
+        className={className}
+        aria-current={item.active ? 'page' : undefined}
+        onClick={item.onClick}
+        prefetch={item.prefetch ?? true}
+      >
+        {content}
+      </LinkComponent>
+    );
+  }
 
   if (item.href) {
     return (

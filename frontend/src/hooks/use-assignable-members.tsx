@@ -28,6 +28,9 @@ const AssignableMembersContext = React.createContext<AssignableMembersContextVal
   null,
 );
 
+let cachedRosterWorkspaceId: string | null = null;
+let cachedRosterMembers: AssignableMember[] | null = null;
+
 function toPickerMembers(members: AssignableMember[]): PickerMember[] {
   return members.map((member) => ({
     kind: member.kind,
@@ -44,7 +47,13 @@ function toPickerMembers(members: AssignableMember[]): PickerMember[] {
 }
 
 function initialRosterState(): AssignableMember[] {
-  return isMockAuthEnabled() ? MOCK_ASSIGNABLE_MEMBERS : [];
+  if (isMockAuthEnabled()) {
+    return MOCK_ASSIGNABLE_MEMBERS;
+  }
+  if (cachedRosterMembers !== null) {
+    return cachedRosterMembers;
+  }
+  return [];
 }
 
 export function AssignableMembersProvider({
@@ -54,28 +63,39 @@ export function AssignableMembersProvider({
 }): React.ReactElement {
   const { workspace } = useWorkspace();
   const [members, setMembers] = React.useState<AssignableMember[]>(initialRosterState);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(
+    () =>
+      !isMockAuthEnabled() &&
+      !(cachedRosterWorkspaceId !== null && cachedRosterMembers !== null),
+  );
   const [error, setError] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
-    // Under real auth the roster RPC (`list_assignable_members`) is keyed by a
-    // uuid workspace id. Until `ActiveWorkspaceProvider` resolves the demo/host
-    // id (`ws-landi-flow-demo`) to the real workspace uuid, skip the fetch so we
-    // never send a non-uuid to the uuid column (Supabase 500). The effect re-runs
-    // once `workspace.id` becomes a resolved uuid.
     if (!isMockAuthEnabled() && !isWorkspaceUuid(workspace.id)) {
-      setLoading(true);
+      if (cachedRosterWorkspaceId !== workspace.id) {
+        setLoading(true);
+      }
       setError(null);
       return;
     }
+
+    if (cachedRosterWorkspaceId === workspace.id && cachedRosterMembers !== null) {
+      setMembers(cachedRosterMembers);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
       const roster = await fetchAssignableMembers(workspace.id);
+      cachedRosterWorkspaceId = workspace.id;
+      cachedRosterMembers = roster;
       setMembers(roster);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load members');
-      setMembers(isMockAuthEnabled() ? MOCK_ASSIGNABLE_MEMBERS : []);
+      setMembers(isMockAuthEnabled() ? MOCK_ASSIGNABLE_MEMBERS : cachedRosterMembers ?? []);
     } finally {
       setLoading(false);
     }
