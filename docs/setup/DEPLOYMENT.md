@@ -217,7 +217,7 @@ Worker deploy binds `canvas.landi.build` via `[[routes]]` + `custom_domain = tru
 - [x] Frontend OpenNext adapter (`@opennextjs/cloudflare`)
 - [x] Frontend Worker deployed; `/en/auth/login` → 200 (workers.dev + custom domain binding)
 - [x] Frontend Worker runtime secrets (6 keys — see table above)
-- [x] Custom domain `canvas.landi.build` bound on Worker (DNS may require dashboard record)
+- [x] Custom domain `canvas.landi.build` bound on Worker — DNS resolving (2026-07-09)
 - [ ] Supabase Auth redirect URL configured for `canvas.landi.build`
 - [ ] `NEXT_PUBLIC_MOCK_AUTH=false` on staging build
 

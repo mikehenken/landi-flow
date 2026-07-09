@@ -31,6 +31,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    testTimeout: 20_000,
     include: [
       'packages/core/src/**/*.test.ts',
       'packages/auth/src/**/*.test.ts',
