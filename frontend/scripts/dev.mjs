@@ -98,11 +98,13 @@ async function main() {
   }
   console.log('');
 
-  const child = spawn('pnpm', ['exec', 'next', 'dev', '--port', String(port)], {
+  const nextBin = path.join(frontendDir, 'node_modules', 'next', 'dist', 'bin', 'next');
+
+  const child = spawn(process.execPath, [nextBin, 'dev', '--port', String(port)], {
     cwd: frontendDir,
     env: childEnv,
     stdio: 'inherit',
-    shell: true,
+    shell: false,
   });
 
   child.on('exit', (code, signal) => {
