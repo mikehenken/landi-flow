@@ -30,6 +30,8 @@ export const metadata: Metadata = {
   },
 };
 
+export const runtime = 'edge';
+
 interface LocaleLayoutProps {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;

@@ -1,7 +1,7 @@
 import { MCP_TOOL_SURFACE, type McpToolSurfaceEntry } from '@/lib/mcp/mcp-tools-surface';
 import { isMockAuthEnabled } from '@/lib/api/config';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 interface McpToolsResponse {

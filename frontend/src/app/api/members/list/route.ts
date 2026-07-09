@@ -4,7 +4,7 @@ import { createServiceClientIfConfigured } from '@/lib/supabase/server';
 import { isMockAuthEnabled, parseAssignableMembers } from '@/lib/agents/roster-client';
 import { MOCK_ASSIGNABLE_MEMBERS } from '@/lib/agents/mock-roster';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 type ListAssignableMembersRpcClient = {

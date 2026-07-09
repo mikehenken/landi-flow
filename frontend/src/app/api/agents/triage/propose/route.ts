@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { proposeInboxTriage } from '@/lib/agents/triage-propose';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 /**

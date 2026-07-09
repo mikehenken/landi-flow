@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server';
 import type { ApplyToolRequestBody } from '@/lib/agent-chat/protocol';
 import { applyTool } from '@/lib/agent-chat/server/apply';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 /**

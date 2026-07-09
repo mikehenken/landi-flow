@@ -3,7 +3,7 @@ import type { EpicAttachedView, EpicCustomerLink, EpicTeamLink } from '@landi-fl
 import { createClient } from '@/lib/supabase/server';
 import { isMockAuthEnabled } from '@/lib/api/config';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const SEED_CUSTOMER_LINKS: EpicCustomerLink[] = [

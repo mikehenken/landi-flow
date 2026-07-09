@@ -5,7 +5,7 @@ import { createCorrelationContext } from '@/lib/correlation';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { SEED_ARTIFACTS } from '@/lib/artifacts/artifact-store';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 interface CreateArtifactBody {
