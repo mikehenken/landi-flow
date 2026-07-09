@@ -42,8 +42,7 @@ test.describe('Inbox activity feed (CAP-035 + CAP-015)', () => {
     await ensureHydratedInbox(page);
 
     const signalActivity = page
-      .getByTestId('inbox-activity-item')
-      .filter({ has: page.locator('[data-event-type="signal.attached"]') })
+      .locator('[data-testid="inbox-activity-item"][data-event-type="signal.attached"]')
       .first();
     await expect(signalActivity).toBeVisible({ timeout: 10_000 });
     await signalActivity.click();

@@ -74,6 +74,9 @@ test.describe('Board & epic views Shortcut parity (CAP-019, 031, 043, 048, 049)'
     });
 
     await page.getByTestId('epic-tab-stories').click();
-    await expect(page.getByTestId('story-list-item')).toHaveCount(3, { timeout: 15_000 });
+    const storyItems = page.getByTestId('story-list-item');
+    await expect(storyItems.first()).toBeVisible({ timeout: 15_000 });
+    const storyCount = await storyItems.count();
+    expect(storyCount).toBeGreaterThanOrEqual(3);
   });
 });

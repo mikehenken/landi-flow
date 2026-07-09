@@ -3,7 +3,6 @@ import { test, expect, SCREENSHOT_DIR, gNavigate } from './fixtures';
 
 const SHELL_SIDEBAR_COLLAPSED_KEY = 'landi-flow:shell-sidebar-collapsed';
 const HYDRATION_SELECTOR = 'html[data-app-hydrated="true"]';
-const STORIES_NAV_HREF = '/workspace/stories';
 
 const TASK_SCREENSHOT_DIR = path.resolve(
   __dirname,
@@ -13,8 +12,8 @@ const TASK_SCREENSHOT_DIR = path.resolve(
 function getStoriesNavLink(
   sidebar: import('@playwright/test').Locator,
 ): import('@playwright/test').Locator {
-  // "My Stories" matches both /stories and /my-issues (CAP-036); target href explicitly.
-  return sidebar.locator(`a[href="${STORIES_NAV_HREF}"]`);
+  // next-intl Link prefixes locale (e.g. /en/workspace/stories); match by accessible name.
+  return sidebar.getByRole('link', { name: 'My Stories' });
 }
 
 async function resetSidebarPreference(page: import('@playwright/test').Page): Promise<void> {
