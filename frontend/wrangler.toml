@@ -1,13 +1,20 @@
-# Cloudflare Pages — Next.js via @cloudflare/next-on-pages
-# Deploy: `pnpm pages:build && wrangler pages deploy .vercel/output/static --project-name=landi-flow`
-# Note: Pages projects must NOT set account_id here — pass via wrangler-action / CLI flags.
-name = "landi-flow"
-compatibility_date = "2026-01-01"
-compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".vercel/output/static"
+# Cloudflare Workers — Next.js via @opennextjs/cloudflare (staging)
+# Deploy: `pnpm worker:build && wrangler deploy`
+# URL: https://landi-flow-staging.<subdomain>.workers.dev
+name = "landi-flow-staging"
+main = ".open-next/worker.js"
+account_id = "dd84ae290b8a011725410e223c0ea928"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "landi-flow-staging"
 
 [vars]
-# Public runtime vars are set in Cloudflare Pages dashboard / CI — never commit secrets.
-# NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_SITE_URL,
-# NEXT_PUBLIC_ROOT_DOMAIN, NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY, NEXT_PUBLIC_MOCK_AUTH,
-# FLOW_API_URL (server-side proxy to API Worker)
+# Public runtime vars — set encrypted secrets via `wrangler secret put` (names only in docs).
+# FLOW_API_URL, NEXT_PUBLIC_* are injected at build time from CI / .dev.vars.

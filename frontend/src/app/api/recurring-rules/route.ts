@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { SEED_RECURRING_RULES } from '@/lib/recurring-stories/recurring-stories-store';
 
-export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const mockRules: RecurringStoryRule[] = [...SEED_RECURRING_RULES];

@@ -8,7 +8,6 @@ import { isMockForced, resolveGatewayConfig } from '@/lib/agent-chat/server/gate
 import { gatewayStream } from '@/lib/agent-chat/server/stream-gateway';
 import { mockStream } from '@/lib/agent-chat/server/mock';
 
-export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 /**

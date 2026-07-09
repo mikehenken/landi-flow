@@ -5,8 +5,6 @@ import {
   serializeObsLogEvent,
 } from '@landi-flow/core/observability/structured-log';
 
-export const runtime = 'edge';
-
 interface ObsReportBody {
   message: string;
   correlation_id?: string;

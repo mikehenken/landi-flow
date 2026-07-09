@@ -11,8 +11,6 @@ import type { WorkspaceMemberRole } from '@landi-flow/auth';
 import { Liveblocks } from '@liveblocks/node';
 import { NextResponse } from 'next/server';
 
-export const runtime = 'edge';
-
 interface LiveblocksAuthBody {
   room?: string;
 }

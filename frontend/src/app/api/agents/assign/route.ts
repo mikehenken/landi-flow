@@ -1,7 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { assignAndAct, type AssignAgentRequest, type AssignEntity } from '@/lib/agents/assign-agent';
 
-export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 /**

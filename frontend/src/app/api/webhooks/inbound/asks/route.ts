@@ -2,8 +2,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createCorrelationContext } from '@/lib/correlation';
 import { createServerCustomerRequest } from '@/lib/mock/server-settings-store';
 
-export const runtime = 'edge';
-
 function resolveAsksSecret(request: NextRequest): boolean {
   const configured =
     process.env.ASKS_INTAKE_WEBHOOK_SECRET?.trim() ??

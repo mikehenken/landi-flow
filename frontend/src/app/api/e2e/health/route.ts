@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-export const runtime = 'edge';
-
 /**
  * Playwright webServer readiness probe — returns 200 only when mock auth is active.
  * Prevents E2E from running against a real-auth dev server on :3000.

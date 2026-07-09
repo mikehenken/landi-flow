@@ -3,8 +3,8 @@
 # Workers: `landi-flow-api`, `landi-flow-mcp` — runtime secrets are set via
 # `wrangler secret put` / Cloudflare dashboard (never committed or echoed in CI).
 #
-# Frontend: Next.js 15 requires `@cloudflare/next-on-pages` or OpenNext before
-# Pages deploy is enabled. See docs/setup/DEPLOYMENT.md.
+# Frontend: Next.js 15 on Cloudflare Workers via @opennextjs/cloudflare (staging).
+# Pages path retained locally as legacy; CI deploys Worker `landi-flow-staging`.
 #
 # Triggers:
 #   - push to `develop` → deploy Workers (staging)
@@ -26,7 +26,7 @@ on:
         type: boolean
         default: true
       deploy_frontend:
-        description: Deploy frontend to Cloudflare Pages (requires next-on-pages adapter)
+        description: Deploy frontend Worker (OpenNext staging)
         type: boolean
         default: false
 
@@ -95,11 +95,11 @@ jobs:
       contents: read
       deployments: write
     env:
-      # Public build-time vars (no secrets). Server secrets belong in Cloudflare Pages dashboard.
+      # Public build-time vars (no secrets). Runtime secrets via wrangler secret put.
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://landi-flow.pages.dev' }}
-      NEXT_PUBLIC_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_ROOT_DOMAIN || 'landi-flow.pages.dev' }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || format('https://landi-flow-staging.{0}.workers.dev', vars.CLOUDFLARE_WORKERS_DEV_SUBDOMAIN || 'mikehenken') }}
+      NEXT_PUBLIC_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_ROOT_DOMAIN || format('landi-flow-staging.{0}.workers.dev', vars.CLOUDFLARE_WORKERS_DEV_SUBDOMAIN || 'mikehenken') }}
       NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY }}
       NEXT_PUBLIC_MOCK_AUTH: ${{ vars.NEXT_PUBLIC_MOCK_AUTH || 'false' }}
       FLOW_API_URL: ${{ vars.FLOW_API_URL || 'https://landi-flow-api.mikehenken.workers.dev' }}
@@ -121,42 +121,29 @@ jobs:
       - name: Typecheck frontend
         run: pnpm --filter @landi-flow/frontend typecheck
 
-      - name: Build for Cloudflare Pages (next-on-pages)
-        run: pnpm --filter @landi-flow/frontend pages:build
+      - name: Build for Cloudflare Workers (OpenNext)
+        run: pnpm --filter @landi-flow/frontend worker:build
 
-      - name: Ensure Cloudflare Pages project exists
-        uses: cloudflare/wrangler-action@v3
-        continue-on-error: true
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: frontend
-          command: pages project create landi-flow --production-branch=develop
-
-      - name: Deploy to Cloudflare Pages (landi-flow)
+      - name: Deploy frontend Worker (landi-flow-staging)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: frontend
-          command: pages deploy .vercel/output/static --project-name=landi-flow --commit-dirty=true
+          command: deploy
 
       - name: Record frontend URL
         run: |
+          SUB="${{ vars.CLOUDFLARE_WORKERS_DEV_SUBDOMAIN || 'mikehenken' }}"
           echo "## Frontend deploy" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Pages project: \`landi-flow\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- URL: https://landi-flow.pages.dev (or custom domain if configured)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Build: \`@cloudflare/next-on-pages\` → \`.vercel/output/static\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Worker: \`landi-flow-staging\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: https://landi-flow-staging.${SUB}.workers.dev" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Build: \`@opennextjs/cloudflare\` → \`.open-next/\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Required Pages environment variables (public only in CI)" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Variable | Purpose |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|----------|---------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| \`NEXT_PUBLIC_SUPABASE_URL\` | Supabase project URL |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| \`NEXT_PUBLIC_SUPABASE_ANON_KEY\` | Supabase anon key |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| \`NEXT_PUBLIC_SITE_URL\` | Canonical app URL |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| \`NEXT_PUBLIC_ROOT_DOMAIN\` | Auth redirect root domain |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| \`NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY\` | Liveblocks public key |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| \`NEXT_PUBLIC_MOCK_AUTH\` | \`false\` on staging for 13r HITM |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| \`FLOW_API_URL\` | API Worker base URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Required Worker secrets (wrangler secret put — names only)" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Secret | Purpose |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|---------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`LIVEBLOCKS_SECRET_KEY\` | Liveblocks auth route |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`SUPABASE_SERVICE_ROLE_KEY\` | Server routes |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Set server-only secrets (\`LIVEBLOCKS_SECRET_KEY\`, \`SUPABASE_SERVICE_ROLE_KEY\`, etc.) in **Cloudflare Pages → Settings → Environment variables** (encrypted), not in this workflow." >> "$GITHUB_STEP_SUMMARY"
+          echo "Public vars are inlined at build from GitHub repository variables." >> "$GITHUB_STEP_SUMMARY"

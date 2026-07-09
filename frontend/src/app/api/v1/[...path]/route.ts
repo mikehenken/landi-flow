@@ -2,8 +2,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createCorrelationContext } from '@/lib/correlation';
 
-export const runtime = 'edge';
-
 function resolveUpstreamBase(): string | null {
   const raw =
     process.env.FLOW_API_URL ??

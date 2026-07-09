@@ -4,8 +4,6 @@ import {
   listServerCustomerRequests,
 } from '@/lib/mock/server-settings-store';
 
-export const runtime = 'edge';
-
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const workspaceId =
     request.nextUrl.searchParams.get('workspace_id') ??

@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { cookies, headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
@@ -19,18 +19,16 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   title: 'Landi Flow',
   description:
-    'Open-source Linear-class PM with native human+AI collaboration â€” Epic and Story nomenclature.',
+    'Open-source Linear-class PM with native human+AI collaboration — Epic and Story nomenclature.',
   openGraph: {
     title: 'Landi Flow',
-    description: 'Easier than Linear â€” keyboard-first PM with governed AI agents.',
+    description: 'Easier than Linear — keyboard-first PM with governed AI agents.',
     images: ['/assets/og/og-image.jpg'],
   },
   icons: {
     icon: '/assets/favicons/favicon-master.jpg',
   },
 };
-
-export const runtime = 'edge';
 
 interface LocaleLayoutProps {
   children: React.ReactNode;

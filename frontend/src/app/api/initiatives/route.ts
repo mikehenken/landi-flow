@@ -7,7 +7,6 @@ import {
   readInitiativeSettings as readMockSettings,
 } from '@/lib/initiatives/initiatives-store';
 
-export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const mockInitiatives: Initiative[] = [...SEED_INITIATIVES];
