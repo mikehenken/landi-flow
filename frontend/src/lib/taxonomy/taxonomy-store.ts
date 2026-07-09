@@ -196,6 +196,14 @@ export function upsertStoryLabel(label: TaxonomyLabel): void {
   writeTaxonomy({ ...settings, story_labels });
 }
 
+export function deleteStoryLabel(labelId: string): void {
+  const settings = readTaxonomy();
+  writeTaxonomy({
+    ...settings,
+    story_labels: settings.story_labels.filter((row) => row.id !== labelId),
+  });
+}
+
 export function upsertCustomEmoji(emoji: CustomEmoji): void {
   const settings = readTaxonomy();
   const index = settings.custom_emojis.findIndex((row) => row.id === emoji.id);

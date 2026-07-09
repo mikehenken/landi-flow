@@ -4,6 +4,7 @@
 
 import * as React from 'react';
 
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 
 import {
@@ -73,8 +74,6 @@ import { CreateCustomerModal } from '@/components/create-customer-modal';
 import { CreateMemberModal } from '@/components/create-member-modal';
 import { CreateResourceDropdown } from '@/components/create-resource-dropdown';
 
-import { WorkspacePresenceLobby } from '@/components/collaboration';
-
 import { getEpicById, getStoriesForEpic } from '@/lib/seed-data';
 
 import { useKeyboardNavigation } from '@/hooks/use-keyboard-navigation';
@@ -91,10 +90,25 @@ import { useWorkspace, getWorkspaceLogoUrl, getWorkspaceTheme } from '@/lib/work
 import { LocaleSwitcher } from '@/components/locale-switcher';
 import { StoryDetailLayoutRoot } from '@/components/story-detail-panel';
 import { WorkspaceSwitcher } from '@/components/navigation/workspace-switcher';
-import { KeyboardShortcutsOverlay } from '@/components/navigation/keyboard-shortcuts-overlay';
 import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import type { ResolvedWorkspace } from '@/lib/workspace/registry';
 import { useWorkspacePageMeta, useWorkspaceShellContext } from '@/components/workspace-shell-provider';
+
+const WorkspacePresenceLobby = dynamic(
+  () =>
+    import('@/components/collaboration').then((module) => ({
+      default: module.WorkspacePresenceLobby,
+    })),
+  { ssr: false },
+);
+
+const KeyboardShortcutsOverlay = dynamic(
+  () =>
+    import('@/components/navigation/keyboard-shortcuts-overlay').then((module) => ({
+      default: module.KeyboardShortcutsOverlay,
+    })),
+  { ssr: false },
+);
 
 
 
@@ -587,6 +601,8 @@ export function AppShellFrame({
 
     },
 
+    onShowShortcuts: () => setShortcutsOverlayOpen(true),
+
     awaitingGSecondary,
 
   });
@@ -597,27 +613,6 @@ export function AppShellFrame({
     return () => {
       if (gKeyTimerRef.current) clearTimeout(gKeyTimerRef.current);
     };
-  }, []);
-
-  React.useEffect(() => {
-    const handleQuestionMark = (event: KeyboardEvent): void => {
-      const target = event.target as HTMLElement | null;
-      const tag = target?.tagName ?? '';
-      const isEditable =
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT' ||
-        target?.isContentEditable === true;
-      if (isEditable || event.metaKey || event.ctrlKey) {
-        return;
-      }
-      if (event.key === '?') {
-        event.preventDefault();
-        setShortcutsOverlayOpen(true);
-      }
-    };
-    window.addEventListener('keydown', handleQuestionMark);
-    return () => window.removeEventListener('keydown', handleQuestionMark);
   }, []);
 
   const handleWorkspaceSwitch = React.useCallback((next: ResolvedWorkspace): void => {
