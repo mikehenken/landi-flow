@@ -9,7 +9,7 @@
     "dev": "node ./scripts/dev.mjs",
     "dev:alt": "node ./scripts/dev-alt.mjs",
     "build": "next build",
-    "pages:build": "npx vercel build && npx @cloudflare/next-on-pages --skip-build",
+    "pages:build": "npx @cloudflare/next-on-pages",
     "pages:dev": "wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
     "pages:deploy": "wrangler pages deploy .vercel/output/static --project-name=landi-flow",
     "start": "next start --port 3000",
