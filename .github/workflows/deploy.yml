@@ -124,6 +124,15 @@ jobs:
       - name: Build for Cloudflare Pages (next-on-pages)
         run: pnpm --filter @landi-flow/frontend pages:build
 
+      - name: Ensure Cloudflare Pages project exists
+        uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: frontend
+          command: pages project create landi-flow --production-branch=develop
+
       - name: Deploy to Cloudflare Pages (landi-flow)
         uses: cloudflare/wrangler-action@v3
         with:
