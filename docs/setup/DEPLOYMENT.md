@@ -138,7 +138,7 @@ GitHub Actions uses **repository variables** (public only) for the build step �
 ### Config files
 
 - `frontend/wrangler.toml` — Pages project name + `pages_build_output_dir`
-- `frontend/next.config.ts` — monorepo transpile + `setupDevPlatform()` for local dev
+- `frontend/next.config.ts` — monorepo transpile + opt-in `setupDevPlatform()` (`CLOUDFLARE_PAGES_DEV=1`)
 
 ## Staging checklist (Phase 12 → 13r)
 

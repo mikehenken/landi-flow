@@ -47,7 +47,7 @@ const config = withNextIntl(nextConfig);
 
 export default config;
 
-/** Local dev parity with Cloudflare Pages (next-on-pages). */
-if (process.env.NODE_ENV === 'development') {
+/** Local dev parity with Cloudflare Pages — opt-in via CLOUDFLARE_PAGES_DEV=1 (not E2E). */
+if (process.env.NODE_ENV === 'development' && process.env.CLOUDFLARE_PAGES_DEV === '1') {
   void setupDevPlatform();
 }
