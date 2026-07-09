@@ -84,8 +84,10 @@ jobs:
 
   deploy-frontend:
     if: >-
+      always() &&
       github.event_name == 'workflow_dispatch' &&
-      inputs.deploy_frontend
+      inputs.deploy_frontend &&
+      (needs.deploy-workers.result == 'success' || needs.deploy-workers.result == 'skipped')
     runs-on: ubuntu-latest
     needs: deploy-workers
     timeout-minutes: 45
