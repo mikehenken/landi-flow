@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import type { Epic, StoryPriority } from '@landi-flow/core/types';
-import type { StoryWorkflowStatus } from '@landi-flow/ui';
+import type { Cycle, Epic, StoryPriority, Team } from '@landi-flow/core/types';
+import type { TaxonomyLabel } from '@/lib/taxonomy/taxonomy-types';
 import {
   Badge,
   EpicBadge,
@@ -11,18 +11,19 @@ import {
   cn,
   type PickerMember,
 } from '@landi-flow/ui';
-import { Check, ChevronDown, Bot, User, UserMinus } from 'lucide-react';
+import { Check, ChevronDown, Bot, User, UserMinus, Users } from 'lucide-react';
 import { getEpicStatusCategory } from '@/lib/epic-status';
 import { DEMO_WORKFLOW_STATE_ROWS } from '@/lib/seed-data';
 import { useEpicStore } from '@/hooks/use-epic-store';
-import { workflowStateToStatus } from '@/lib/workflow-states';
+import { workflowStateToStatus, type WorkflowStateKey } from '@/lib/workflow-states';
 
 const STORY_PRIORITIES: StoryPriority[] = ['none', 'low', 'medium', 'high', 'urgent'];
 
 const statusVariant: Record<
-  StoryWorkflowStatus,
+  WorkflowStateKey,
   'statusTodo' | 'statusInProgress' | 'statusDone' | 'secondary'
 > = {
+  triage: 'secondary',
   todo: 'statusTodo',
   in_progress: 'statusInProgress',
   done: 'statusDone',
@@ -148,6 +149,339 @@ function PopoverOption({
       <span className="flex min-w-0 flex-1 items-center gap-2">{children}</span>
       {selected ? <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden /> : null}
     </button>
+  );
+}
+
+export function PropertyEmptyValue({
+  children = 'None',
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}): React.ReactElement {
+  return (
+    <span className={cn('italic text-muted-foreground', className)}>{children}</span>
+  );
+}
+
+export interface TeamPickerProps {
+  teams: Team[];
+  teamId: string;
+  onSelect: (teamId: string) => void;
+}
+
+export function TeamPicker({
+  teams,
+  teamId,
+  onSelect,
+}: TeamPickerProps): React.ReactElement {
+  const selected = teams.find((team) => team.id === teamId) ?? null;
+
+  return (
+    <InlinePopover
+      testId="story-team-picker"
+      trigger={
+        selected ? (
+          <span className="inline-flex cursor-pointer items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>{selected.name}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        ) : (
+          <span className="inline-flex cursor-pointer items-center gap-1.5">
+            <PropertyEmptyValue />
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        )
+      }
+    >
+      {teams.map((team) => (
+        <PopoverOption
+          key={team.id}
+          selected={team.id === teamId}
+          onSelect={() => onSelect(team.id)}
+        >
+          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-sm">{team.name}</span>
+        </PopoverOption>
+      ))}
+    </InlinePopover>
+  );
+}
+
+export interface CyclePickerProps {
+  cycles: Cycle[];
+  cycleId: string | null;
+  onSelect: (cycleId: string | null) => void;
+}
+
+export function CyclePicker({
+  cycles,
+  cycleId,
+  onSelect,
+}: CyclePickerProps): React.ReactElement {
+  const selected = cycleId ? cycles.find((cycle) => cycle.id === cycleId) ?? null : null;
+
+  return (
+    <InlinePopover
+      testId="story-cycle-picker"
+      trigger={
+        selected ? (
+          <span className="inline-flex cursor-pointer items-center gap-1.5">
+            <span>{selected.name}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        ) : (
+          <span className="inline-flex cursor-pointer items-center gap-1.5">
+            <PropertyEmptyValue />
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        )
+      }
+    >
+      <PopoverOption selected={cycleId === null} onSelect={() => onSelect(null)}>
+        <PropertyEmptyValue />
+      </PopoverOption>
+      {cycles.map((cycle) => (
+        <PopoverOption
+          key={cycle.id}
+          selected={cycle.id === cycleId}
+          onSelect={() => onSelect(cycle.id)}
+        >
+          <span className="text-sm">{cycle.name}</span>
+        </PopoverOption>
+      ))}
+    </InlinePopover>
+  );
+}
+
+export interface StoryTypePickerProps {
+  types: TaxonomyLabel[];
+  typeId: string | null;
+  onSelect: (typeId: string | null) => void;
+}
+
+export function StoryTypePicker({
+  types,
+  typeId,
+  onSelect,
+}: StoryTypePickerProps): React.ReactElement {
+  const selected = typeId ? types.find((type) => type.id === typeId) ?? null : null;
+
+  return (
+    <InlinePopover
+      testId="story-type-picker"
+      trigger={
+        selected ? (
+          <span className="inline-flex cursor-pointer items-center gap-1.5">
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: selected.color }}
+              aria-hidden
+            />
+            <span>{selected.name}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        ) : (
+          <span className="inline-flex cursor-pointer items-center gap-1.5">
+            <PropertyEmptyValue>Feature</PropertyEmptyValue>
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        )
+      }
+    >
+      {types.map((type) => (
+        <PopoverOption
+          key={type.id}
+          selected={type.id === typeId}
+          onSelect={() => onSelect(type.id)}
+        >
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ backgroundColor: type.color }}
+            aria-hidden
+          />
+          <span className="text-sm">{type.name}</span>
+        </PopoverOption>
+      ))}
+    </InlinePopover>
+  );
+}
+
+export interface EstimatePickerProps {
+  estimate: number | null;
+  onChange: (estimate: number | null) => void;
+}
+
+export function EstimatePicker({
+  estimate,
+  onChange,
+}: EstimatePickerProps): React.ReactElement {
+  const [draft, setDraft] = React.useState(
+    estimate != null ? String(estimate) : '',
+  );
+
+  React.useEffect(() => {
+    setDraft(estimate != null ? String(estimate) : '');
+  }, [estimate]);
+
+  const commit = React.useCallback((): void => {
+    const trimmed = draft.trim();
+    if (!trimmed) {
+      onChange(null);
+      return;
+    }
+    const parsed = Number.parseInt(trimmed, 10);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      onChange(parsed);
+    }
+  }, [draft, onChange]);
+
+  return (
+    <input
+      type="number"
+      min={0}
+      step={1}
+      data-testid="story-estimate-picker"
+      value={draft}
+      placeholder="Unestimated"
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          commit();
+        }
+      }}
+      className={cn(
+        'w-full bg-transparent text-sm outline-none placeholder:italic placeholder:text-muted-foreground',
+      )}
+    />
+  );
+}
+
+export interface DueDatePickerProps {
+  dueDate: string | null;
+  onChange: (dueDate: string | null) => void;
+}
+
+export function DueDatePicker({
+  dueDate,
+  onChange,
+}: DueDatePickerProps): React.ReactElement {
+  const value = dueDate ? dueDate.slice(0, 10) : '';
+
+  return (
+    <input
+      type="date"
+      data-testid="story-due-date-picker"
+      value={value}
+      onChange={(event) => {
+        const next = event.target.value;
+        onChange(next ? `${next}T12:00:00.000Z` : null);
+      }}
+      className={cn(
+        'w-full bg-transparent text-sm outline-none',
+        !value ? 'text-muted-foreground italic' : undefined,
+      )}
+      placeholder="No date"
+    />
+  );
+}
+
+export interface StoryTemplatePickerProps {
+  templates: Array<{ id: string; name: string }>;
+  templateId: string;
+  onSelect: (templateId: string) => void;
+}
+
+export function StoryTemplatePicker({
+  templates,
+  templateId,
+  onSelect,
+}: StoryTemplatePickerProps): React.ReactElement {
+  const selected = templateId
+    ? templates.find((template) => template.id === templateId) ?? null
+    : null;
+
+  return (
+    <InlinePopover
+      testId="create-story-template"
+      trigger={
+        selected ? (
+          <span className="inline-flex cursor-pointer items-center gap-1.5">
+            <span>{selected.name}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        ) : (
+          <span className="inline-flex cursor-pointer items-center gap-1.5">
+            <PropertyEmptyValue />
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        )
+      }
+    >
+      <PopoverOption selected={templateId === ''} onSelect={() => onSelect('')}>
+        <PropertyEmptyValue />
+      </PopoverOption>
+      {templates.map((template) => (
+        <PopoverOption
+          key={template.id}
+          selected={template.id === templateId}
+          onSelect={() => onSelect(template.id)}
+        >
+          <span className="text-sm">{template.name}</span>
+        </PopoverOption>
+      ))}
+    </InlinePopover>
+  );
+}
+
+export interface CustomFieldPickerProps {
+  label: string;
+  value: string | null;
+  options: string[];
+  onSelect: (value: string | null) => void;
+  testId?: string;
+}
+
+export function CustomFieldPicker({
+  label,
+  value,
+  options,
+  onSelect,
+  testId,
+}: CustomFieldPickerProps): React.ReactElement {
+  return (
+    <InlinePopover
+      testId={testId}
+      trigger={
+        value ? (
+          <span className="inline-flex cursor-pointer items-center gap-1.5">
+            <span>{value}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        ) : (
+          <span className="inline-flex cursor-pointer items-center gap-1.5">
+            <PropertyEmptyValue />
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        )
+      }
+    >
+      <PopoverOption selected={value === null} onSelect={() => onSelect(null)}>
+        <PropertyEmptyValue />
+      </PopoverOption>
+      {options.map((option) => (
+        <PopoverOption
+          key={option}
+          selected={value === option}
+          onSelect={() => onSelect(option)}
+        >
+          <span className="text-sm">{option}</span>
+        </PopoverOption>
+      ))}
+      <span className="sr-only">{label}</span>
+    </InlinePopover>
   );
 }
 

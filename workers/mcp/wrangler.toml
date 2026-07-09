@@ -2,6 +2,7 @@ name = "landi-flow-mcp"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
+account_id = "dd84ae290b8a011725410e223c0ea928"
 
 [vars]
 ENABLE_OUTBOX_EMITTER = "true"

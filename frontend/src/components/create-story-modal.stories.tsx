@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { CreateStoryModal } from './create-story-modal';
 import { WorkspaceProvider } from '@/lib/workspace';
+import { AssignableMembersProvider } from '@/hooks/use-assignable-members';
 import { WORKSPACE_REGISTRY } from '@/lib/workspace/registry';
 import { DEMO_WORKSPACE_ID } from '@/lib/seed-data';
 
@@ -26,7 +27,9 @@ const meta: Meta<typeof CreateStoryModal> = {
       }
       return (
         <WorkspaceProvider workspace={workspace}>
-          <Story />
+          <AssignableMembersProvider>
+            <Story />
+          </AssignableMembersProvider>
         </WorkspaceProvider>
       );
     },

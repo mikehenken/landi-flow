@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { AppShell } from '@/components/app-shell';
 import { MyIssuesTabs } from '@/components/navigation/my-issues-tabs';
 import { useStoryStore } from '@/hooks/use-story-store';

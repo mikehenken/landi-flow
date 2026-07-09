@@ -1,0 +1,102 @@
+# Deploy landi-flow to Cloudflare (staging / production).
+#
+# Workers: `landi-flow-api`, `landi-flow-mcp` — runtime secrets are set via
+# `wrangler secret put` / Cloudflare dashboard (never committed or echoed in CI).
+#
+# Frontend: Next.js 15 requires `@cloudflare/next-on-pages` or OpenNext before
+# Pages deploy is enabled. See docs/setup/DEPLOYMENT.md.
+#
+# Triggers:
+#   - push to `develop` → deploy Workers (staging)
+#   - workflow_dispatch → optional Workers + optional frontend flag
+
+name: Deploy
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      deploy_workers:
+        description: Deploy API + MCP Workers
+        type: boolean
+        default: true
+      deploy_frontend:
+        description: Deploy frontend to Cloudflare Pages (requires next-on-pages adapter)
+        type: boolean
+        default: false
+
+jobs:
+  deploy-workers:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.deploy_workers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck workers
+        run: |
+          pnpm --filter @landi-flow/api-worker typecheck
+          pnpm --filter @landi-flow/mcp-worker typecheck
+
+      - name: Deploy API Worker (landi-flow-api)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/api
+          command: deploy
+
+      - name: Deploy MCP Worker (landi-flow-mcp)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/mcp
+          command: deploy
+
+      - name: Record worker URLs
+        run: |
+          echo "## Worker deploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API: https://landi-flow-api.${{ vars.CLOUDFLARE_WORKERS_DEV_SUBDOMAIN || 'mikehenken' }}.workers.dev" >> "$GITHUB_STEP_SUMMARY"
+          echo "- MCP: https://landi-flow-mcp.${{ vars.CLOUDFLARE_WORKERS_DEV_SUBDOMAIN || 'mikehenken' }}.workers.dev" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Health: /api/v1/health on API worker" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-frontend:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy_frontend
+    runs-on: ubuntu-latest
+    needs: deploy-workers
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Frontend Pages deploy (blocked)
+        run: |
+          echo "::error::Frontend Cloudflare Pages deploy is not configured yet."
+          echo "Next.js 15 requires @cloudflare/next-on-pages or OpenNext adapter."
+          echo "See docs/setup/DEPLOYMENT.md — enable after adapter is added."
+          exit 1

@@ -29,7 +29,7 @@ export interface StoryDetailBodyProps {
 
 /**
  * Story detail split layout: left main content (~75%) + right metadata sidebar (~25%).
- * Shortcut reference parity — single scroll on left, independent scroll on right.
+ * Unified scroll — both columns scroll together inside one overflow container.
  */
 export function StoryDetailBody({
   story,
@@ -88,41 +88,46 @@ export function StoryDetailBody({
 
   return (
     <div
-      className={cn('grid h-full min-h-0 grid-cols-[minmax(0,3fr)_minmax(0,1fr)]', className)}
+      className={cn('flex h-full min-h-0 flex-col', className)}
       data-testid="story-detail-body"
     >
-      <div
-        className="min-w-0 overflow-y-auto px-6 py-5"
-        data-testid="story-detail-main-scroll"
-      >
-        <StoryDetailSectionScroller scrollRootTestId="story-detail-main-scroll" />
-        <div className="space-y-8">
-          <StoryMainContent story={story} unifiedScroll />
-          <StoryDetailSection
-            title="Artifacts"
-            icon={<Paperclip className="h-4 w-4" />}
-            sectionId="artifacts"
-            testId="story-detail-artifacts-panel"
-            actions={
-              <ArtifactUploadTrigger
-                storyId={story.id}
-                onUploaded={() => setArtifactRevision((value) => value + 1)}
-              />
-            }
-          >
-            <ArtifactPanel
-              key={artifactRevision}
-              storyId={story.id}
-              showTitle={false}
-              showUpload={false}
-            />
-          </StoryDetailSection>
-          {commentsSection}
-        </div>
-      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto" data-testid="story-detail-unified-scroll">
+        <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
+          <div className="min-w-0 px-6 py-5" data-testid="story-detail-main-scroll">
+            <StoryDetailSectionScroller scrollRootTestId="story-detail-unified-scroll" />
+            <div className="space-y-8">
+              <StoryMainContent story={story} unifiedScroll />
+              <StoryDetailSection
+                title="Artifacts"
+                icon={<Paperclip className="h-4 w-4" />}
+                sectionId="artifacts"
+                testId="story-detail-artifacts-panel"
+                actions={
+                  <ArtifactUploadTrigger
+                    storyId={story.id}
+                    onUploaded={() => setArtifactRevision((value) => value + 1)}
+                  />
+                }
+              >
+                <ArtifactPanel
+                  key={artifactRevision}
+                  storyId={story.id}
+                  showTitle={false}
+                  showUpload={false}
+                />
+              </StoryDetailSection>
+              {commentsSection}
+            </div>
+          </div>
 
-      <div className="min-w-0 overflow-hidden border-l border-border/60 bg-surface/30 px-4 py-5">
-        <StoryModalMetadataPanel story={story} headerActions={headerActions} />
+          <div className="min-w-0 border-l border-border/60 bg-surface/30 px-4 py-5">
+            <StoryModalMetadataPanel
+              story={story}
+              headerActions={headerActions}
+              unifiedScroll
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

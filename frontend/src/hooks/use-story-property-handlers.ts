@@ -12,6 +12,10 @@ import {
   updateStoryOwner,
   updateStoryPriority,
   updateStoryWorkflowState,
+  updateStoryCycle,
+  updateStoryEstimate,
+  updateStoryDueDate,
+  updateStoryTeam,
 } from '@/controllers/story-controller';
 import { useAssignableMembers } from '@/hooks/use-assignable-members';
 import { useStoryActivity } from '@/hooks/use-story-activity';
@@ -31,6 +35,10 @@ export interface StoryPropertyHandlers {
   handlePriorityChange: (priority: Story['priority']) => void;
   handleEpicChange: (epicId: string | null) => void;
   handleSelectAgent: (agentId: string | null) => void;
+  handleCycleChange: (cycleId: string | null) => void;
+  handleEstimateChange: (estimate: number | null) => void;
+  handleDueDateChange: (dueDate: string | null) => void;
+  handleTeamChange: (teamId: string) => void;
 }
 
 /** Shared story property mutation handlers for inspector, sidebar, and main content. */
@@ -38,9 +46,13 @@ export function useStoryPropertyHandlers(story: Story): StoryPropertyHandlers {
   const [agentActivity, setAgentActivity] = React.useState<string | null>(null);
   const storyActivity = useStoryActivity(story);
   const { pickerMembers, getMemberById, getAgentName } = useAssignableMembers();
-  const requester = getMemberById(story.creator_id) ?? null;
-  const delegateMember = getMemberById(story.delegate_agent_id) ?? null;
-  const delegateAttribution = getDelegateAttributionLabel(delegateMember);
+  const requester =
+    pickerMembers.find((member) => member.id === story.creator_id) ?? null;
+  const delegateMember =
+    pickerMembers.find((member) => member.id === story.delegate_agent_id) ?? null;
+  const delegateAttribution = getDelegateAttributionLabel(
+    getMemberById(story.delegate_agent_id),
+  );
 
   const handleDescriptionChange = React.useCallback(
     (markdown: string) => {
@@ -91,6 +103,34 @@ export function useStoryPropertyHandlers(story: Story): StoryPropertyHandlers {
     [story],
   );
 
+  const handleCycleChange = React.useCallback(
+    (cycleId: string | null) => {
+      void updateStoryCycle(story.workspace_id, story, cycleId);
+    },
+    [story],
+  );
+
+  const handleEstimateChange = React.useCallback(
+    (estimate: number | null) => {
+      void updateStoryEstimate(story.workspace_id, story, estimate);
+    },
+    [story],
+  );
+
+  const handleDueDateChange = React.useCallback(
+    (dueDate: string | null) => {
+      void updateStoryDueDate(story.workspace_id, story, dueDate);
+    },
+    [story],
+  );
+
+  const handleTeamChange = React.useCallback(
+    (teamId: string) => {
+      void updateStoryTeam(story.workspace_id, story, teamId);
+    },
+    [story],
+  );
+
   const handleSelectAgent = React.useCallback(
     (agentId: string | null) => {
       void updateStoryDelegateAgent(story.workspace_id, story, agentId);
@@ -136,5 +176,9 @@ export function useStoryPropertyHandlers(story: Story): StoryPropertyHandlers {
     handlePriorityChange,
     handleEpicChange,
     handleSelectAgent,
+    handleCycleChange,
+    handleEstimateChange,
+    handleDueDateChange,
+    handleTeamChange,
   };
 }

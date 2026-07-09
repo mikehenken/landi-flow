@@ -24,6 +24,11 @@ export interface CreateStoryInput {
   workflowStateId?: string;
   priority?: StoryPriority;
   epicId?: string | null;
+  assigneeId?: string | null;
+  cycleId?: string | null;
+  estimate?: number | null;
+  dueDate?: string | null;
+  followerIds?: string[];
   isDraft?: boolean;
 }
 
@@ -182,15 +187,15 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
       description_md: input.descriptionMd ?? null,
       workflow_state_id: input.workflowStateId ?? WORKFLOW_STATES.todo,
       priority: input.priority ?? 'none',
-      assignee_id: null,
+      assignee_id: input.assigneeId ?? null,
       creator_id: CURRENT_USER.id,
-      follower_ids: [],
+      follower_ids: input.followerIds ?? [],
       delegate_agent_id: null,
       epic_id: input.epicId ?? null,
       milestone_id: null,
-      cycle_id: null,
-      estimate: null,
-      due_date: null,
+      cycle_id: input.cycleId ?? null,
+      estimate: input.estimate ?? null,
+      due_date: input.dueDate ?? null,
       sort_order: nextNumber,
       is_draft: input.isDraft ?? false,
       archived_at: null,
@@ -226,6 +231,18 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
 
   updateStoryCycle(storyId: string, cycleId: string | null): void {
     this.applyStoryPatch(storyId, { cycle_id: cycleId });
+  }
+
+  updateStoryEstimate(storyId: string, estimate: number | null): void {
+    this.applyStoryPatch(storyId, { estimate });
+  }
+
+  updateStoryDueDate(storyId: string, dueDate: string | null): void {
+    this.applyStoryPatch(storyId, { due_date: dueDate });
+  }
+
+  updateStoryTeam(storyId: string, teamId: string): void {
+    this.applyStoryPatch(storyId, { team_id: teamId });
   }
 
   /** Public patch for cross-module stores (milestones, cycles). */

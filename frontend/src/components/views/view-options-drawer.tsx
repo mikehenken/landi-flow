@@ -1,8 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import type { StoryDisplayOptions, StoryFilterAst } from '@landi-flow/core/types';
-import { Button, cn, DisplayPanel, FilterPanel } from '@landi-flow/ui';
+import type { StoryDisplayOptions, StoryFilterAst, ViewLayout } from '@landi-flow/core/types';
+import {
+  Button,
+  cn,
+  DisplayPanel,
+  FilterPanel,
+  type DisplayPanelLabels,
+  type FilterPanelLabels,
+} from '@landi-flow/ui';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
 
 export interface ViewOptionsDrawerProps {
@@ -12,12 +19,12 @@ export interface ViewOptionsDrawerProps {
   onFiltersChange: (filters: StoryFilterAst) => void;
   display: StoryDisplayOptions;
   onDisplayChange: (display: Partial<StoryDisplayOptions>) => void;
-  onLayoutChange: (layout: 'list' | 'board') => void;
+  onLayoutChange: (layout: ViewLayout) => void;
   statusOptions: Array<{ value: string; label: string }>;
   assigneeOptions: Array<{ value: string; label: string }>;
   customerOptions: Array<{ value: string; label: string }>;
-  filterLabels: Record<string, string>;
-  displayLabels: Record<string, string>;
+  filterLabels: FilterPanelLabels;
+  displayLabels: DisplayPanelLabels;
 }
 
 /** IDEA-001 — unified View options drawer with progressive disclosure. */

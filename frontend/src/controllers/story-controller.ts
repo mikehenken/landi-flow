@@ -72,6 +72,9 @@ export async function createStory(input: CreateStoryInput): Promise<Story> {
           workflow_state_id: workflowStateId,
           priority: input.priority ?? 'none',
           epic_id: input.epicId ?? null,
+          assignee_id: input.assigneeId ?? null,
+          cycle_id: input.cycleId ?? null,
+          estimate: input.estimate ?? null,
           is_draft: input.isDraft ?? false,
         },
         correlationId: createCorrelationContext().correlation_id,
@@ -217,6 +220,84 @@ export async function updateStoryFollowers(
     return;
   }
   // follower_ids not yet persisted in linear_clone.stories — local-only until schema lands.
+  void workspaceId;
+  void previous;
+}
+
+export async function updateStoryCycle(
+  workspaceId: string,
+  story: Story,
+  cycleId: string | null,
+): Promise<void> {
+  const previous = story.cycle_id;
+  storyStore.updateStoryCycle(story.id, cycleId);
+  if (isMockAuthEnabled()) {
+    persistMockStoryPatch(story.id, { cycle_id: cycleId });
+    return;
+  }
+  try {
+    const response = await apiFetch<{ story: DbStoryRow }>(
+      `workspaces/${workspaceId}/teams/${story.team_id}/stories/${story.id}`,
+      { method: 'PATCH', body: { cycle_id: cycleId } },
+    );
+    storyStore.upsertStory(mapStoryRow(response.story));
+  } catch (error) {
+    storyStore.updateStoryCycle(story.id, previous);
+    throw error;
+  }
+}
+
+export async function updateStoryEstimate(
+  workspaceId: string,
+  story: Story,
+  estimate: number | null,
+): Promise<void> {
+  const previous = story.estimate;
+  storyStore.updateStoryEstimate(story.id, estimate);
+  if (isMockAuthEnabled()) {
+    persistMockStoryPatch(story.id, { estimate });
+    return;
+  }
+  try {
+    const response = await apiFetch<{ story: DbStoryRow }>(
+      `workspaces/${workspaceId}/teams/${story.team_id}/stories/${story.id}`,
+      { method: 'PATCH', body: { estimate } },
+    );
+    storyStore.upsertStory(mapStoryRow(response.story));
+  } catch (error) {
+    storyStore.updateStoryEstimate(story.id, previous);
+    throw error;
+  }
+}
+
+export async function updateStoryDueDate(
+  workspaceId: string,
+  story: Story,
+  dueDate: string | null,
+): Promise<void> {
+  const previous = story.due_date;
+  storyStore.updateStoryDueDate(story.id, dueDate);
+  if (isMockAuthEnabled()) {
+    persistMockStoryPatch(story.id, { due_date: dueDate });
+    return;
+  }
+  // due_date not yet on StoryUpdateInput — optimistic local until API schema lands.
+  void workspaceId;
+  void previous;
+}
+
+export async function updateStoryTeam(
+  workspaceId: string,
+  story: Story,
+  teamId: string,
+): Promise<void> {
+  const previous = story.team_id;
+  storyStore.updateStoryTeam(story.id, teamId);
+  if (isMockAuthEnabled()) {
+    persistMockStoryPatch(story.id, { team_id: teamId });
+    return;
+  }
+  // Cross-team moves require a dedicated API — local optimistic until supported.
   void workspaceId;
   void previous;
 }

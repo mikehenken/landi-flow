@@ -23,7 +23,7 @@ function mockSlaStatus(story: Story): StorySlaStatus {
       : story.id === 'story-005';
   return {
     story_id: story.id,
-    sla_id: story.sla_id,
+    sla_id: story.sla_id ?? null,
     sla_due_at: seededDue ?? (story.id === 'story-005' ? new Date(Date.now() - 3600_000).toISOString() : null),
     breached,
     due_in_hours: breached ? -2 : 24,

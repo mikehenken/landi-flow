@@ -26,7 +26,8 @@ test.describe('Settings taxonomy & templates (CAP-008,009,090-098)', () => {
     await page.getByTestId('create-resource-dropdown-trigger').click();
     await page.getByTestId('create-dropdown-story').click();
     await expect(page.getByTestId('create-story-modal')).toBeVisible();
-    await page.getByTestId('create-story-template').locator('select').selectOption('tpl-story-bug');
+    await page.getByTestId('create-story-template').click();
+    await page.getByRole('option', { name: 'Bug report' }).click();
     await expect(page.getByTestId('create-story-title')).toHaveValue('Bug: ');
   });
 });

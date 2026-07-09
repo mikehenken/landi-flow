@@ -67,7 +67,7 @@ describe('loadStoryActivity (production API path)', () => {
       epic_id: null,
       story_identifier: 'GEN-25',
       story_title: story.title,
-      actor_type: 'user',
+      actor_type: 'human',
       actor_user_id: 'user-1',
       actor_agent_id: null,
       actor_name: 'Test User',

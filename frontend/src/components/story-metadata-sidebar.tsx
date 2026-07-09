@@ -24,17 +24,27 @@ import {
 import { publishStory } from '@/controllers/story-controller';
 import {
   AgentDelegatePicker,
+  CyclePicker,
+  DueDatePicker,
+  EstimatePicker,
   FollowersPicker,
   OwnerPicker,
+  PropertyEmptyValue,
   StoryEpicPicker,
-  StoryPriorityPicker,
+  StoryTypePicker,
   StoryStatusPicker,
+  TeamPicker,
 } from '@/components/story-property-pickers';
+import { StoryCustomFieldsSection, EMPTY_CUSTOM_FIELDS } from '@/components/story-custom-fields-section';
+import type { StoryCustomFieldValues } from '@/components/story-custom-fields-section';
 import { StorySlaBadge } from '@/components/story-sla-badge';
 import { useEpicStore } from '@/hooks/use-epic-store';
 import { useStoryPropertyHandlers } from '@/hooks/use-story-property-handlers';
+import { listCyclesForTeam } from '@/lib/cycles/cycle-store';
+import { listMockTeams } from '@/lib/mock/settings-completion-store';
+import { getTaxonomySettings } from '@/lib/taxonomy/taxonomy-store';
+import { useWorkspace } from '@/lib/workspace';
 import { buildStoryModalQueryString } from '@/lib/story/open-story-modal';
-import { DEMO_TEAM_ID } from '@/lib/seed-data';
 
 export interface MetadataPropertyRowProps {
   icon: React.ReactNode;
@@ -43,7 +53,7 @@ export interface MetadataPropertyRowProps {
   className?: string;
 }
 
-/** Shortcut-style metadata row: icon + muted label stacked above value. */
+/** Linear-style metadata row: icon + muted label + value in a rounded field block. */
 export function MetadataPropertyRow({
   icon,
   label,
@@ -51,16 +61,25 @@ export function MetadataPropertyRow({
   className,
 }: MetadataPropertyRowProps): React.ReactElement {
   return (
-    <div className={cn('flex items-start gap-2.5 py-2', className)}>
+    <div className={cn('flex items-start gap-2.5 py-1.5', className)}>
       <span
-        className="mt-0.5 flex w-5 shrink-0 items-center justify-center text-muted-foreground"
+        className="mt-2 flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground"
         aria-hidden
       >
         {icon}
       </span>
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <div className="text-sm text-foreground">{children}</div>
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
+          {label}
+        </p>
+        <div
+          className={cn(
+            'min-h-[34px] rounded-md border border-border/50 bg-white/[0.03] px-2.5 py-1.5',
+            'text-sm text-foreground',
+          )}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -71,6 +90,8 @@ export interface StoryMetadataSidebarProps {
   className?: string;
   /** Optional slot for modal chrome (pin / expand / close). */
   headerActions?: React.ReactNode;
+  /** When true, parent owns vertical scroll (no inner overflow). */
+  unifiedScroll?: boolean;
 }
 
 /** Right metadata sidebar (~25% width) — Shortcut property panel parity. */
@@ -78,10 +99,25 @@ export function StoryMetadataSidebar({
   story,
   className,
   headerActions,
+  unifiedScroll = false,
 }: StoryMetadataSidebarProps): React.ReactElement {
+  const { workspace } = useWorkspace();
   const { epics } = useEpicStore();
   const epic = epics.find((entry) => entry.id === story.epic_id) ?? null;
   const handlers = useStoryPropertyHandlers(story);
+  const teams = React.useMemo(() => listMockTeams(workspace.id), [workspace.id]);
+  const cycles = React.useMemo(
+    () => listCyclesForTeam(story.team_id),
+    [story.team_id],
+  );
+  const storyTypes = React.useMemo(
+    () => getTaxonomySettings().story_labels,
+    [],
+  );
+  const [storyTypeId, setStoryTypeId] = React.useState<string | null>(null);
+  const [customFields, setCustomFields] = React.useState<StoryCustomFieldValues>(
+    EMPTY_CUSTOM_FIELDS,
+  );
 
   const permalink = React.useMemo((): string => {
     if (typeof window === 'undefined') {
@@ -183,18 +219,22 @@ export function StoryMetadataSidebar({
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className={cn(unifiedScroll ? undefined : 'min-h-0 flex-1 overflow-y-auto')}>
         <div
           data-testid="story-detail-property-chips"
           className="space-y-0.5"
           aria-label="Story properties"
         >
           <MetadataPropertyRow icon={<Users className="h-4 w-4" />} label="Team">
-            <span>Team {story.team_id === DEMO_TEAM_ID ? '1' : story.team_id.slice(0, 6)}</span>
+            <TeamPicker
+              teams={teams}
+              teamId={story.team_id}
+              onSelect={handlers.handleTeamChange}
+            />
           </MetadataPropertyRow>
 
           <MetadataPropertyRow icon={<Workflow className="h-4 w-4" />} label="Workflow">
-            <span className="text-muted-foreground">Product Development</span>
+            <PropertyEmptyValue>Product Development</PropertyEmptyValue>
           </MetadataPropertyRow>
 
           <MetadataPropertyRow icon={<CircleDot className="h-4 w-4" />} label="State">
@@ -205,7 +245,7 @@ export function StoryMetadataSidebar({
           </MetadataPropertyRow>
 
           <MetadataPropertyRow icon={<Link2 className="h-4 w-4" />} label="Project">
-            <span className="text-muted-foreground">None</span>
+            <PropertyEmptyValue />
           </MetadataPropertyRow>
 
           <MetadataPropertyRow icon={<Flag className="h-4 w-4" />} label="Epic">
@@ -213,11 +253,19 @@ export function StoryMetadataSidebar({
           </MetadataPropertyRow>
 
           <MetadataPropertyRow icon={<Calendar className="h-4 w-4" />} label="Iteration">
-            <span className="text-muted-foreground">None</span>
+            <CyclePicker
+              cycles={cycles}
+              cycleId={story.cycle_id}
+              onSelect={handlers.handleCycleChange}
+            />
           </MetadataPropertyRow>
 
           <MetadataPropertyRow icon={<Star className="h-4 w-4" />} label="Type">
-            <span>Feature</span>
+            <StoryTypePicker
+              types={storyTypes}
+              typeId={storyTypeId}
+              onSelect={setStoryTypeId}
+            />
           </MetadataPropertyRow>
 
           <MetadataPropertyRow icon={<User className="h-4 w-4" />} label="Requester">
@@ -234,7 +282,7 @@ export function StoryMetadataSidebar({
                 }}
               />
             ) : (
-              <span className="text-muted-foreground">Unknown</span>
+              <PropertyEmptyValue>Unknown</PropertyEmptyValue>
             )}
           </MetadataPropertyRow>
 
@@ -265,13 +313,14 @@ export function StoryMetadataSidebar({
           </MetadataPropertyRow>
 
           <MetadataPropertyRow icon={<BarChart3 className="h-4 w-4" />} label="Estimate">
-            <span className="text-muted-foreground">
-              {story.estimate != null ? `${story.estimate} Points` : 'Unestimated'}
-            </span>
+            <EstimatePicker
+              estimate={story.estimate}
+              onChange={handlers.handleEstimateChange}
+            />
           </MetadataPropertyRow>
 
           <MetadataPropertyRow icon={<Calendar className="h-4 w-4" />} label="Due">
-            <span className="text-muted-foreground">{formatDate(story.due_date)}</span>
+            <DueDatePicker dueDate={story.due_date} onChange={handlers.handleDueDateChange} />
           </MetadataPropertyRow>
 
           <MetadataPropertyRow icon={<Users className="h-4 w-4" />} label="Followers">
@@ -283,19 +332,12 @@ export function StoryMetadataSidebar({
           </MetadataPropertyRow>
         </div>
 
-        <div className="mt-4 border-t border-border/60 pt-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-sm font-medium text-foreground">Custom Fields</h4>
-            <button type="button" className="text-xs text-primary hover:underline">
-              Edit
-            </button>
-          </div>
-          <div className="space-y-0.5">
-            <MetadataPropertyRow icon={<Star className="h-4 w-4" />} label="Priority">
-              <StoryPriorityPicker priority={story.priority} onSelect={handlers.handlePriorityChange} />
-            </MetadataPropertyRow>
-          </div>
-        </div>
+        <StoryCustomFieldsSection
+          priority={story.priority}
+          onPriorityChange={handlers.handlePriorityChange}
+          customFields={customFields}
+          onCustomFieldsChange={setCustomFields}
+        />
 
         <div className="mt-4 border-t border-border/60 pt-4">
           <div className="mb-2 flex items-center justify-between">
