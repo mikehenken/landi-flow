@@ -17,7 +17,12 @@ major_version = 15
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback", "http://localhost:3100/auth/callback"]
+# Common dev ports — launcher auto-picks among 3000/3100/3200; add hosted-dashboard URLs for other ports.
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3100/auth/callback",
+  "http://localhost:3200/auth/callback",
+]
 jwt_expiry = 3600
 enable_signup = true
 enable_anonymous_sign_ins = false

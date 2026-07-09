@@ -6,7 +6,7 @@
     "predev": "node ./scripts/sync-public-assets.mjs",
     "predev:alt": "node ./scripts/sync-public-assets.mjs",
     "prebuild": "node ./scripts/sync-public-assets.mjs",
-    "dev": "next dev --port 3000",
+    "dev": "node ./scripts/dev.mjs",
     "dev:alt": "node ./scripts/dev-alt.mjs",
     "build": "next build",
     "start": "next start --port 3000",

@@ -12,6 +12,11 @@ const repoRoot = path.join(__dirname, '..');
 // NEXT_PUBLIC_* vars inline into the client bundle and server routes see process.env.
 loadEnvConfig(repoRoot, process.env.NODE_ENV !== 'production', console, true);
 
+// Root .env.local may set NEXT_PUBLIC_MOCK_AUTH= (empty). E2E launcher sets LANDI_FORCE_MOCK_AUTH.
+if (process.env.LANDI_FORCE_MOCK_AUTH === 'true') {
+  process.env.NEXT_PUBLIC_MOCK_AUTH = 'true';
+}
+
 const nextConfig: NextConfig = {
   outputFileTracingRoot: repoRoot,
   transpilePackages: ['@landi-flow/ui', '@landi-flow/core', '@landi-flow/auth', '@landi-flow/collaboration'],

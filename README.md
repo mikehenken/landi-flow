@@ -60,11 +60,15 @@ pnpm install
 cp .env.example .env.local
 # Populate .env.local with values from your secret store (key names only in .env.example)
 
-pnpm dev          # http://localhost:3000 (canonical; collides with landing-editor / landi-canvas if those run first)
-pnpm dev:alt      # http://localhost:3100 (recommended when :3000 is taken)
+pnpm dev          # auto-picks :3000, then :3100, then :3200 if busy — sets SITE_URL to match
+pnpm dev:alt      # explicit :3100 (alongside landing-editor / landi-canvas on :3000)
 ```
 
-In VS Code / Cursor: **Terminal → Run Build Task** and choose **Dev (landi-flow :3100)**.
+**Port changes:** set `PORT` or use `dev:alt` — do **not** edit `NEXT_PUBLIC_SITE_URL` in `.env.local`. The dev launcher pins `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_ROOT_DOMAIN=localhost` to the bound port before Next starts.
+
+```bash
+PORT=3200 pnpm dev   # http://localhost:3200 (add redirect URL in hosted Supabase if not in config.toml)
+```
 
 ## Environment
 
