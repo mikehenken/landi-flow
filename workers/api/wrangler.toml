@@ -1,6 +1,7 @@
 name = "landi-flow-api"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
+account_id = "dd84ae290b8a011725410e223c0ea928"
 
 [vars]
 ENABLE_OUTBOX_EMITTER = "true"
@@ -15,5 +16,6 @@ ENABLE_OUTBOX_EMITTER = "true"
 # STRIPE_PRICE_PRO_MONTHLY
 # NEXT_PUBLIC_SITE_URL
 
-[[triggers.crons]]
-crons = ["*/1 * * * *"]
+# Cron disabled during wrangler 3.x schedule API mismatch — re-enable after wrangler 4 upgrade.
+# [[triggers.crons]]
+# crons = ["*/1 * * * *"]
