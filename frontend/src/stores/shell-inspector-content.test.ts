@@ -27,11 +27,11 @@ describe('resolveInspectorContent', () => {
     expect(result).toMatchObject({
       hasContent: false,
       variant: 'none',
-      showStoryInspector: true,
+      showStoryInspector: false,
     });
   });
 
-  it('shows story content on inbox when a story is selected', () => {
+  it('uses story modal on inbox instead of sidebar inspector when a story is selected', () => {
     const result = resolveInspectorContent({
       pathname: '/workspace/inbox',
       hasInspectorSlot: false,
@@ -40,8 +40,9 @@ describe('resolveInspectorContent', () => {
     });
 
     expect(result).toMatchObject({
-      hasContent: true,
-      variant: 'story',
+      hasContent: false,
+      variant: 'none',
+      showStoryInspector: false,
     });
   });
 

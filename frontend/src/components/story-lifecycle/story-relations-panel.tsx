@@ -76,9 +76,11 @@ export function StoryRelationsPanel({
 
   return (
     <section
-      className={cn('space-y-3', className)}
+      id="relations"
+      className={cn('space-y-3 scroll-mt-4', className)}
       data-testid="story-relations-panel"
       data-cap="CAP-007"
+      data-story-section="relations"
     >
       <div className="flex items-center gap-2">
         <Link2 className="h-4 w-4 text-muted-foreground" aria-hidden />

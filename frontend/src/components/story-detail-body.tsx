@@ -10,6 +10,7 @@ import { ArtifactPanel, ArtifactUploadTrigger } from '@/components/artifacts/art
 import { UnifiedCommentsPanel } from '@/components/comments/unified-comments-panel';
 import { StoryInspector } from '@/components/story-inspector';
 import { StoryDetailSection } from '@/components/story-detail-section';
+import { StoryDetailSectionScroller } from '@/components/story-detail-section-scroller';
 import {
   CollaborativeComments,
   CollaborativeRoom,
@@ -37,6 +38,7 @@ export function StoryDetailBody({
 
   return (
     <div className={cn('space-y-6 p-4', className)} data-testid="story-detail-body">
+      <StoryDetailSectionScroller />
       <StoryInspector story={story} layout="detail" />
 
       <StoryDetailSection

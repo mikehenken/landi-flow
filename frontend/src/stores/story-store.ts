@@ -1,7 +1,18 @@
 import type { Story, StoryPriority } from '@landi-flow/core/types';
 import { WORKFLOW_STATES } from '@/lib/workflow-states';
 import { CURRENT_USER } from '@/lib/agent-roster';
+import type { StoryDetailSectionId } from '@/lib/story/story-detail-sections';
 import { BaseDomainStore } from './base-domain-store';
+
+export interface StoryDetailFocus {
+  section: StoryDetailSectionId | null;
+  highlightedSignalId: string | null;
+}
+
+const emptyDetailFocus = (): StoryDetailFocus => ({
+  section: null,
+  highlightedSignalId: null,
+});
 
 const TEAM_IDENTIFIER_PREFIX = 'LAN';
 
@@ -26,6 +37,7 @@ function generateStoryId(): string {
 export interface StoryStoreState {
   stories: Story[];
   selectedStoryId: string | null;
+  detailFocus: StoryDetailFocus;
   loading: boolean;
   error: string | null;
 }
@@ -33,6 +45,7 @@ export interface StoryStoreState {
 const emptyState = (): StoryStoreState => ({
   stories: [],
   selectedStoryId: null,
+  detailFocus: emptyDetailFocus(),
   loading: false,
   error: null,
 });
@@ -60,6 +73,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
     return {
       stories: [...this.state.stories],
       selectedStoryId: this.state.selectedStoryId,
+      detailFocus: { ...this.state.detailFocus },
       loading: this.state.loading,
       error: this.state.error,
     };
@@ -80,7 +94,45 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
   }
 
   selectStory(storyId: string | null): void {
-    this.state = { ...this.state, selectedStoryId: storyId };
+    this.state = {
+      ...this.state,
+      selectedStoryId: storyId,
+      detailFocus: storyId ? this.state.detailFocus : emptyDetailFocus(),
+    };
+    this.notify();
+  }
+
+  openStoryDetail(storyId: string, focus: Partial<StoryDetailFocus> = {}): void {
+    this.state = {
+      ...this.state,
+      selectedStoryId: storyId,
+      detailFocus: {
+        section: focus.section ?? null,
+        highlightedSignalId: focus.highlightedSignalId ?? null,
+      },
+    };
+    this.notify();
+  }
+
+  setDetailFocus(focus: Partial<StoryDetailFocus>): void {
+    this.state = {
+      ...this.state,
+      detailFocus: {
+        section: focus.section !== undefined ? focus.section : this.state.detailFocus.section,
+        highlightedSignalId:
+          focus.highlightedSignalId !== undefined
+            ? focus.highlightedSignalId
+            : this.state.detailFocus.highlightedSignalId,
+      },
+    };
+    this.notify();
+  }
+
+  clearDetailFocus(): void {
+    this.state = {
+      ...this.state,
+      detailFocus: emptyDetailFocus(),
+    };
     this.notify();
   }
 

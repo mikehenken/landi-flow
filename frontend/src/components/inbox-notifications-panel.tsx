@@ -13,13 +13,15 @@ import { Bell, Bot } from 'lucide-react';
 import { EmptyState } from '@/components/empty-state';
 import { markInboxNotificationRead } from '@/controllers/inbox-controller';
 import { brandAssets } from '@/lib/correlation';
+import { resolveSectionFromNotification } from '@/lib/story/resolve-story-detail-section';
+import type { OpenStoryModalOptions } from '@/lib/story/open-story-modal';
 
 export interface InboxNotificationsPanelProps {
   notifications: InboxNotification[];
   loading: boolean;
   error: string | null;
   selectedStoryId?: string | null;
-  onStorySelect: (storyId: string) => void;
+  onStorySelect: (storyId: string, options?: OpenStoryModalOptions) => void;
   onRetry?: () => void;
 }
 
@@ -172,7 +174,11 @@ export function InboxNotificationsPanel({
                 onClick={() => {
                   markInboxNotificationRead(notification.id);
                   if (notification.story_id) {
-                    onStorySelect(notification.story_id);
+                    const focus = resolveSectionFromNotification(notification);
+                    onStorySelect(notification.story_id, {
+                      section: focus.section,
+                      highlightedSignalId: focus.highlightedSignalId,
+                    });
                   }
                 }}
                 className={cn(

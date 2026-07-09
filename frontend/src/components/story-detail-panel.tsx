@@ -15,13 +15,14 @@ import { useStoryStore } from '@/hooks/use-story-store';
 import { storyStore } from '@/stores/story-store';
 
 const STORY_DETAIL_ROUTES = ['/workspace/stories', '/workspace/stories/board'] as const;
+const STORY_MODAL_ROUTES = [...STORY_DETAIL_ROUTES, '/workspace/inbox'] as const;
 const STORY_SELECTION_PRESERVE_ROUTES = [
   ...STORY_DETAIL_ROUTES,
   '/workspace/inbox',
 ] as const;
 
-function isStoryDetailRoute(pathname: string): boolean {
-  return STORY_DETAIL_ROUTES.some(
+function isStoryModalRoute(pathname: string): boolean {
+  return STORY_MODAL_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 }
@@ -55,9 +56,9 @@ function StoryDetailModalHost(): React.ReactElement | null {
   const selectedStory = stories.find((story) => story.id === selectedStoryId) ?? null;
 
   const dialogRef = React.useRef<HTMLDialogElement>(null);
-  const onStoryRoute = isStoryDetailRoute(pathname);
+  const onStoryModalRoute = isStoryModalRoute(pathname);
   const showModal =
-    isModal && selectedStory !== null && (onStoryRoute || isPinned);
+    isModal && selectedStory !== null && (onStoryModalRoute || isPinned);
 
   React.useEffect(() => {
     if (!isModal || isPinned) {
@@ -90,6 +91,7 @@ function StoryDetailModalHost(): React.ReactElement | null {
   const handleCloseModal = React.useCallback((): void => {
     setPinned(false);
     setExpanded(false);
+    storyStore.clearDetailFocus();
     storyStore.selectStory(null);
   }, [setExpanded, setPinned]);
 

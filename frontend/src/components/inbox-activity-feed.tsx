@@ -11,13 +11,15 @@ import {
 } from '@landi-flow/ui';
 import { Activity, Bot } from 'lucide-react';
 import { useLocalizedDateTime } from '@/hooks/use-localized-date-time';
+import { resolveSectionFromActivity } from '@/lib/story/resolve-story-detail-section';
+import type { OpenStoryModalOptions } from '@/lib/story/open-story-modal';
 
 export interface InboxActivityFeedProps {
   activity: ActivityEvent[];
   loading: boolean;
   error: string | null;
   selectedStoryId?: string | null;
-  onStorySelect: (storyId: string) => void;
+  onStorySelect: (storyId: string, options?: OpenStoryModalOptions) => void;
   onRetry?: () => void;
 }
 
@@ -60,7 +62,7 @@ function ActivityFeedItem({
 }: {
   event: ActivityEvent;
   isSelected: boolean;
-  onSelect: (storyId: string) => void;
+  onSelect: (storyId: string, options?: OpenStoryModalOptions) => void;
 }): React.ReactElement {
   const t = useTranslations('inbox');
   const { formatDate } = useLocalizedDateTime();
@@ -71,7 +73,11 @@ function ActivityFeedItem({
 
   const handleClick = (): void => {
     if (event.story_id) {
-      onSelect(event.story_id);
+      const focus = resolveSectionFromActivity(event);
+      onSelect(event.story_id, {
+        section: focus.section,
+        highlightedSignalId: focus.highlightedSignalId,
+      });
     }
   };
 

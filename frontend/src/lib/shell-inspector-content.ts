@@ -21,10 +21,11 @@ export function resolveInspectorContent(
   context: InspectorContentContext,
 ): InspectorContentResolution {
   const onStoriesRoute = context.pathname.includes('/stories');
+  const onInboxRoute = context.pathname.includes('/inbox');
   const showStoryInspector =
-    context.pathname.includes('/inbox') ||
-    (onStoriesRoute && !context.selectedStoryId) ||
-    (Boolean(context.selectedStoryId) && !onStoriesRoute);
+    !onInboxRoute &&
+    ((onStoriesRoute && !context.selectedStoryId) ||
+      (Boolean(context.selectedStoryId) && !onStoriesRoute));
 
   const showEpicInspector =
     context.pathname.startsWith('/workspace/epics') &&
