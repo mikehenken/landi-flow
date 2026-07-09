@@ -120,8 +120,7 @@ jobs:
         run: pnpm --filter @landi-flow/frontend typecheck
 
       - name: Build for Cloudflare Pages (next-on-pages)
-        working-directory: frontend
-        run: pnpm run pages:build
+        run: pnpm --filter @landi-flow/frontend pages:build
 
       - name: Deploy to Cloudflare Pages (landi-flow)
         uses: cloudflare/wrangler-action@v3
