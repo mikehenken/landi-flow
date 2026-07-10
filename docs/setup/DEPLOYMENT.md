@@ -6,7 +6,7 @@
 
 | Component | Worker name | Primary URL | Fallback |
 |-----------|-------------|-------------|----------|
-| Frontend | `landi-flow-staging` | https://canvas.landi.build | https://landi-flow-staging.mikehenken.workers.dev |
+| Frontend | `landi-flow-staging` | https://flow.landi.build | https://landi-flow-staging.mikehenken.workers.dev |
 | API | `landi-flow-api` | https://landi-flow-api.mikehenken.workers.dev | — |
 | MCP | `landi-flow-mcp` | https://landi-flow-mcp.mikehenken.workers.dev | — |
 
@@ -42,11 +42,11 @@ Workflows in `.github/workflows/`:
 | Variable | Purpose |
 |----------|---------|
 | `CLOUDFLARE_WORKERS_DEV_SUBDOMAIN` | workers.dev label for deploy summary URLs |
-| `STAGING_SITE_URL` | Canonical staging frontend URL (`https://canvas.landi.build`) |
+| `STAGING_SITE_URL` | Canonical staging frontend URL (`https://flow.landi.build`) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Frontend build |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Frontend build |
 | `NEXT_PUBLIC_SITE_URL` | Canonical staging URL (build + runtime secret) |
-| `NEXT_PUBLIC_ROOT_DOMAIN` | Auth cookie domain root (`canvas.landi.build`) |
+| `NEXT_PUBLIC_ROOT_DOMAIN` | Auth cookie domain root (`flow.landi.build`) |
 | `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY` | Liveblocks public key |
 | `NEXT_PUBLIC_MOCK_AUTH` | `false` on staging |
 | `FLOW_API_URL` | API Worker base URL for Next.js proxy |
@@ -86,8 +86,8 @@ Set via `wrangler secret put <NAME>` in each worker directory. **Key names only*
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL` (runtime — middleware + Supabase client)
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (runtime)
-- `NEXT_PUBLIC_SITE_URL` (runtime — use `https://canvas.landi.build` on staging)
-- `NEXT_PUBLIC_ROOT_DOMAIN` (runtime — `canvas.landi.build`)
+- `NEXT_PUBLIC_SITE_URL` (runtime — use `https://flow.landi.build` on staging)
+- `NEXT_PUBLIC_ROOT_DOMAIN` (runtime — `flow.landi.build`)
 
 Set all six from repo-root `.env.local` (override site URL vars for staging):
 
@@ -130,7 +130,7 @@ pnpm worker:deploy
 
 | File | Role |
 |------|------|
-| `frontend/wrangler.toml` | Worker name, custom domain `canvas.landi.build`, OpenNext output paths, `FLOW_API_URL` var |
+| `frontend/wrangler.toml` | Worker name, custom domain `flow.landi.build`, OpenNext output paths, `FLOW_API_URL` var |
 | `frontend/open-next.config.ts` | OpenNext Cloudflare adapter |
 | `frontend/next.config.ts` | Monorepo transpile + `initOpenNextCloudflareForDev()` |
 
@@ -165,11 +165,13 @@ Do **not** run `wrangler secret put` with placeholder values in agent sessions.
 Add redirect URLs in Supabase Auth → URL configuration:
 
 ```
-https://canvas.landi.build/auth/callback
+https://flow.landi.build/auth/callback
 https://landi-flow-staging.mikehenken.workers.dev/auth/callback
 ```
 
-Use the primary `canvas.landi.build` URL once DNS resolves. Keep the workers.dev fallback until cutover is verified.
+Use the primary `flow.landi.build` URL once DNS resolves. Keep the workers.dev fallback until cutover is verified.
+
+> **Canvas Studio** uses a separate Supabase project. Add `https://canvas.landi.build/auth/callback` there — not in the landi-flow project.
 
 ### OAuth redirect URL (localhost bug)
 
@@ -179,7 +181,7 @@ OAuth `redirectTo` is set in the **client bundle** at interaction time from `win
 
 | When | Set `NEXT_PUBLIC_SITE_URL` to |
 |------|-------------------------------|
-| GitHub Actions `deploy-frontend` | `https://canvas.landi.build` (repo variable or default in workflow) |
+| GitHub Actions `deploy-frontend` | `https://flow.landi.build` (repo variable or default in workflow) |
 | Manual `worker:build` before deploy | Export env **or** rely on browser origin at OAuth click time |
 
 **Verify Worker runtime vars** (not secrets — in `wrangler.toml` `[vars]` or `wrangler secret list`):
@@ -194,7 +196,7 @@ If a stale Worker secret sets `NEXT_PUBLIC_SITE_URL=http://localhost:3000`, remo
 ```bash
 cd frontend
 npx wrangler secret delete NEXT_PUBLIC_SITE_URL   # only if wrongly set as secret
-# Prefer [vars] in wrangler.toml: NEXT_PUBLIC_SITE_URL = "https://canvas.landi.build"
+# Prefer [vars] in wrangler.toml: NEXT_PUBLIC_SITE_URL = "https://flow.landi.build"
 ```
 
 After code or env changes, redeploy:
@@ -208,7 +210,7 @@ cd frontend && npx wrangler deploy
 
 ### Custom domain DNS
 
-Worker deploy binds `canvas.landi.build` via `[[routes]]` + `custom_domain = true` in `frontend/wrangler.toml`. If the hostname does not resolve after deploy, add a proxied DNS record in the **landi.build** zone (Cloudflare dashboard → DNS) or ensure the deploy API token has **Zone.DNS.Edit** + **Workers Routes** permissions.
+Worker deploy binds `flow.landi.build` via `[[routes]]` + `custom_domain = true` in `frontend/wrangler.toml`. If the hostname does not resolve after deploy, add a proxied DNS record in the **landi.build** zone (Cloudflare dashboard → DNS) or ensure the deploy API token has **Zone.DNS.Edit** + **Workers Routes** permissions.
 
 ## Staging checklist
 
@@ -217,8 +219,8 @@ Worker deploy binds `canvas.landi.build` via `[[routes]]` + `custom_domain = tru
 - [x] Frontend OpenNext adapter (`@opennextjs/cloudflare`)
 - [x] Frontend Worker deployed; `/en/auth/login` → 200 (workers.dev + custom domain binding)
 - [x] Frontend Worker runtime secrets (6 keys — see table above)
-- [x] Custom domain `canvas.landi.build` bound on Worker — DNS resolving (2026-07-09)
-- [ ] Supabase Auth redirect URL configured for `canvas.landi.build`
+- [x] Custom domain `flow.landi.build` bound on Worker — DNS resolving (2026-07-09)
+- [ ] Supabase Auth redirect URL configured for `flow.landi.build`
 - [ ] `NEXT_PUBLIC_MOCK_AUTH=false` on staging build
 
 ## Rollback

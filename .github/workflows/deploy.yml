@@ -98,8 +98,8 @@ jobs:
       # Public build-time vars (no secrets). Runtime secrets via wrangler secret put.
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || vars.STAGING_SITE_URL || 'https://canvas.landi.build' }}
-      NEXT_PUBLIC_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_ROOT_DOMAIN || 'canvas.landi.build' }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || vars.STAGING_SITE_URL || 'https://flow.landi.build' }}
+      NEXT_PUBLIC_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_ROOT_DOMAIN || 'flow.landi.build' }}
       NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY }}
       NEXT_PUBLIC_MOCK_AUTH: ${{ vars.NEXT_PUBLIC_MOCK_AUTH || 'false' }}
       FLOW_API_URL: ${{ vars.FLOW_API_URL || 'https://landi-flow-api.mikehenken.workers.dev' }}
@@ -135,7 +135,7 @@ jobs:
       - name: Record frontend URL
         run: |
           SUB="${{ vars.CLOUDFLARE_WORKERS_DEV_SUBDOMAIN || 'mikehenken' }}"
-          SITE="${{ vars.NEXT_PUBLIC_SITE_URL || vars.STAGING_SITE_URL || 'https://canvas.landi.build' }}"
+          SITE="${{ vars.NEXT_PUBLIC_SITE_URL || vars.STAGING_SITE_URL || 'https://flow.landi.build' }}"
           echo "## Frontend deploy" >> "$GITHUB_STEP_SUMMARY"
           echo "- Worker: \`landi-flow-staging\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Primary URL: ${SITE}" >> "$GITHUB_STEP_SUMMARY"

@@ -50,9 +50,9 @@ function Set-WorkerSecrets {
     }
 }
 
-$canvasOverrides = @{
-    'NEXT_PUBLIC_SITE_URL' = 'https://canvas.landi.build'
-    'NEXT_PUBLIC_ROOT_DOMAIN' = 'canvas.landi.build'
+$flowOverrides = @{
+    'NEXT_PUBLIC_SITE_URL' = 'https://flow.landi.build'
+    'NEXT_PUBLIC_ROOT_DOMAIN' = 'flow.landi.build'
 }
 
 $frontendKeys = @(
@@ -100,17 +100,17 @@ $mcpKeys = @(
 
 switch ($Target) {
     'frontend' {
-        Set-WorkerSecrets -Config 'frontend/wrangler.toml' -Keys $frontendKeys -Overrides $canvasOverrides
+        Set-WorkerSecrets -Config 'frontend/wrangler.toml' -Keys $frontendKeys -Overrides $flowOverrides
     }
     'api' {
-        Set-WorkerSecrets -Config 'workers/api/wrangler.toml' -Keys $apiKeys -Overrides $canvasOverrides
+        Set-WorkerSecrets -Config 'workers/api/wrangler.toml' -Keys $apiKeys -Overrides $flowOverrides
     }
     'mcp' {
         Set-WorkerSecrets -Config 'workers/mcp/wrangler.toml' -Keys $mcpKeys
     }
     'all' {
-        Set-WorkerSecrets -Config 'frontend/wrangler.toml' -Keys $frontendKeys -Overrides $canvasOverrides
-        Set-WorkerSecrets -Config 'workers/api/wrangler.toml' -Keys $apiKeys -Overrides $canvasOverrides
+        Set-WorkerSecrets -Config 'frontend/wrangler.toml' -Keys $frontendKeys -Overrides $flowOverrides
+        Set-WorkerSecrets -Config 'workers/api/wrangler.toml' -Keys $apiKeys -Overrides $flowOverrides
         Set-WorkerSecrets -Config 'workers/mcp/wrangler.toml' -Keys $mcpKeys
     }
 }
