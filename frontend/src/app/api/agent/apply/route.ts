@@ -39,6 +39,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             teamId: body.teamId,
             teamName: null,
             teamKey: null,
+            teamSlug: null,
             defaultWorkflowStateId: null,
             teams: [],
           }

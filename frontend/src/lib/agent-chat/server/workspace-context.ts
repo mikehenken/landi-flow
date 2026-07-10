@@ -3,13 +3,21 @@ import type { WorkflowState } from '@landi-flow/core/types';
 import { fetchFlowApiUpstream } from '@/lib/api/upstream-fetch';
 import { resolveDefaultWorkflowStateId } from '@/lib/workflow-state-defaults';
 
+export interface AgentWorkspaceTeam {
+  id: string;
+  name: string;
+  key: string;
+  slug: string;
+}
+
 export interface AgentWorkspaceContext {
   workspaceId: string;
   teamId: string | null;
   teamName: string | null;
   teamKey: string | null;
+  teamSlug: string | null;
   defaultWorkflowStateId: string | null;
-  teams: Array<{ id: string; name: string; key: string }>;
+  teams: AgentWorkspaceTeam[];
 }
 
 interface ContextDefaultsResponse {
@@ -22,6 +30,41 @@ interface TeamRow {
   id: string;
   name: string;
   key: string;
+  slug: string;
+}
+
+function normalizeTeamLookup(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
+ * Resolve a team reference (UUID, slug, or key) to the canonical team UUID from the roster.
+ * Returns the input unchanged when no roster match exists (e.g. mock/dev fixtures).
+ */
+export function resolveTeamIdFromRoster(
+  teams: AgentWorkspaceTeam[],
+  reference: string | null | undefined,
+): string | null {
+  if (!reference || reference.length === 0) {
+    return null;
+  }
+
+  const normalized = normalizeTeamLookup(reference);
+  const byId = teams.find((team) => team.id === reference);
+  if (byId) {
+    return byId.id;
+  }
+
+  const bySlugOrKey = teams.find(
+    (team) =>
+      normalizeTeamLookup(team.slug) === normalized ||
+      normalizeTeamLookup(team.key) === normalized,
+  );
+  if (bySlugOrKey) {
+    return bySlugOrKey.id;
+  }
+
+  return reference;
 }
 
 async function fetchJson<T>(path: string, accessToken: string): Promise<T | null> {
@@ -62,13 +105,15 @@ export async function loadAgentWorkspaceContext(
     id: team.id,
     name: team.name,
     key: team.key,
+    slug: team.slug,
   }));
 
-  const activeTeam = defaults.team_id
-    ? teams.find((team) => team.id === defaults.team_id) ?? null
+  const resolvedDefaultTeamId = resolveTeamIdFromRoster(teams, defaults.team_id);
+  const activeTeam = resolvedDefaultTeamId
+    ? teams.find((team) => team.id === resolvedDefaultTeamId) ?? null
     : teams[0] ?? null;
 
-  const teamId = activeTeam?.id ?? defaults.team_id;
+  const teamId = activeTeam?.id ?? resolvedDefaultTeamId;
   let defaultWorkflowStateId = defaults.default_workflow_state_id;
 
   if (teamId && !defaultWorkflowStateId) {
@@ -87,6 +132,7 @@ export async function loadAgentWorkspaceContext(
     teamId,
     teamName: activeTeam?.name ?? null,
     teamKey: activeTeam?.key ?? null,
+    teamSlug: activeTeam?.slug ?? null,
     defaultWorkflowStateId,
     teams,
   };
@@ -96,7 +142,7 @@ export async function loadAgentWorkspaceContext(
 export function buildWorkspaceSystemPromptSection(ctx: AgentWorkspaceContext): string {
   const teamLine =
     ctx.teamId !== null
-      ? `- Active team: ${ctx.teamName ?? 'Default'} (${ctx.teamKey ?? '—'}) · team_id=\`${ctx.teamId}\``
+      ? `- Active team: ${ctx.teamName ?? 'Default'} · team_id=\`${ctx.teamId}\`${ctx.teamKey ? ` (key: ${ctx.teamKey})` : ''}`
       : '- Active team: none configured';
 
   const workflowStateLine =
@@ -106,7 +152,9 @@ export function buildWorkspaceSystemPromptSection(ctx: AgentWorkspaceContext): s
 
   const roster =
     ctx.teams.length > 0
-      ? ctx.teams.map((t) => `  - ${t.name} (${t.key}): \`${t.id}\``).join('\n')
+      ? ctx.teams
+          .map((t) => `  - ${t.name} · team_id=\`${t.id}\`${t.key ? ` (key: ${t.key})` : ''}`)
+          .join('\n')
       : '  - (no teams loaded)';
 
   return (
@@ -115,7 +163,7 @@ export function buildWorkspaceSystemPromptSection(ctx: AgentWorkspaceContext): s
     `${teamLine}\n` +
     `${workflowStateLine}\n` +
     `- Teams in workspace:\n${roster}\n` +
-    `\nUse the active team's \`team_id\` for \`story.create\`, \`story.update\`, and \`story.list\` unless the user names a different team. ` +
+    `\nUse each team's UUID \`team_id\` (never slug or key) for \`story.create\`, \`story.update\`, and \`story.list\` unless the user names a different team. ` +
     `Use the default \`workflow_state_id\` for \`story.create\` unless the user names a different state. ` +
     `Never ask the user for a team ID or workflow state ID — infer them from this context.`
   );
@@ -140,8 +188,14 @@ export function enrichToolInputWithWorkspaceContext(
 
   let enriched = input;
 
-  if (ctx.teamId && TOOLS_REQUIRING_TEAM_ID.has(toolName) && !hasNonEmptyString(enriched.team_id)) {
-    enriched = { ...enriched, team_id: ctx.teamId };
+  if (TOOLS_REQUIRING_TEAM_ID.has(toolName)) {
+    const rawTeamId = hasNonEmptyString(enriched.team_id)
+      ? enriched.team_id
+      : ctx.teamId;
+    const resolvedTeamId = resolveTeamIdFromRoster(ctx.teams, rawTeamId);
+    if (resolvedTeamId) {
+      enriched = { ...enriched, team_id: resolvedTeamId };
+    }
   }
 
   if (
