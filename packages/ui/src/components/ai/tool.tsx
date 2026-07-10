@@ -65,7 +65,7 @@ export function Tool({
   input,
   output,
   errorText,
-  isWrite = false,
+  isWrite: _isWrite = false,
   defaultOpen,
   className,
   children,
@@ -84,12 +84,7 @@ export function Tool({
         className="flex w-full items-center gap-2 px-3 py-2 text-xs"
       >
         <Wrench className="h-3.5 w-3.5 text-foreground-subtle" />
-        <span className="font-mono font-medium text-foreground">{title ?? toolName}</span>
-        {isWrite ? (
-          <span className="rounded-sm bg-status-warning/15 px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-status-warning">
-            Write
-          </span>
-        ) : null}
+        <span className="font-medium text-foreground">{title ?? toolName}</span>
         <span className={cn('ml-auto flex items-center gap-1', meta.className)}>
           {meta.icon}
           <span>{meta.label}</span>

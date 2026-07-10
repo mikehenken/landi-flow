@@ -19,6 +19,11 @@ import {
 } from './gateway';
 import { MCP_TOOL_CATALOGUE, TOOL_BY_NAME, geminiTools } from './mcp-catalogue';
 import { applyTool } from './apply';
+import {
+  buildWorkspaceSystemPromptSection,
+  enrichToolInputWithWorkspaceContext,
+  type AgentWorkspaceContext,
+} from './workspace-context';
 
 interface GeminiFunctionCall {
   name: string;
@@ -36,12 +41,19 @@ interface GeminiCandidate {
   finishReason?: string | null;
 }
 
-const SYSTEM_PROMPT =
+const SYSTEM_PROMPT_BASE =
   'You are a first-class agent collaborator in Landi Flow, a Linear-class product tool. ' +
   'Use the platform nouns Epic (never Project) and Story. Use the provided tools to read ' +
   'workspace data. For any write, CALL the appropriate write tool with complete arguments; the ' +
   'client will require explicit human approval before applying it (Agent Handoff Queue). ' +
   'Answer concisely in Markdown.';
+
+function buildSystemPrompt(workspaceContext?: AgentWorkspaceContext | null): string {
+  if (!workspaceContext) {
+    return SYSTEM_PROMPT_BASE;
+  }
+  return SYSTEM_PROMPT_BASE + buildWorkspaceSystemPromptSection(workspaceContext);
+}
 
 /** Map the wire transcript to Gemini `contents` (roles: `user` / `model`). */
 function toGeminiContents(
@@ -61,8 +73,10 @@ export async function* gatewayStream(params: {
   messages: ChatRequestMessage[];
   metadata: GatewayMetadata;
   workspaceId?: string;
+  authToken?: string | null;
+  workspaceContext?: AgentWorkspaceContext | null;
 }): AsyncGenerator<StreamEvent> {
-  const { config, messages, metadata, workspaceId } = params;
+  const { config, messages, metadata, workspaceId, authToken, workspaceContext } = params;
   const model = normalizeModel(config, params.model);
 
   yield { type: 'meta', model, live: true };
@@ -71,7 +85,7 @@ export async function* gatewayStream(params: {
     method: 'POST',
     headers: gatewayHeaders(config, { ...metadata, feature: 'agent_chat' }),
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      systemInstruction: { parts: [{ text: buildSystemPrompt(workspaceContext) }] },
       contents: toGeminiContents(messages),
       tools: geminiTools(),
       generationConfig: { temperature: 0.4 },
@@ -137,7 +151,11 @@ export async function* gatewayStream(params: {
   for (const call of functionCalls) {
     const def = TOOL_BY_NAME.get(call.name) ?? MCP_TOOL_CATALOGUE.find((t) => t.name === call.name);
     if (!def) continue;
-    const input = call.args ?? {};
+    const input = enrichToolInputWithWorkspaceContext(
+      def.name,
+      call.args ?? {},
+      workspaceContext,
+    );
     const toolCallId = crypto.randomUUID();
 
     yield {
@@ -153,7 +171,13 @@ export async function* gatewayStream(params: {
     };
 
     if (!def.isWrite) {
-      const result = await applyTool({ toolName: def.name, input, workspaceId });
+      const result = await applyTool({
+        toolName: def.name,
+        input,
+        workspaceId,
+        authToken,
+        workspaceContext,
+      });
       yield {
         type: 'tool-result',
         toolCallId,

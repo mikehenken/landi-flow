@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import { assignAndAct, type AssignAgentRequest, type AssignEntity } from '@/lib/agents/assign-agent';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ ok: false, errorText: 'entityId is required' }, { status: 400 });
   }
 
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const result = await assignAndAct({
     entity: entity as AssignEntity,
     entityId: body.entityId,
@@ -33,6 +39,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     delegateAgentId: body.delegateAgentId,
     humanId: body.humanId,
     entityLabel: body.entityLabel,
+    authToken: session?.access_token ?? null,
   });
 
   return Response.json(result, { status: result.ok ? 200 : 502 });

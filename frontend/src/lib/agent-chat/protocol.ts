@@ -19,6 +19,8 @@ export interface ChatRequestBody {
   model?: string;
   agentId?: string;
   workspaceId?: string;
+  /** Client fallback when session/API context is unavailable (mock auth). */
+  teamId?: string;
 }
 
 export interface ApplyToolRequestBody {
@@ -27,6 +29,8 @@ export interface ApplyToolRequestBody {
   input: Record<string, unknown>;
   workspaceId?: string;
   agentId?: string;
+  /** Client fallback active team when server session context is unavailable. */
+  teamId?: string;
 }
 
 export interface ApplyToolResponseBody {

@@ -16,6 +16,8 @@ export interface AssignAgentRequest {
   entity: AssignEntity;
   entityId: string;
   workspaceId?: string;
+  /** Supabase session JWT or MCP_WORKER_TOKEN for live Action Bus calls. */
+  authToken?: string | null;
   /** Agent (delegate) being assigned. When set, the agent then acts via the Action Bus. */
   delegateAgentId?: string | null;
   /** Human owner: assignee for a Story, lead for an Epic. */
@@ -41,7 +43,7 @@ function withWorkspace(
 
 export async function assignAndAct(req: AssignAgentRequest): Promise<AssignAgentResult> {
   const steps: McpCallResult[] = [];
-  const live = isMcpWorkerConfigured();
+  const live = isMcpWorkerConfigured(req.authToken);
 
   // Step 1 — assignment (Action Bus governed write).
   const assignTool = req.entity === 'story' ? 'story.assign' : 'epic.assign';
@@ -71,7 +73,11 @@ export async function assignAndAct(req: AssignAgentRequest): Promise<AssignAgent
     }
   }
 
-  const assignStep = await dispatchMcpTool(assignTool, withWorkspace(assignArgs, req.workspaceId));
+  const assignStep = await dispatchMcpTool(
+    assignTool,
+    withWorkspace(assignArgs, req.workspaceId),
+    req.authToken,
+  );
   steps.push(assignStep);
   if (!assignStep.ok) {
     return { ok: false, live, steps, errorText: assignStep.errorText };
@@ -92,6 +98,7 @@ export async function assignAndAct(req: AssignAgentRequest): Promise<AssignAgent
         },
         req.workspaceId,
       ),
+      req.authToken,
     );
     steps.push(commentStep);
 
@@ -111,6 +118,7 @@ export async function assignAndAct(req: AssignAgentRequest): Promise<AssignAgent
           },
           req.workspaceId,
         ),
+        req.authToken,
       );
       steps.push(signalStep);
     }

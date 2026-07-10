@@ -145,7 +145,7 @@ export function AiSettingsPanel(): React.ReactElement {
         </div>
         <div>
           <dt className="text-muted-foreground">Gateway</dt>
-          <dd className="font-medium">CF AI Gateway (mock)</dd>
+          <dd className="font-medium">Cloudflare AI Gateway</dd>
         </div>
       </dl>
     </section>
@@ -238,7 +238,23 @@ export function UpdatesSettingsPanel(): React.ReactElement {
 
 export function WorkspaceApiSettingsPanel(): React.ReactElement {
   const { workspace } = useWorkspace();
+  const [keys, setKeys] = React.useState<Array<{ id: string; name: string; key_prefix: string }>>([]);
   const [issuedKey, setIssuedKey] = React.useState<string | null>(null);
+
+  const refresh = React.useCallback(async () => {
+    const rows = await loadPersonalApiKeys();
+    setKeys(rows);
+  }, []);
+
+  React.useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const handleCreate = React.useCallback(async () => {
+    const created = await createPersonalApiKey(workspace.id, 'Workspace API key');
+    setIssuedKey(created.api_key || 'issued');
+    await refresh();
+  }, [workspace.id, refresh]);
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="workspace-api-settings-panel" data-cap="CAP-105">
@@ -246,18 +262,25 @@ export function WorkspaceApiSettingsPanel(): React.ReactElement {
       <p className="mb-4 text-sm text-muted-foreground">
         Programmatic access for {workspace.name} via REST API keys.
       </p>
-      <Button
-        type="button"
-        data-testid="workspace-api-key-create"
-        onClick={() => setIssuedKey(`wf_${workspace.id.slice(0, 8)}_mock_key`)}
-      >
+      <Button type="button" data-testid="workspace-api-key-create" onClick={() => void handleCreate()}>
         Create workspace API key
       </Button>
       {issuedKey ? (
         <p className="mt-2 font-mono text-xs text-muted-foreground" data-testid="workspace-api-key-issued">
-          Issued: {issuedKey}
+          Issued (copy now): {issuedKey}
         </p>
       ) : null}
+      <ul className="mt-4 divide-y divide-border rounded-md border border-border">
+        {keys.length === 0 ? (
+          <li className="px-3 py-2 text-sm text-muted-foreground">No workspace API keys yet.</li>
+        ) : (
+          keys.map((key) => (
+            <li key={key.id} className="px-3 py-2 text-sm" data-testid="workspace-api-key-row">
+              {key.name} · {key.key_prefix}…
+            </li>
+          ))
+        )}
+      </ul>
     </section>
   );
 }

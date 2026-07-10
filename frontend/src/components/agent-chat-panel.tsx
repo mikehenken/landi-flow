@@ -29,6 +29,9 @@ import {
 } from '@landi-flow/ui';
 import { Copy, RefreshCw, Sparkles } from 'lucide-react';
 import { useAgentChat } from '@/hooks/use-agent-chat';
+import { getDefaultTeamId } from '@/lib/api/workspace-context';
+import { isMockAuthEnabled } from '@/lib/api/config';
+import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import {
   agentAsAuthor,
   agentConsoleDescription,
@@ -64,6 +67,10 @@ export function AgentChatPanel({
   const [input, setInput] = React.useState('');
   const [model, setModel] = React.useState(agent.model);
   const author = React.useMemo(() => agentAsAuthor(agent), [agent]);
+  const activeTeamId = React.useMemo(
+    () => (isMockAuthEnabled() ? DEMO_TEAM_ID : getDefaultTeamId()),
+    [],
+  );
 
   const {
     messages,
@@ -73,7 +80,7 @@ export function AgentChatPanel({
     stop,
     approveTool,
     rejectTool,
-  } = useAgentChat({ agentAuthor: author, model, workspaceId });
+  } = useAgentChat({ agentAuthor: author, model, workspaceId, teamId: activeTeamId });
 
   const submit = (): void => {
     const text = input.trim();

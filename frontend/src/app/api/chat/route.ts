@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import {
   encodeEvent,
   type ChatRequestBody,
@@ -6,9 +7,22 @@ import {
 } from '@/lib/agent-chat/protocol';
 import { isMockForced, resolveGatewayConfig } from '@/lib/agent-chat/server/gateway';
 import { gatewayStream } from '@/lib/agent-chat/server/stream-gateway';
+import { loadAgentWorkspaceContext } from '@/lib/agent-chat/server/workspace-context';
 import { mockStream } from '@/lib/agent-chat/server/mock';
 
 export const dynamic = 'force-dynamic';
+
+async function resolveSessionToken(): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Agent chat endpoint. Streams an assistant turn as NDJSON message-part events.
@@ -33,6 +47,21 @@ export async function POST(request: NextRequest): Promise<Response> {
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
   const userText = lastUser?.content ?? '';
 
+  const authToken = await resolveSessionToken();
+  const workspaceContext =
+    body.workspaceId && authToken
+      ? await loadAgentWorkspaceContext(body.workspaceId, authToken)
+      : body.teamId && body.workspaceId
+        ? {
+            workspaceId: body.workspaceId,
+            teamId: body.teamId,
+            teamName: null,
+            teamKey: null,
+            defaultWorkflowStateId: null,
+            teams: [],
+          }
+        : null;
+
   const config = isMockForced() ? null : resolveGatewayConfig();
 
   const source: AsyncGenerator<StreamEvent> = config
@@ -46,6 +75,8 @@ export async function POST(request: NextRequest): Promise<Response> {
           feature: 'agent_chat',
         },
         workspaceId: body.workspaceId,
+        authToken,
+        workspaceContext,
       })
     : mockStream(userText, body.model ?? 'gemini-2.5-flash');
 

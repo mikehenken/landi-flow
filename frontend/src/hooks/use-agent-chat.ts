@@ -23,6 +23,8 @@ export interface UseAgentChatOptions {
   agentAuthor: MessageAuthor;
   model: string;
   workspaceId?: string;
+  /** Active team for MCP tool arg injection when server cannot load session context. */
+  teamId?: string | null;
   initialMessages?: UIMessage[];
 }
 
@@ -65,6 +67,7 @@ export function useAgentChat({
   agentAuthor,
   model,
   workspaceId,
+  teamId,
   initialMessages = [],
 }: UseAgentChatOptions): UseAgentChatResult {
   const [messages, setMessages] = React.useState<UIMessage[]>(initialMessages);
@@ -188,7 +191,13 @@ export function useAgentChat({
           const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: priorTurns, model, workspaceId, agentId: agentAuthor.id }),
+            body: JSON.stringify({
+              messages: priorTurns,
+              model,
+              workspaceId,
+              teamId: teamId ?? undefined,
+              agentId: agentAuthor.id,
+            }),
             signal: controller.signal,
           });
           if (!response.ok || !response.body) {
@@ -221,7 +230,7 @@ export function useAgentChat({
         }
       })();
     },
-    [agentAuthor, applyEvent, messages, model, status, workspaceId],
+    [agentAuthor, applyEvent, messages, model, status, workspaceId, teamId],
   );
 
   const stop = React.useCallback(() => {
@@ -264,6 +273,7 @@ export function useAgentChat({
             toolName: target.toolName,
             input: target.input ?? {},
             workspaceId,
+            teamId: teamId ?? undefined,
           }),
         });
         const result = (await response.json()) as ApplyToolResponseBody;
@@ -288,7 +298,7 @@ export function useAgentChat({
         );
       }
     },
-    [updateMessage, workspaceId],
+    [updateMessage, workspaceId, teamId],
   );
 
   const approveTool = React.useCallback(
