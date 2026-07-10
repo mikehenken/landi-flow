@@ -1,5 +1,6 @@
 import type { WorkflowState } from '@landi-flow/core/types';
 import { apiFetch } from '@/lib/api/client';
+import { resolveDefaultWorkflowStateId } from '@/lib/workflow-state-defaults';
 
 export interface WorkspaceRuntimeContext {
   teamId: string | null;
@@ -63,7 +64,10 @@ export async function loadWorkspaceRuntimeContext(
   cachedWorkspaceId = workspaceId;
   cachedContext = {
     teamId: defaults.team_id,
-    defaultWorkflowStateId: defaults.default_workflow_state_id,
+    defaultWorkflowStateId: resolveDefaultWorkflowStateId(
+      defaults.default_workflow_state_id,
+      workflowStates,
+    ),
     defaultEpicStatusId: defaults.default_epic_status_id,
     workflowStates,
   };

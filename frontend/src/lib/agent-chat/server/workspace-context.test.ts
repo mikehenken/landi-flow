@@ -18,19 +18,21 @@ const sampleContext: AgentWorkspaceContext = {
 };
 
 describe('agent workspace context', () => {
-  it('builds a system prompt section with active team_id', () => {
+  it('builds a system prompt section with active team_id and workflow_state_id', () => {
     const section = buildWorkspaceSystemPromptSection(sampleContext);
     expect(section).toContain('team_id=`team-1`');
-    expect(section).toContain('Never ask the user for a team ID');
+    expect(section).toContain('workflow_state_id=`state-todo`');
+    expect(section).toContain('Never ask the user for a team ID or workflow state ID');
   });
 
-  it('injects team_id into story.create when missing', () => {
+  it('injects team_id and workflow_state_id into story.create when missing', () => {
     const enriched = enrichToolInputWithWorkspaceContext(
       'story.create',
       { title: 'Dark mode toggle' },
       sampleContext,
     );
     expect(enriched.team_id).toBe('team-1');
+    expect(enriched.workflow_state_id).toBe('state-todo');
     expect(enriched.title).toBe('Dark mode toggle');
   });
 
@@ -41,6 +43,27 @@ describe('agent workspace context', () => {
       sampleContext,
     );
     expect(enriched.team_id).toBe('team-2');
+    expect(enriched.workflow_state_id).toBe('state-todo');
+  });
+
+  it('does not override an explicit workflow_state_id', () => {
+    const enriched = enrichToolInputWithWorkspaceContext(
+      'story.create',
+      { title: 'X', workflow_state_id: 'state-in-progress' },
+      sampleContext,
+    );
+    expect(enriched.team_id).toBe('team-1');
+    expect(enriched.workflow_state_id).toBe('state-in-progress');
+  });
+
+  it('injects team_id but not workflow_state_id for story.update', () => {
+    const enriched = enrichToolInputWithWorkspaceContext(
+      'story.update',
+      { story_id: 'story-1', title: 'Updated title' },
+      sampleContext,
+    );
+    expect(enriched.team_id).toBe('team-1');
+    expect(enriched.workflow_state_id).toBeUndefined();
   });
 
   it('ignores read tools', () => {
