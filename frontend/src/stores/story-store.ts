@@ -29,6 +29,7 @@ export interface CreateStoryInput {
   estimate?: number | null;
   dueDate?: string | null;
   followerIds?: string[];
+  labelIds?: string[];
   isDraft?: boolean;
 }
 
@@ -190,6 +191,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
       assignee_id: input.assigneeId ?? null,
       creator_id: CURRENT_USER.id,
       follower_ids: input.followerIds ?? [],
+      label_ids: input.labelIds ?? [],
       delegate_agent_id: null,
       epic_id: input.epicId ?? null,
       milestone_id: null,
@@ -258,6 +260,11 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
   /** Shortcut Followers — multi-select subscriber list. */
   setFollowers(storyId: string, followerIds: string[]): void {
     this.applyStoryPatch(storyId, { follower_ids: [...followerIds] });
+  }
+
+  /** Workspace story labels — multi-select catalog ids. */
+  setLabelIds(storyId: string, labelIds: string[]): void {
+    this.applyStoryPatch(storyId, { label_ids: [...labelIds] });
   }
 
   private applyStoryPatch(storyId: string, patch: Partial<Story>): void {

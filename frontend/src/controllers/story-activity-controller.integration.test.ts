@@ -19,6 +19,7 @@ const story: Story = {
   assignee_id: null,
   creator_id: null,
   follower_ids: [],
+  label_ids: [],
   delegate_agent_id: null,
   epic_id: null,
   milestone_id: null,

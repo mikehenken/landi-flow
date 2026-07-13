@@ -21,6 +21,7 @@ export interface StoryCreateInput {
   milestone_id?: string | null;
   cycle_id?: string | null;
   estimate?: number | null;
+  label_ids?: string[];
 }
 
 export interface StoryUpdateInput {
@@ -36,6 +37,7 @@ export interface StoryUpdateInput {
   estimate?: number | null;
   sort_order?: number;
   is_draft?: boolean;
+  label_ids?: string[];
 }
 
 export interface WorkflowStateCreateInput {
@@ -103,6 +105,68 @@ export class WorkflowStateController extends BaseController {
 }
 
 export class StoryController extends BaseController {
+  private async fetchLabelIdsByStoryIds(storyIds: string[]): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    if (storyIds.length === 0) {
+      return result;
+    }
+
+    const { data, error } = await this.db
+      .from('story_labels')
+      .select('story_id, label_id')
+      .in('story_id', storyIds);
+
+    if (error) {
+      throw new Error(`Failed to load story labels: ${error.message}`);
+    }
+
+    for (const row of data ?? []) {
+      const storyId = row.story_id as string;
+      const labelId = row.label_id as string;
+      const existing = result.get(storyId) ?? [];
+      existing.push(labelId);
+      result.set(storyId, existing);
+    }
+
+    return result;
+  }
+
+  private async attachLabelIds(stories: Story[]): Promise<Story[]> {
+    if (stories.length === 0) {
+      return stories;
+    }
+    const labelMap = await this.fetchLabelIdsByStoryIds(stories.map((story) => story.id));
+    return stories.map((story) => ({
+      ...story,
+      label_ids: labelMap.get(story.id) ?? [],
+    }));
+  }
+
+  private async syncStoryLabels(storyId: string, labelIds: string[]): Promise<void> {
+    const { error: deleteError } = await this.db
+      .from('story_labels')
+      .delete()
+      .eq('story_id', storyId);
+
+    if (deleteError) {
+      throw new Error(`Failed to clear story labels: ${deleteError.message}`);
+    }
+
+    if (labelIds.length === 0) {
+      return;
+    }
+
+    const rows = labelIds.map((labelId) => ({
+      story_id: storyId,
+      label_id: labelId,
+    }));
+
+    const { error: insertError } = await this.db.from('story_labels').insert(rows);
+    if (insertError) {
+      throw new Error(`Failed to assign story labels: ${insertError.message}`);
+    }
+  }
+
   async list(workspaceId: string, teamId: string, limit = 50): Promise<Story[]> {
     await this.assertTeamReadable(workspaceId, teamId);
 
@@ -119,7 +183,7 @@ export class StoryController extends BaseController {
       throw new Error(`Failed to list stories: ${error.message}`);
     }
 
-    return (data ?? []) as Story[];
+    return this.attachLabelIds((data ?? []) as Story[]);
   }
 
   async getById(workspaceId: string, teamId: string, storyId: string): Promise<Story | null> {
@@ -137,7 +201,12 @@ export class StoryController extends BaseController {
       throw new Error(`Failed to get story: ${error.message}`);
     }
 
-    return data as Story | null;
+    if (!data) {
+      return null;
+    }
+
+    const [story] = await this.attachLabelIds([data as Story]);
+    return story ?? null;
   }
 
   async getByIdentifier(workspaceId: string, identifier: string): Promise<Story | null> {
@@ -156,9 +225,11 @@ export class StoryController extends BaseController {
 
     if (data) {
       await this.assertTeamReadable(workspaceId, (data as Story).team_id);
+      const [story] = await this.attachLabelIds([data as Story]);
+      return story ?? null;
     }
 
-    return data as Story | null;
+    return null;
   }
 
   async create(
@@ -190,7 +261,12 @@ export class StoryController extends BaseController {
       }
     );
 
-    return { story: entity, correlation_id: ctx.correlation_id, outbox_event_id };
+    if (input.label_ids && input.label_ids.length > 0) {
+      await this.syncStoryLabels(entity.id, input.label_ids);
+    }
+
+    const [story] = await this.attachLabelIds([entity]);
+    return { story: story ?? entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
   async update(
@@ -252,7 +328,12 @@ export class StoryController extends BaseController {
       }
     );
 
-    return { story: entity, correlation_id: ctx.correlation_id, outbox_event_id };
+    if (input.label_ids !== undefined) {
+      await this.syncStoryLabels(storyId, input.label_ids);
+    }
+
+    const [story] = await this.attachLabelIds([entity]);
+    return { story: story ?? entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
   async archive(
@@ -272,7 +353,8 @@ export class StoryController extends BaseController {
       { team_id: teamId, story_id: storyId },
     );
 
-    return { story: entity, correlation_id: ctx.correlation_id, outbox_event_id };
+    const [story] = await this.attachLabelIds([entity]);
+    return { story: story ?? entity, correlation_id: ctx.correlation_id, outbox_event_id };
   }
 
   async listByEpic(workspaceId: string, epicId: string): Promise<Story[]> {
@@ -290,7 +372,7 @@ export class StoryController extends BaseController {
       throw new Error(`Failed to list epic stories: ${error.message}`);
     }
 
-    return (data ?? []) as Story[];
+    return this.attachLabelIds((data ?? []) as Story[]);
   }
 }
 

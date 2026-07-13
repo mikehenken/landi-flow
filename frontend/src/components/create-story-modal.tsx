@@ -18,6 +18,7 @@ import {
   Flag,
   Link2,
   Star,
+  Tag,
   User,
   Users,
   Workflow,
@@ -52,6 +53,7 @@ import {
   OwnerPicker,
   PropertyEmptyValue,
   StoryEpicPicker,
+  StoryLabelsPicker,
   StoryStatusPicker,
   StoryTemplatePicker,
   StoryTypePicker,
@@ -98,6 +100,7 @@ export function CreateStoryModal({
   const [storyTypeId, setStoryTypeId] = React.useState<string | null>(null);
   const [ownerId, setOwnerId] = React.useState<string | null>(null);
   const [followerIds, setFollowerIds] = React.useState<string[]>([]);
+  const [labelIds, setLabelIds] = React.useState<string[]>([]);
   const [estimate, setEstimate] = React.useState<number | null>(null);
   const [dueDate, setDueDate] = React.useState<string | null>(null);
   const [customFields, setCustomFields] = React.useState<StoryCustomFieldValues>(
@@ -108,7 +111,11 @@ export function CreateStoryModal({
   const [selectedTemplateId, setSelectedTemplateId] = React.useState('');
 
   const storyTemplates = React.useMemo(() => getTaxonomySettings().story_templates, []);
-  const { labels: storyTypes } = useWorkspaceStoryLabels(workspace.id);
+  const {
+    labels: workspaceLabels,
+    refresh: refreshWorkspaceLabels,
+  } = useWorkspaceStoryLabels(workspace.id);
+  const storyTypes = workspaceLabels;
   const { teams, defaultTeamId } = useWorkspaceTeams(workspace.id);
   const { cycles } = useTeamCycles(workspace.id, teamId);
   const { workflowStates } = useTeamWorkflowStates(workspace.id, teamId);
@@ -163,6 +170,7 @@ export function CreateStoryModal({
     setStoryTypeId(null);
     setOwnerId(null);
     setFollowerIds([]);
+    setLabelIds([]);
     setEstimate(null);
     setDueDate(null);
     setCustomFields(EMPTY_CUSTOM_FIELDS);
@@ -222,6 +230,7 @@ export function CreateStoryModal({
         estimate,
         dueDate,
         followerIds,
+        labelIds,
       }).then(() => {
         if (createMore) {
           resetFormFields();
@@ -242,6 +251,7 @@ export function CreateStoryModal({
       estimate,
       dueDate,
       followerIds,
+      labelIds,
       createMore,
       workspace.id,
       resetFormFields,
@@ -421,6 +431,18 @@ export function CreateStoryModal({
                     customFields={customFields}
                     onCustomFieldsChange={setCustomFields}
                   />
+
+                  <div className="mt-4 border-t border-border/60 pt-4">
+                    <MetadataPropertyRow icon={<Tag className="h-4 w-4" />} label="Labels">
+                      <StoryLabelsPicker
+                        workspaceId={workspace.id}
+                        labels={workspaceLabels}
+                        labelIds={labelIds}
+                        onChange={setLabelIds}
+                        onLabelsCatalogChange={refreshWorkspaceLabels}
+                      />
+                    </MetadataPropertyRow>
+                  </div>
                 </aside>
               </div>
             </div>

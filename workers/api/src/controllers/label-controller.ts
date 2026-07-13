@@ -49,7 +49,7 @@ export class StoryLabelController extends BaseController {
     input: StoryLabelCreateInput,
     ctx: CorrelationContext,
   ): Promise<{ label: StoryLabel; correlation_id: string }> {
-    await this.assertWorkspaceAdmin(workspaceId);
+    await this.assertWorkspaceMember(workspaceId);
 
     const { data, error } = await this.db
       .from('labels')

@@ -23,6 +23,7 @@ const sampleStory: Story = {
   assignee_id: 'user-1',
   creator_id: 'user-1',
   follower_ids: [],
+  label_ids: [],
   delegate_agent_id: 'agent-1',
   epic_id: null,
   milestone_id: null,

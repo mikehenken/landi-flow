@@ -76,6 +76,9 @@ export async function createStory(input: CreateStoryInput): Promise<Story> {
           cycle_id: input.cycleId ?? null,
           estimate: input.estimate ?? null,
           is_draft: input.isDraft ?? false,
+          ...(input.labelIds && input.labelIds.length > 0
+            ? { label_ids: input.labelIds }
+            : {}),
         },
         correlationId: createCorrelationContext().correlation_id,
       },
@@ -222,6 +225,29 @@ export async function updateStoryFollowers(
   // follower_ids not yet persisted in linear_clone.stories — local-only until schema lands.
   void workspaceId;
   void previous;
+}
+
+export async function updateStoryLabels(
+  workspaceId: string,
+  story: Story,
+  labelIds: string[],
+): Promise<void> {
+  const previous = [...story.label_ids];
+  storyStore.setLabelIds(story.id, labelIds);
+  if (isMockAuthEnabled()) {
+    persistMockStoryPatch(story.id, { label_ids: labelIds });
+    return;
+  }
+  try {
+    const response = await apiFetch<{ story: DbStoryRow }>(
+      `workspaces/${workspaceId}/teams/${story.team_id}/stories/${story.id}`,
+      { method: 'PATCH', body: { label_ids: labelIds } },
+    );
+    storyStore.upsertStory(mapStoryRow(response.story));
+  } catch (error) {
+    storyStore.setLabelIds(story.id, previous);
+    throw error;
+  }
 }
 
 export async function updateStoryCycle(

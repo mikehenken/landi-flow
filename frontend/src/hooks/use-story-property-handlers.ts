@@ -16,6 +16,7 @@ import {
   updateStoryEstimate,
   updateStoryDueDate,
   updateStoryTeam,
+  updateStoryLabels,
 } from '@/controllers/story-controller';
 import { useAssignableMembers } from '@/hooks/use-assignable-members';
 import { useStoryActivity } from '@/hooks/use-story-activity';
@@ -39,6 +40,7 @@ export interface StoryPropertyHandlers {
   handleEstimateChange: (estimate: number | null) => void;
   handleDueDateChange: (dueDate: string | null) => void;
   handleTeamChange: (teamId: string) => void;
+  handleLabelsChange: (labelIds: string[]) => void;
 }
 
 /** Shared story property mutation handlers for inspector, sidebar, and main content. */
@@ -162,6 +164,13 @@ export function useStoryPropertyHandlers(story: Story): StoryPropertyHandlers {
     [story, getAgentName, storyActivity],
   );
 
+  const handleLabelsChange = React.useCallback(
+    (labelIds: string[]) => {
+      void updateStoryLabels(story.workspace_id, story, labelIds);
+    },
+    [story],
+  );
+
   return {
     storyActivity,
     pickerMembers,
@@ -180,5 +189,6 @@ export function useStoryPropertyHandlers(story: Story): StoryPropertyHandlers {
     handleEstimateChange,
     handleDueDateChange,
     handleTeamChange,
+    handleLabelsChange,
   };
 }

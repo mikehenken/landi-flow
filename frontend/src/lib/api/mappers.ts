@@ -29,6 +29,7 @@ interface DbStoryRow {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  label_ids?: string[];
 }
 
 interface DbEpicRow {
@@ -75,6 +76,7 @@ export function mapStoryRow(row: DbStoryRow): Story {
     assignee_id: row.assignee_id,
     creator_id: row.created_by,
     follower_ids: [],
+    label_ids: row.label_ids ?? [],
     delegate_agent_id: row.delegate_agent_id,
     epic_id: row.epic_id,
     milestone_id: row.milestone_id,

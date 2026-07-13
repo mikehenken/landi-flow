@@ -11,13 +11,14 @@ import {
   cn,
   type PickerMember,
 } from '@landi-flow/ui';
-import { Check, ChevronDown, Bot, User, UserMinus, Users } from 'lucide-react';
+import { Check, ChevronDown, Bot, User, UserMinus, Users, Tag } from 'lucide-react';
 import { getEpicStatusCategory } from '@/lib/epic-status';
 import { DEMO_WORKFLOW_STATE_ROWS } from '@/lib/seed-data';
 import { useEpicStore } from '@/hooks/use-epic-store';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { getWorkflowStatesForTeam } from '@/lib/api/workspace-context';
 import { workflowStateBadgeVariant } from '@/lib/workflow-state-display';
+import { createStoryLabel } from '@/controllers/labels-controller';
 
 const STORY_PRIORITIES: StoryPriority[] = ['none', 'low', 'medium', 'high', 'urgent'];
 
@@ -794,6 +795,143 @@ export function AgentDelegatePicker({
           ) : null}
         </PopoverOption>
       ))}
+    </InlinePopover>
+  );
+}
+
+const DEFAULT_NEW_LABEL_COLOR = '#3b82f6';
+
+export interface StoryLabelsPickerProps {
+  workspaceId: string;
+  labels: TaxonomyLabel[];
+  labelIds: string[];
+  onChange: (labelIds: string[]) => void;
+  onLabelsCatalogChange?: () => void;
+}
+
+/** Multi-select workspace story labels with optional inline create. */
+export function StoryLabelsPicker({
+  workspaceId,
+  labels,
+  labelIds,
+  onChange,
+  onLabelsCatalogChange,
+}: StoryLabelsPickerProps): React.ReactElement {
+  const [newLabelName, setNewLabelName] = React.useState('');
+  const [creating, setCreating] = React.useState(false);
+  const [createError, setCreateError] = React.useState<string | null>(null);
+
+  const selected = React.useMemo(
+    () => labels.filter((label) => labelIds.includes(label.id)),
+    [labels, labelIds],
+  );
+
+  const toggleLabel = React.useCallback(
+    (labelId: string): void => {
+      if (labelIds.includes(labelId)) {
+        onChange(labelIds.filter((id) => id !== labelId));
+        return;
+      }
+      onChange([...labelIds, labelId]);
+    },
+    [labelIds, onChange],
+  );
+
+  const handleCreateLabel = React.useCallback((): void => {
+    const trimmedName = newLabelName.trim();
+    if (!trimmedName || creating) {
+      return;
+    }
+    setCreating(true);
+    setCreateError(null);
+    void createStoryLabel({
+      workspaceId,
+      name: trimmedName,
+      color: DEFAULT_NEW_LABEL_COLOR,
+    })
+      .then((created) => {
+        setNewLabelName('');
+        onLabelsCatalogChange?.();
+        onChange([...labelIds, created.id]);
+      })
+      .catch((err: unknown) => {
+        setCreateError(err instanceof Error ? err.message : 'Failed to create label');
+      })
+      .finally(() => {
+        setCreating(false);
+      });
+  }, [creating, labelIds, newLabelName, onChange, onLabelsCatalogChange, workspaceId]);
+
+  return (
+    <InlinePopover
+      testId="story-labels-picker"
+      trigger={
+        selected.length > 0 ? (
+          <span className="inline-flex cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-transparent px-1 py-0.5 hover:border-border">
+            {selected.map((label) => (
+              <span
+                key={label.id}
+                className="rounded-full px-2 py-0.5 text-xs text-white"
+                style={{ backgroundColor: label.color }}
+              >
+                {label.name}
+              </span>
+            ))}
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-foreground-subtle" />
+          </span>
+        ) : (
+          <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface-overlay px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-white/5">
+            <Tag className="h-3.5 w-3.5" />
+            Add labels
+            <ChevronDown className="h-3.5 w-3.5 text-foreground-subtle" />
+          </span>
+        )
+      }
+    >
+      {labels.map((label) => (
+        <PopoverOption
+          key={label.id}
+          selected={labelIds.includes(label.id)}
+          onSelect={() => toggleLabel(label.id)}
+          closeOnSelect={false}
+        >
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ backgroundColor: label.color }}
+            aria-hidden
+          />
+          <span className="text-sm">{label.name}</span>
+        </PopoverOption>
+      ))}
+      <div className="border-t border-border/60 p-2">
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            value={newLabelName}
+            onChange={(event) => setNewLabelName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                handleCreateLabel();
+              }
+            }}
+            placeholder="Create label…"
+            data-testid="story-label-inline-create"
+            className="min-w-0 flex-1 rounded border border-border bg-transparent px-2 py-1 text-sm"
+          />
+          <button
+            type="button"
+            disabled={creating || newLabelName.trim().length === 0}
+            onClick={handleCreateLabel}
+            className="rounded px-2 py-1 text-xs text-primary hover:bg-white/5 disabled:opacity-50"
+          >
+            Add
+          </button>
+        </div>
+        {createError ? (
+          <p className="mt-1 text-xs text-destructive">{createError}</p>
+        ) : null}
+      </div>
     </InlinePopover>
   );
 }

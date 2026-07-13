@@ -18,6 +18,7 @@ type StoryPatchFields = Partial<
     | 'title'
     | 'description_md'
     | 'epic_id'
+    | 'label_ids'
   >
 >;
 

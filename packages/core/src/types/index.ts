@@ -141,6 +141,8 @@ export interface Story {
   creator_id: string | null;
   /** Human subscribers notified on Story updates (Shortcut: Followers). */
   follower_ids: string[];
+  /** Workspace label catalog ids attached to this Story (linear_clone.story_labels). */
+  label_ids: string[];
   delegate_agent_id: string | null;
   epic_id: string | null;
   milestone_id: string | null;

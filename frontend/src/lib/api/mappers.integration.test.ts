@@ -32,6 +32,7 @@ describe('api mappers', () => {
 
     expect(story.creator_id).toBe('user-creator');
     expect(story.follower_ids).toEqual([]);
+    expect(story.label_ids).toEqual([]);
     expect(story.identifier).toBe('LAN-7');
   });
 

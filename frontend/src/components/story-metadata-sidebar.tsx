@@ -31,6 +31,7 @@ import {
   OwnerPicker,
   PropertyEmptyValue,
   StoryEpicPicker,
+  StoryLabelsPicker,
   StoryTypePicker,
   StoryStatusPicker,
   TeamPicker,
@@ -109,7 +110,13 @@ export function StoryMetadataSidebar({
   const { teams } = useWorkspaceTeams(workspace.id);
   const { cycles } = useTeamCycles(workspace.id, story.team_id);
   const { workflowStates } = useTeamWorkflowStates(workspace.id, story.team_id);
-  const { labels: storyTypes } = useWorkspaceStoryLabels(workspace.id);
+  const {
+    labels: workspaceLabels,
+    loading: labelsLoading,
+    error: labelsError,
+    refresh: refreshWorkspaceLabels,
+  } = useWorkspaceStoryLabels(workspace.id);
+  const storyTypes = workspaceLabels;
   const [storyTypeId, setStoryTypeId] = React.useState<string | null>(null);
   const [customFields, setCustomFields] = React.useState<StoryCustomFieldValues>(
     EMPTY_CUSTOM_FIELDS,
@@ -340,7 +347,17 @@ export function StoryMetadataSidebar({
           <div className="mb-2 flex items-center justify-between">
             <h4 className="text-sm font-medium text-foreground">Labels</h4>
           </div>
+          {labelsError ? (
+            <p className="mb-2 text-xs text-destructive">{labelsError}</p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2">
+            <StoryLabelsPicker
+              workspaceId={story.workspace_id}
+              labels={workspaceLabels}
+              labelIds={story.label_ids}
+              onChange={handlers.handleLabelsChange}
+              onLabelsCatalogChange={refreshWorkspaceLabels}
+            />
             <StorySlaBadge workspaceId={story.workspace_id} story={story} />
             {epic ? (
               <span className="rounded-full bg-status-warning/20 px-2 py-0.5 text-xs text-status-warning">
@@ -348,6 +365,9 @@ export function StoryMetadataSidebar({
               </span>
             ) : null}
           </div>
+          {labelsLoading ? (
+            <p className="mt-1 text-xs text-muted-foreground">Loading labels…</p>
+          ) : null}
         </div>
 
         <div className="mt-4 space-y-1 border-t border-border/60 pt-4 text-xs text-muted-foreground">

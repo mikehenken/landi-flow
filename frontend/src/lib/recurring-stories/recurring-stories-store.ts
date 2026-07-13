@@ -122,6 +122,7 @@ export function runRecurringRule(ruleId: string): { rule: RecurringStoryRule; st
     assignee_id: null,
     creator_id: 'user-jane',
     follower_ids: [],
+    label_ids: [],
     delegate_agent_id: null,
     epic_id: null,
     milestone_id: null,
