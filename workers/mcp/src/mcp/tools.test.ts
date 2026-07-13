@@ -35,7 +35,7 @@ describe('MCP tool catalogue (static contract)', () => {
   it('documents required Epic/Story tool names for IDE agents', () => {
     // Static contract test — full MCP_TOOLS import pulls worker runtime deps.
     for (const name of expectedTools) {
-      expect(name).toMatch(/^(flow|epic|story|comment|signal)\./);
+      expect(name).toMatch(/^(workspace|flow|epic|story|comment|signal)\./);
     }
   });
 });

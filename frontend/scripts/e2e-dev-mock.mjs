@@ -83,12 +83,24 @@ async function main() {
     await new Promise((resolve) => setTimeout(resolve, postKillDelayMs));
   }
 
+  /** LocaleLayout still constructs a Supabase server client even under mock auth. */
+  const mockSupabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+    fileEnv.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+    'https://e2e-mock.supabase.co';
+  const mockSupabaseAnonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    fileEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    'e2e-mock-anon-key';
+
   const devEnv = {
     ...process.env,
     ...fileEnv,
     PORT: String(port),
     LANDI_FORCE_MOCK_AUTH: 'true',
     NEXT_PUBLIC_MOCK_AUTH: 'true',
+    NEXT_PUBLIC_SUPABASE_URL: mockSupabaseUrl,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: mockSupabaseAnonKey,
     NEXT_PUBLIC_OBS_ENABLE_CLIENT_REPORTING: 'true',
     NEXT_PUBLIC_MOCK_ASKS_WEBHOOK_SECRET: 'e2e-asks-secret',
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? `http://localhost:${port}`,
