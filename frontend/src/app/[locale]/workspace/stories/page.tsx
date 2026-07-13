@@ -12,12 +12,14 @@ import {
 } from '@/components/stories-view-provider';
 import { useDefaultTeamLabel } from '@/hooks/use-default-team-label';
 import { useStoryStore } from '@/hooks/use-story-store';
+import { useSelectedStoryId } from '@/hooks/use-selected-story-id';
 import { useStoryDeepLink, useStoryModalSelect } from '@/lib/story/use-story-deep-link';
 import { storyStore } from '@/stores/story-store';
 
 function StoriesListBody(): React.ReactElement {
   const openCreateStory = useOpenCreateStoryModal();
-  const { selectedStoryId, loading } = useStoryStore();
+  const { loading } = useStoryStore();
+  const selectedStoryId = useSelectedStoryId();
   const { visibleStories, displayProperties } = useStoriesViewContext();
   useStoryDeepLink();
   const handleStorySelect = useStoryModalSelect();

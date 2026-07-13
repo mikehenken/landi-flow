@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/empty-state';
 import { getParentStoryId, getStoryCustomerId } from '@/lib/story-relations-seed';
 import { useAssignableMembers } from '@/hooks/use-assignable-members';
 import { useStorySelection } from '@/hooks/use-story-selection';
+import { storyStore } from '@/stores/story-store';
 import {
   formatAssigneeDisplayName,
   formatAssigneeInitials,
@@ -161,7 +162,10 @@ export function StoryListView({
                 type="button"
                 data-testid="story-list-item"
                 role="listitem"
-                onClick={() => onStorySelect(story.id)}
+                onClick={() => {
+                  storyStore.openStoryDetail(story.id);
+                  onStorySelect(story.id);
+                }}
                 className="flex min-w-0 flex-1 items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:gap-3"
                 aria-current={isRowSelected ? 'true' : undefined}
               >

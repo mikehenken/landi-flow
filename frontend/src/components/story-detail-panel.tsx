@@ -12,6 +12,7 @@ import {
 } from '@/components/story-detail-layout-context';
 import { StoryDetailLayoutToggle } from '@/components/story-detail-layout-toggle';
 import { useStoryStore } from '@/hooks/use-story-store';
+import { useSelectedStoryId } from '@/hooks/use-selected-story-id';
 import {
   isStoryModalRoute,
   preservesStorySelection,
@@ -37,7 +38,8 @@ export function StoryDetailLayoutRoot({
 function StoryDetailModalHost(): React.ReactElement | null {
   const pathname = usePathname();
   const { isModal, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
-  const { stories, selectedStoryId } = useStoryStore();
+  const { stories } = useStoryStore();
+  const selectedStoryId = useSelectedStoryId();
   const selectedStory =
     stories.find((story) => story.id === selectedStoryId) ??
     (selectedStoryId

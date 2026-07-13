@@ -14,6 +14,7 @@ import { useBoardGroupByPreference } from '@/hooks/use-board-group-by-preference
 import { useDefaultTeamLabel } from '@/hooks/use-default-team-label';
 import { useEpicStore } from '@/hooks/use-epic-store';
 import { useStoryStore } from '@/hooks/use-story-store';
+import { useSelectedStoryId } from '@/hooks/use-selected-story-id';
 import { useTeamCycles } from '@/hooks/use-team-cycles';
 import { useTeamWorkflowStates } from '@/hooks/use-team-workflow-states';
 import { useWorkspaceTeams } from '@/hooks/use-workspace-teams';
@@ -30,7 +31,7 @@ import { getWorkflowStatesForTeam } from '@/lib/api/workspace-context';
 
 function StoriesBoardBody(): React.ReactElement {
   const { workspace } = useWorkspace();
-  const { selectedStoryId } = useStoryStore();
+  const selectedStoryId = useSelectedStoryId();
   const { epics } = useEpicStore();
   const { visibleStories } = useStoriesViewContext();
   const { groupBy, setGroupBy } = useBoardGroupByPreference();

@@ -11,6 +11,7 @@ import {
 } from '@/lib/story/open-story-modal';
 import { isStoryDetailSectionId } from '@/lib/story/story-detail-sections';
 import { useStoryStore } from '@/hooks/use-story-store';
+import { useSelectedStoryId } from '@/hooks/use-selected-story-id';
 import { storyStore } from '@/stores/story-store';
 
 /**
@@ -18,7 +19,8 @@ import { storyStore } from '@/stores/story-store';
  * when selection clears. Shared by inbox, stories list, and board.
  */
 export function useStoryDeepLink(): void {
-  const { selectedStoryId, stories } = useStoryStore();
+  const selectedStoryId = useSelectedStoryId();
+  const { stories } = useStoryStore();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
