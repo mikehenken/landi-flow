@@ -12,6 +12,8 @@ import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 import { createClient } from '@/lib/supabase/server';
 import { routing } from '@/i18n/routing';
 import { isRtlLocale } from '@landi-flow/ui';
+import { LiveblocksVendorBadgeGate } from '@/components/collaboration/liveblocks-vendor-badge-gate';
+import { isLiveblocksVendorBadgeVisible } from '@/lib/liveblocks/config';
 import '../globals.css';
 
 export const metadata: Metadata = {
@@ -66,14 +68,17 @@ export default async function LocaleLayout({
   const {
     data: { user: serverUser },
   } = await supabase.auth.getUser();
+  const liveblocksVendorBadgeVisible = isLiveblocksVendorBadgeVisible();
 
   return (
     <html
       lang={locale}
       dir={isRtlLocale(locale) ? 'rtl' : 'ltr'}
       className="dark h-full"
+      data-liveblocks-vendor-badge={liveblocksVendorBadgeVisible ? 'visible' : 'hidden'}
     >
       <body className="h-full antialiased">
+        <LiveblocksVendorBadgeGate />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <SupabaseSessionProvider>
             <ActiveWorkspaceProvider

@@ -40,6 +40,22 @@ export function isLiveblocksConfigured(): boolean {
   return Boolean(getLiveblocksPublicKey());
 }
 
+/**
+ * Whether the Liveblocks SDK "Powered by" vendor badge may render.
+ * Hidden on production (flow.landi.build) for copy-hygiene GATE 1; opt-in via env for local QA.
+ */
+export function isLiveblocksVendorBadgeVisible(
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  if (env.NEXT_PUBLIC_LIVEBLOCKS_SHOW_VENDOR_BADGE === '1') {
+    return true;
+  }
+  if (env.NEXT_PUBLIC_LIVEBLOCKS_SHOW_VENDOR_BADGE === '0') {
+    return false;
+  }
+  return env.NODE_ENV === 'development';
+}
+
 export interface LiveblocksEnvStatus {
   publicKeyConfigured: boolean;
   secretKeyConfigured: boolean;
