@@ -66,7 +66,7 @@ describe('resolveBoardWorkflowStates', () => {
     expect(resolveBoardWorkflowStates(stories, states)).toEqual(states);
   });
 
-  it('synthesizes columns when roster ids do not match story statuses', () => {
+  it('synthesizes when roster only partially matches story statuses', () => {
     const states: WorkflowState[] = [
       {
         id: 'state-todo',
@@ -86,11 +86,6 @@ describe('resolveBoardWorkflowStates', () => {
       makeStory({
         id: 's2',
         team_id: 'real-team',
-        workflow_state_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-      }),
-      makeStory({
-        id: 's3',
-        team_id: 'real-team',
         workflow_state_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
       }),
     ];
@@ -101,6 +96,41 @@ describe('resolveBoardWorkflowStates', () => {
       'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
       'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
     ].sort());
+  });
+
+  it('keeps roster when every story status is covered', () => {
+    const states: WorkflowState[] = [
+      {
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        team_id: 'team-1',
+        name: 'Todo',
+        category: 'unstarted',
+        position: 0,
+        is_default: true,
+      },
+      {
+        id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        team_id: 'team-1',
+        name: 'Done',
+        category: 'completed',
+        position: 1,
+        is_default: false,
+      },
+    ];
+    const stories = [
+      makeStory({
+        id: 's1',
+        team_id: 'team-1',
+        workflow_state_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      }),
+      makeStory({
+        id: 's2',
+        team_id: 'team-1',
+        workflow_state_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      }),
+    ];
+
+    expect(resolveBoardWorkflowStates(stories, states)).toEqual(states);
   });
 
   it('synthesizes from stories when roster is empty', () => {

@@ -6,7 +6,7 @@ import { Button, cn } from '@landi-flow/ui';
 import { StoryListView } from '@/components/story-list-view';
 import { useCurrentUserId } from '@/hooks/use-current-user-id';
 import { useStoryStore } from '@/hooks/use-story-store';
-import { storyStore } from '@/stores/story-store';
+import { useStoryModalSelect } from '@/lib/story/use-story-deep-link';
 import {
   filterMyIssuesTab,
   type MyIssuesTab,
@@ -29,6 +29,7 @@ export function MyIssuesTabs({ stories, className }: MyIssuesTabsProps): React.R
   const [activeTab, setActiveTab] = React.useState<MyIssuesTab>('assigned');
   const currentUserId = useCurrentUserId();
   const { selectedStoryId } = useStoryStore();
+  const handleStorySelect = useStoryModalSelect();
   const filtered = React.useMemo(
     () => filterMyIssuesTab(stories, activeTab, currentUserId),
     [stories, activeTab, currentUserId],
@@ -63,7 +64,7 @@ export function MyIssuesTabs({ stories, className }: MyIssuesTabsProps): React.R
         <StoryListView
           stories={filtered}
           selectedStoryId={selectedStoryId}
-          onStorySelect={(id) => storyStore.selectStory(id)}
+          onStorySelect={handleStorySelect}
         />
       </div>
     </div>

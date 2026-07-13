@@ -10,14 +10,8 @@ import { useDefaultTeamLabel } from '@/hooks/use-default-team-label';
 import { useInboxHydration } from '@/hooks/use-inbox-hydration';
 import { useInboxStore } from '@/hooks/use-inbox-store';
 import { useStoryStore } from '@/hooks/use-story-store';
-import { usePathname, useRouter } from '@/i18n/navigation';
-import {
-  openStoryModal,
-  type OpenStoryModalOptions,
-} from '@/lib/story/open-story-modal';
-import { syncStoryModalUrl, useStoryDeepLink } from '@/lib/story/use-story-deep-link';
+import { useStoryDeepLink, useStoryModalSelect } from '@/lib/story/use-story-deep-link';
 import { useWorkspace } from '@/lib/workspace';
-import { storyStore } from '@/stores/story-store';
 
 function InboxPageBody(): React.ReactElement {
   const { workspace } = useWorkspace();
@@ -25,26 +19,15 @@ function InboxPageBody(): React.ReactElement {
   const { selectedStoryId } = useStoryStore();
   const tNav = useTranslations('navigation');
   const tInbox = useTranslations('inbox');
-  const router = useRouter();
-  const pathname = usePathname();
-
   useInboxHydration(workspace.id);
   useStoryDeepLink();
+  const handleStorySelect = useStoryModalSelect();
 
   const handleRetry = React.useCallback(() => {
     void hydrateInbox(workspace.id).catch(() => {
       /* error stored on inboxStore */
     });
   }, [workspace.id]);
-
-  const handleStorySelect = React.useCallback(
-    (storyId: string, options?: OpenStoryModalOptions) => {
-      openStoryModal(storyId, options);
-      const story = storyStore.getServerSnapshot().stories.find((row) => row.id === storyId);
-      router.replace(syncStoryModalUrl(pathname, story, options), { scroll: false });
-    },
-    [pathname, router],
-  );
 
   const unreadCount = notifications.filter((row) => !row.read).length;
 

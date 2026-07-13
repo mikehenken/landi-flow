@@ -92,7 +92,9 @@ export function CreateStoryModal({
   const titleInputRef = React.useRef<HTMLInputElement>(null);
   const [title, setTitle] = React.useState('');
   const [descriptionMd, setDescriptionMd] = React.useState('');
-  const [teamId, setTeamId] = React.useState<string>(DEMO_TEAM_ID);
+  const [teamId, setTeamId] = React.useState<string>(() =>
+    isMockAuthEnabled() ? DEMO_TEAM_ID : getDefaultTeamId() ?? '',
+  );
   const [workflowStateId, setWorkflowStateId] = React.useState<string>(WORKFLOW_STATES.todo);
   const [priority, setPriority] = React.useState<StoryPriority>('none');
   const [epicId, setEpicId] = React.useState<string | null>(null);
@@ -162,7 +164,7 @@ export function CreateStoryModal({
   }, []);
 
   const resetPropertyFields = React.useCallback((): void => {
-    setTeamId(isMockAuthEnabled() ? DEMO_TEAM_ID : getDefaultTeamId() ?? DEMO_TEAM_ID);
+    setTeamId(isMockAuthEnabled() ? DEMO_TEAM_ID : getDefaultTeamId() ?? '');
     setWorkflowStateId(WORKFLOW_STATES.todo);
     setPriority('none');
     setEpicId(null);

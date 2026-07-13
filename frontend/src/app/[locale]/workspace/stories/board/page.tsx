@@ -25,7 +25,7 @@ import {
   resolveBoardTeamId,
   resolveBoardWorkflowStates,
 } from '@/lib/board/resolve-board-workflow-states';
-import { useStoryDeepLink } from '@/lib/story/use-story-deep-link';
+import { useStoryDeepLink, useStoryModalSelect } from '@/lib/story/use-story-deep-link';
 import { getWorkflowStatesForTeam } from '@/lib/api/workspace-context';
 
 function StoriesBoardBody(): React.ReactElement {
@@ -54,6 +54,7 @@ function StoriesBoardBody(): React.ReactElement {
   }, [teamId]);
 
   useStoryDeepLink();
+  const handleStorySelect = useStoryModalSelect();
 
   const selectedStory =
     visibleStories.find((story) => story.id === selectedStoryId) ??
@@ -67,10 +68,6 @@ function StoriesBoardBody(): React.ReactElement {
     }
     return map;
   }, [visibleStories]);
-
-  const handleCardSelect = React.useCallback((id: string) => {
-    storyStore.selectStory(id);
-  }, []);
 
   const handleQuickAdd = React.useCallback(
     (workflowStateId: string) => {
@@ -112,7 +109,7 @@ function StoriesBoardBody(): React.ReactElement {
               workflowStates={resolvedWorkflowStates}
               storyTitles={storyTitles}
               selectedStoryId={selectedStoryId}
-              onCardSelect={handleCardSelect}
+              onCardSelect={handleStorySelect}
               groupBy={groupBy}
               epics={epics}
               cycles={cycles}

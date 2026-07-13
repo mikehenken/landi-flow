@@ -76,3 +76,24 @@ export function syncStoryModalUrl(
   const query = buildStoryModalQueryString(story, options);
   return query.length > 0 ? `${pathname}?${query}` : pathname;
 }
+
+/**
+ * Opens story detail and writes `?story=` (and optional section/signal) to the URL.
+ * Use for list/board/inbox clicks so GATE 2 reload restores the open story.
+ */
+export function useStoryModalSelect(): (
+  storyId: string,
+  options?: OpenStoryModalOptions,
+) => void {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  return React.useCallback(
+    (storyId: string, options?: OpenStoryModalOptions) => {
+      openStoryModal(storyId, options);
+      const story = storyStore.getServerSnapshot().stories.find((row) => row.id === storyId);
+      router.replace(syncStoryModalUrl(pathname, story, options), { scroll: false });
+    },
+    [pathname, router],
+  );
+}

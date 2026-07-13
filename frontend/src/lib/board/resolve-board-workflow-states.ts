@@ -8,15 +8,28 @@ export function resolveBoardWorkflowStates(
   stories: Story[],
   workflowStates: WorkflowState[],
 ): WorkflowState[] {
-  if (workflowStates.length > 0) {
-    const stateIds = new Set(workflowStates.map((state) => state.id));
-    const anyStoryMatches = stories.some((story) => stateIds.has(story.workflow_state_id));
-    if (anyStoryMatches || stories.length === 0) {
+  if (stories.length === 0 && workflowStates.length > 0) {
+    return [...workflowStates].sort((a, b) => a.position - b.position);
+  }
+
+  const storyStateIds = new Set(
+    stories.map((story) => story.workflow_state_id).filter((id): id is string => Boolean(id)),
+  );
+
+  if (workflowStates.length > 0 && storyStateIds.size > 0) {
+    const rosterIds = new Set(workflowStates.map((state) => state.id));
+    const rosterCoversAllStories = [...storyStateIds].every((id) => rosterIds.has(id));
+    if (rosterCoversAllStories) {
       return [...workflowStates].sort((a, b) => a.position - b.position);
     }
   }
 
-  return synthesizeWorkflowStatesFromStories(stories);
+  const nameById = new Map(workflowStates.map((state) => [state.id, state.name]));
+  const synthesized = synthesizeWorkflowStatesFromStories(stories);
+  return synthesized.map((state) => ({
+    ...state,
+    name: nameById.get(state.id) ?? state.name,
+  }));
 }
 
 /** Build minimal columns from distinct story.workflow_state_id values when roster is missing. */

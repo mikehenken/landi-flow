@@ -3,6 +3,8 @@
 import * as React from 'react';
 import type { Cycle } from '@landi-flow/core/types';
 import { loadCycles } from '@/controllers/cycles-controller';
+import { isMockAuthEnabled } from '@/lib/api/config';
+import { isUuid } from '@landi-flow/core/mcp';
 
 export interface UseTeamCyclesResult {
   cycles: Cycle[];
@@ -20,7 +22,7 @@ export function useTeamCycles(
   const [error, setError] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(() => {
-    if (!teamId) {
+    if (!teamId || (!isMockAuthEnabled() && !isUuid(teamId))) {
       setCycles([]);
       setLoading(false);
       setError(null);

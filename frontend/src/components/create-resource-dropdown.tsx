@@ -49,10 +49,10 @@ function useDismissOnOutside(
         onClose();
       }
     }
-    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('click', onPointerDown, true);
     document.addEventListener('keydown', onKeyDown);
     return () => {
-      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('click', onPointerDown, true);
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [open, refs, onClose]);
@@ -203,6 +203,7 @@ export function CreateResourceDropdown({
         size="sm"
         className="shrink-0 gap-1"
         data-testid="create-resource-dropdown-trigger"
+        onMouseDown={(event) => event.stopPropagation()}
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open ? 'true' : 'false'}

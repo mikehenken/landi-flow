@@ -156,7 +156,7 @@ export function AppShellFrame({
   const { workspace } = useWorkspace();
   const { workspaces: membershipWorkspaces, loading: membershipsLoading } = useWorkspaceMemberships();
   const triageTeamId = React.useMemo(
-    () => (isMockAuthEnabled() ? DEMO_TEAM_ID : getDefaultTeamId() ?? DEMO_TEAM_ID),
+    () => (isMockAuthEnabled() ? DEMO_TEAM_ID : getDefaultTeamId() ?? ''),
     [workspace.id],
   );
 

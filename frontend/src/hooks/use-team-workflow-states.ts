@@ -6,6 +6,7 @@ import { loadWorkflowStates } from '@/controllers/workflow-states-controller';
 import { DEMO_WORKFLOW_STATE_ROWS } from '@/lib/seed-data';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { getWorkflowStatesForTeam } from '@/lib/api/workspace-context';
+import { isUuid } from '@landi-flow/core/mcp';
 
 export interface UseTeamWorkflowStatesResult {
   workflowStates: WorkflowState[];
@@ -23,7 +24,7 @@ export function useTeamWorkflowStates(
   const [error, setError] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(() => {
-    if (!teamId) {
+    if (!teamId || (!isMockAuthEnabled() && !isUuid(teamId))) {
       setWorkflowStates([]);
       setLoading(false);
       setError(null);
