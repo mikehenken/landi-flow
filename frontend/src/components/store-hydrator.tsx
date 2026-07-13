@@ -18,7 +18,9 @@ import { loadWorkspaceMembers } from '@/controllers/member-controller';
 
 import { loadStories } from '@/controllers/story-controller';
 
+import { isAuthFailure, recoverSessionAndRedirect } from '@/lib/auth/recover-session';
 import { isWorkspaceUuid, useWorkspace } from '@/lib/workspace';
+import { usePathname } from '@/i18n/navigation';
 
 import { SEED_CUSTOMERS, SEED_EPICS, SEED_STORIES } from '@/lib/seed-data';
 import { applyMockCustomerAdditions } from '@/lib/customer-mock-persistence';
@@ -149,6 +151,7 @@ function markAppHydrated(workspaceId: string): void {
 export function StoreHydrator({ children }: { children: React.ReactNode }): React.ReactElement {
 
   const { workspace } = useWorkspace();
+  const pathname = usePathname();
 
   const { user, isReady: sessionReady } = useSupabaseSession();
   const userId = user?.id ?? null;
@@ -158,6 +161,18 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
   );
 
   const [hydrationError, setHydrationError] = React.useState<string | null>(null);
+  const [redirectingToLogin, setRedirectingToLogin] = React.useState(false);
+  const redirectStartedRef = React.useRef(false);
+
+  const redirectToLogin = React.useCallback((): void => {
+    if (redirectStartedRef.current || typeof window === 'undefined') {
+      return;
+    }
+    redirectStartedRef.current = true;
+    setRedirectingToLogin(true);
+    setHydrationError(null);
+    void recoverSessionAndRedirect(pathname);
+  }, [pathname]);
 
 
 
@@ -199,13 +214,9 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
 
     if (!userId) {
-
-      setHydrationError('Authentication required');
-
+      redirectToLogin();
       setReady(true);
-
       return;
-
     }
 
 
@@ -243,17 +254,18 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
         setHydrationError(null);
 
       } catch (error) {
-
         hydrationPromise = null;
-
         hydratedWorkspaceId = null;
 
-        const message =
+        if (isAuthFailure(error)) {
+          redirectToLogin();
+          return;
+        }
 
+        const message =
           error instanceof Error ? error.message : 'Failed to hydrate stores from API';
 
         setHydrationError(message);
-
       }
 
     })();
@@ -266,9 +278,15 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
     });
 
-  }, [workspace.id, sessionReady, userId]);
+  }, [workspace.id, sessionReady, userId, redirectToLogin]);
 
-
+  if (redirectingToLogin) {
+    return (
+      <div className="flex h-full min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
+        Redirecting to sign in.
+      </div>
+    );
+  }
 
   if (!ready) {
     const mockAlreadyHydrated =

@@ -5,6 +5,7 @@ import {
   fetchFlowApiUpstream,
   resolveFlowApiUpstreamBase,
 } from '@/lib/api/upstream-fetch';
+import { resolveProxyAccessToken } from '@/lib/api/resolve-proxy-access-token';
 
 async function proxyRequest(
   request: NextRequest,
@@ -30,12 +31,9 @@ async function proxyRequest(
     );
   }
 
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
+  const accessToken = await resolveProxyAccessToken(supabase);
 
-  if (sessionError || !session?.access_token) {
+  if (!accessToken) {
     return NextResponse.json(
       { error: 'unauthorized', message: 'Authentication required' },
       { status: 401 },
@@ -51,7 +49,7 @@ async function proxyRequest(
   const upstreamPath = `/api/v1/${path}${search}`;
 
   const headers = new Headers();
-  headers.set('Authorization', `Bearer ${session.access_token}`);
+  headers.set('Authorization', `Bearer ${accessToken}`);
   headers.set('X-Landi-Correlation-Id', correlation);
   const contentType = request.headers.get('content-type');
   if (contentType) {

@@ -7,8 +7,9 @@ import { isMockAuthEnabled } from '@/lib/api/config';
 import { getMockWorkspacePatch } from '@/lib/mock/settings-completion-store';
 import { ensureUserWorkspace, listWorkspaces } from '@/lib/api/workspace-api';
 import { useSupabaseSession } from '@/lib/supabase/session-provider';
+import { isAuthFailure, recoverSessionAndRedirect } from '@/lib/auth/recover-session';
 import { toResolvedWorkspace } from '@/lib/workspace/to-resolved-workspace';
-import { usePathname, useRouter } from '@/i18n/navigation';
+import { usePathname } from '@/i18n/navigation';
 import { WorkspaceProvider } from '@/lib/workspace/workspace-provider';
 import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 
@@ -81,11 +82,10 @@ export interface ActiveWorkspaceProviderProps {
  */
 export function ActiveWorkspaceProvider({
   initialWorkspace,
-  serverAuthenticated = false,
+  serverAuthenticated: _serverAuthenticated = false,
   children,
 }: ActiveWorkspaceProviderProps): React.ReactElement {
   const pathname = usePathname();
-  const router = useRouter();
   const onAuthPage = isPublicAuthPath(pathname);
   const { user, isReady: sessionReady } = useSupabaseSession();
   const userId = user?.id ?? null;
@@ -134,20 +134,14 @@ export function ActiveWorkspaceProvider({
       return;
     }
 
-    if (serverAuthenticated) {
-      return;
-    }
-
+    // Session bootstrap finished with no user — clear stale SSR hint and sign in again.
     resolvedUserIdRef.current = null;
     resolvedWorkspaceIdRef.current = null;
     lastResolveAttemptRef.current = -1;
     setRedirectingToLogin(true);
     setError(null);
-    router.replace({
-      pathname: '/auth/login',
-      query: { redirect: loginRedirectPath(pathnameRef.current) },
-    });
-  }, [onAuthPage, router, serverAuthenticated, sessionReady, userId]);
+    void recoverSessionAndRedirect(loginRedirectPath(pathnameRef.current));
+  }, [onAuthPage, sessionReady, userId]);
 
   React.useEffect(() => {
     if (isMockAuthEnabled()) {
@@ -230,6 +224,12 @@ export function ActiveWorkspaceProvider({
         }
         resolvedUserIdRef.current = null;
         resolvedWorkspaceIdRef.current = null;
+        if (isAuthFailure(resolveError)) {
+          setRedirectingToLogin(true);
+          setError(null);
+          void recoverSessionAndRedirect(loginRedirectPath(pathnameRef.current));
+          return;
+        }
         setError(workspaceResolveErrorMessage(resolveError));
       }
     })();
