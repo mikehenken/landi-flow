@@ -14,6 +14,8 @@ import { McpAuthorizationError, McpProjectService } from './mutations.js';
 import { TOOLS_BY_NAME, ToolInputError, toolListForClient } from './tools.js';
 import { maybeRefreshAgentPresenceAfterTool } from '../collaboration/tools.js';
 import type { McpWorkerEnv } from '../env.js';
+import { enrichMutationToolInput, MUTATION_TOOLS_WITH_ENRICHMENT } from '../lib/input-enrichment.js';
+import { normalizeToolName } from '@landi-flow/core/mcp';
 
 const MCP_PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: 'landi-flow-mcp', version: '0.1.0' };
@@ -156,9 +158,25 @@ async function handleToolCall(
   }
 
   try {
+    let enrichedArgs: Record<string, unknown> = {
+      ...args,
+      workspace_id: workspaceId,
+    };
+
+    if (MUTATION_TOOLS_WITH_ENRICHMENT.has(normalizeToolName(tool.name))) {
+      enrichedArgs = await enrichMutationToolInput({
+        db: ctx.db,
+        service,
+        toolName: tool.name,
+        input: enrichedArgs,
+        workspaceId,
+        userId: ctx.principal.userId,
+      });
+    }
+
     const output = await tool.handler(
       { service, principal: ctx.principal, gateway: ctx.gateway, workspaceId, env: ctx.env },
-      args
+      enrichedArgs
     );
     await maybeRefreshAgentPresenceAfterTool(
       ctx.env,

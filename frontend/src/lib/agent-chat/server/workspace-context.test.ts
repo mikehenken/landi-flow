@@ -114,7 +114,7 @@ describe('agent workspace context', () => {
     expect(section).toContain(`team_id=\`${ENG_TEAM_UUID}\``);
     expect(section).toContain('Active team: Engineering');
     expect(section).toContain('workflow_state_id=`state-todo`');
-    expect(section).toContain('Never ask the user for a team ID');
+    expect(section).toContain('Never ask the user for team IDs');
     expect(section).toContain(`Design · team_id=\`${DESIGN_TEAM_UUID}\``);
     expect(section).toContain('mark a **Story** complete');
     expect(section).toContain('mark an **Epic** complete');

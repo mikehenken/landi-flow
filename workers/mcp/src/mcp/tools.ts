@@ -34,9 +34,35 @@ function requireStr(args: Record<string, unknown>, key: string): string {
 }
 
 const STRING = { type: 'string' } as const;
+const OPTIONAL_ID = {
+  ...STRING,
+  description: 'Optional — resolved from workspace.context, slug, key, or name',
+} as const;
 
 export const MCP_TOOLS: ToolDefinition[] = [
   ...COLLABORATION_TOOLS,
+  // ----------------------------------------------------------- workspace context
+  {
+    name: 'workspace.context',
+    title: 'Workspace Context',
+    description:
+      'Returns everything needed for Story/Epic mutations in one call: teams, workflow states, epic statuses, labels, members, and defaults. Call this first instead of hunting UUIDs.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspace_id: {
+          ...STRING,
+          description: 'Optional when credential is workspace-bound',
+        },
+      },
+    },
+    requiredScopes: [MCP_SCOPES.READ],
+    isWrite: false,
+    handler: async ({ service, principal, workspaceId }) => {
+      await service.assertWorkspaceAccess();
+      return service.getWorkspaceContext(principal.userId);
+    },
+  },
   // ------------------------------------------------------------------ search
   {
     name: 'flow.search',
@@ -99,17 +125,18 @@ export const MCP_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         workspace_id: STRING,
-        name: STRING,
-        slug: STRING,
-        status_id: { ...STRING, description: 'Epic status UUID' },
+        name: { ...STRING, description: 'Epic title / name' },
+        slug: { ...OPTIONAL_ID, description: 'Optional — auto-generated from name when omitted' },
+        status_id: { ...OPTIONAL_ID, description: 'Optional — defaults to backlog; accepts slug/name/“backlog”/“done”' },
+        status: { ...OPTIONAL_ID, description: 'Alias for status_id (e.g. backlog, done, complete)' },
         description_md: STRING,
         priority: { type: 'string', enum: ['none', 'low', 'medium', 'high', 'urgent'] },
-        lead_id: STRING,
+        lead_id: { ...OPTIONAL_ID, description: 'Human lead — UUID or member name/email' },
         start_date: STRING,
         target_date: STRING,
         team_ids: { type: 'array', items: STRING },
       },
-      required: ['name', 'slug', 'status_id'],
+      required: ['name'],
     },
     requiredScopes: [MCP_SCOPES.EPICS_CREATE],
     isWrite: true,
@@ -134,12 +161,13 @@ export const MCP_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         workspace_id: STRING,
-        epic_id: STRING,
+        epic_id: { ...OPTIONAL_ID, description: 'Epic UUID or slug/name' },
         name: STRING,
         description_md: STRING,
-        status_id: STRING,
+        status_id: { ...OPTIONAL_ID, description: 'Epic status UUID or slug/name (e.g. done, backlog)' },
+        status: { ...OPTIONAL_ID, description: 'Alias for status_id' },
         priority: { type: 'string', enum: ['none', 'low', 'medium', 'high', 'urgent'] },
-        lead_id: STRING,
+        lead_id: { ...OPTIONAL_ID, description: 'Human lead — UUID or member name' },
         start_date: STRING,
         target_date: STRING,
       },
@@ -168,7 +196,7 @@ export const MCP_TOOLS: ToolDefinition[] = [
     description: 'List active Stories, optionally filtered by team.',
     inputSchema: {
       type: 'object',
-      properties: { workspace_id: STRING, team_id: STRING, limit: { type: 'integer', minimum: 1, maximum: 100 } },
+      properties: { workspace_id: STRING, team_id: OPTIONAL_ID, limit: { type: 'integer', minimum: 1, maximum: 100 } },
     },
     requiredScopes: [MCP_SCOPES.READ],
     isWrite: false,
@@ -198,19 +226,23 @@ export const MCP_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         workspace_id: STRING,
-        team_id: STRING,
+        team_id: { ...OPTIONAL_ID, description: 'Optional — defaults to workspace default team; accepts slug/key/name' },
         title: STRING,
-        workflow_state_id: STRING,
+        workflow_state_id: {
+          ...OPTIONAL_ID,
+          description: 'Optional — defaults to backlog; accepts name or aliases done/complete/backlog',
+        },
+        status: { ...OPTIONAL_ID, description: 'Alias for workflow_state_id (e.g. backlog, done)' },
         description_md: STRING,
         priority: { type: 'string', enum: ['none', 'low', 'medium', 'high', 'urgent'] },
-        assignee_id: { ...STRING, description: 'Human assignee (owner) user id' },
-        delegate_agent_id: { ...STRING, description: 'Agent delegate id (human keeps ownership)' },
-        epic_id: STRING,
+        assignee_id: { ...OPTIONAL_ID, description: 'Human assignee — UUID or member name' },
+        delegate_agent_id: { ...OPTIONAL_ID, description: 'Agent delegate — UUID or agent name' },
+        epic_id: { ...OPTIONAL_ID, description: 'Epic UUID or slug/name' },
         milestone_id: STRING,
         cycle_id: STRING,
         estimate: { type: 'number' },
       },
-      required: ['team_id', 'title', 'workflow_state_id'],
+      required: ['title'],
     },
     requiredScopes: [MCP_SCOPES.STORIES_CREATE],
     isWrite: true,
@@ -237,22 +269,31 @@ export const MCP_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         workspace_id: STRING,
-        team_id: STRING,
-        story_id: STRING,
+        team_id: { ...OPTIONAL_ID, description: 'Optional — inferred from story when omitted' },
+        story_id: { ...OPTIONAL_ID, description: 'Story UUID or identifier (e.g. LAN-2)' },
+        story: { ...OPTIONAL_ID, description: 'Alias for story_id' },
         title: STRING,
         description_md: STRING,
-        workflow_state_id: STRING,
+        workflow_state_id: {
+          ...OPTIONAL_ID,
+          description: 'Workflow state UUID or name; use done/complete to mark finished',
+        },
+        status: { ...OPTIONAL_ID, description: 'Alias for workflow_state_id (e.g. done, complete)' },
         priority: { type: 'string', enum: ['none', 'low', 'medium', 'high', 'urgent'] },
-        epic_id: STRING,
+        epic_id: { ...OPTIONAL_ID, description: 'Epic UUID or slug/name' },
         milestone_id: STRING,
         cycle_id: STRING,
         estimate: { type: 'number' },
       },
-      required: ['team_id', 'story_id'],
+      required: [],
     },
     requiredScopes: [MCP_SCOPES.STORIES_WRITE],
     isWrite: true,
     handler: async ({ service }, args) => {
+      const storyId = str(args, 'story_id') ?? str(args, 'story');
+      if (!storyId) {
+        throw new ToolInputError('Missing story_id or story identifier');
+      }
       const patch = pickDefined(args, [
         'title',
         'description_md',
@@ -265,7 +306,7 @@ export const MCP_TOOLS: ToolDefinition[] = [
       ]);
       return service.updateStory(
         requireStr(args, 'team_id'),
-        requireStr(args, 'story_id'),
+        storyId,
         patch,
         patch.workflow_state_id !== undefined
       );
@@ -280,9 +321,9 @@ export const MCP_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         workspace_id: STRING,
-        story_id: STRING,
-        assignee_id: { ...STRING, description: 'Human user id to own the Story' },
-        delegate_agent_id: { ...STRING, description: 'Agent id to assign as delegate (preserves human ownership)' },
+        story_id: { ...OPTIONAL_ID, description: 'Story UUID or identifier (e.g. LAN-2)' },
+        assignee_id: { ...OPTIONAL_ID, description: 'Human user id or member name' },
+        delegate_agent_id: { ...OPTIONAL_ID, description: 'Agent id or agent name' },
         unassign_assignee: { type: 'boolean', description: 'Clear the human assignee' },
         unassign_agent: { type: 'boolean', description: 'Clear the agent delegate' },
       },
@@ -358,12 +399,16 @@ export const MCP_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         workspace_id: STRING,
-        team_id: STRING,
-        workflow_state_id: STRING,
-        epic_id: STRING,
+        team_id: OPTIONAL_ID,
+        workflow_state_id: {
+          ...OPTIONAL_ID,
+          description: 'Optional — defaults to backlog; accepts done/complete/backlog',
+        },
+        status: { ...OPTIONAL_ID, description: 'Alias for workflow_state_id' },
+        epic_id: { ...OPTIONAL_ID, description: 'Epic UUID or slug/name' },
         subtasks: { type: 'array', items: STRING, description: 'Titles for the child Stories' },
       },
-      required: ['team_id', 'workflow_state_id', 'subtasks'],
+      required: ['subtasks'],
     },
     requiredScopes: [MCP_SCOPES.STORIES_CREATE],
     isWrite: true,

@@ -11,6 +11,7 @@ export default defineConfig({
     alias: [
       { find: '@landi-flow/core/events', replacement: path.join(packagesDir, 'core/src/events/topics.ts') },
       { find: '@landi-flow/core/types', replacement: path.join(packagesDir, 'core/src/types/index.ts') },
+      { find: '@landi-flow/core/mcp', replacement: path.join(packagesDir, 'core/src/mcp/index.ts') },
       { find: '@landi-flow/core', replacement: path.join(packagesDir, 'core/src/index.ts') },
       { find: '@landi-flow/auth/rbac', replacement: path.join(packagesDir, 'auth/src/rbac.ts') },
       { find: '@landi-flow/auth/env', replacement: path.join(packagesDir, 'auth/src/env.ts') },

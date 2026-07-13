@@ -22,6 +22,7 @@ describe('MCP scopes', () => {
 
 describe('MCP tool catalogue (static contract)', () => {
   const expectedTools = [
+    'workspace.context',
     'flow.search',
     'epic.create',
     'epic.list',

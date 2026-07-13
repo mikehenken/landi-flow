@@ -5,7 +5,9 @@
  * mutations share the transactional-outbox path with a full audit trail.
  */
 import { ENTITY_TOPICS } from '@landi-flow/core/events';
+import type { McpWorkspaceContext } from '@landi-flow/core/mcp';
 import type { DbClient } from '../lib/db.js';
+import { loadMcpWorkspaceContext } from '../lib/workspace-context-loader.js';
 import type { McpPrincipal } from '../auth/authenticate.js';
 
 export class McpAuthorizationError extends Error {
@@ -158,6 +160,11 @@ export class McpProjectService {
       throw new Error(`Failed to list members: ${error.message}`);
     }
     return Array.isArray(data) ? (data as unknown[]) : [];
+  }
+
+  /** Full workspace roster for MCP agents — teams, states, statuses, labels, members. */
+  async getWorkspaceContext(userId: string | null): Promise<McpWorkspaceContext> {
+    return loadMcpWorkspaceContext(this.db, this.workspaceId, userId);
   }
 
   // --- Writes (Action Bus) ------------------------------------------------

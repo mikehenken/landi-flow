@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./events": "./src/events/topics.ts",
     "./types": "./src/types/index.ts",
-    "./observability/structured-log": "./src/observability/structured-log.ts"
+    "./observability/structured-log": "./src/observability/structured-log.ts",
+    "./mcp": "./src/mcp/index.ts"
   },
   "dependencies": {
     "@landi-flow/auth": "workspace:*"
