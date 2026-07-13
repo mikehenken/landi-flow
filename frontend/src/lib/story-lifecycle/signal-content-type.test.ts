@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSignalContentExcerpt,
   detectSignalContentType,
+  extractSignalContentContext,
   extractSignalFullContent,
   formatJsonForDisplay,
   formatJsonlLines,
@@ -89,5 +90,37 @@ describe('signal-content-type', () => {
     expect(formatJsonForDisplay('{"z":1,"a":2}')).toBe(
       '{\n  "z": 1,\n  "a": 2\n}',
     );
+  });
+
+  it('detects markdown in agent_trace content_preview despite jsonl artifact_ref', () => {
+    const payload = {
+      kind: 'agent_trace',
+      title: 'Attach missing agent traces retroactively',
+      status: 'completed',
+      trace_id: '555775c9-7136-4836-944a-63ed1c662080',
+      artifact_ref:
+        'file://C:/Users/mikeh/.cursor/projects/c-Users-mikeh-Projects-landi-landi-canvas-studio/agent-transcripts/555775c9-7136-4836-944a-63ed1c662080.jsonl',
+      correlation_id: '6a3121ea-bf9a-49bb-b283-f63829c6f3a5',
+      content_preview: `User complaint: Signal preview shows raw JSON instead of markdown.
+
+## Tasks
+
+### 1. Find all relevant code paths
+- **signal-content-type.ts** — heuristics
+- **signal-payload.ts** — extract content_preview
+
+### 2. Fix detection
+Ensure \`content_preview\` markdown renders in the modal.`,
+    };
+
+    const content = extractSignalFullContent(payload);
+    expect(content).toBe(payload.content_preview);
+
+    const context = extractSignalContentContext(payload, 'agent_trace');
+    expect(context.artifactRef).toContain('.jsonl');
+
+    const detected = detectSignalContentType(content!, context);
+    expect(detected.type).toBe('markdown');
+    expect(detected.label).toBe('Markdown');
   });
 });

@@ -242,18 +242,28 @@ function contentTypeLabel(type: SignalContentType): string {
   }
 }
 
+function extensionTypeForContext(
+  context: SignalContentContext,
+): SignalContentType | null {
+  // artifact_ref/path extensions describe linked artifacts (e.g. trace .jsonl files),
+  // not necessarily the inline preview body on agent_trace and other signal kinds.
+  if (context.signalKind !== 'artifact') {
+    return null;
+  }
+  const ext =
+    extensionFromRef(context.artifactRef) ?? extensionFromRef(context.path);
+  return typeFromExtension(ext);
+}
+
 /** Infer how to render signal body content. */
 export function detectSignalContentType(
   content: string,
   context: SignalContentContext,
 ): DetectedSignalContent {
-  const ext =
-    extensionFromRef(context.artifactRef) ?? extensionFromRef(context.path);
-
   const explicit =
     typeFromMimeOrContentType(context.mimeType) ??
     typeFromMimeOrContentType(context.contentType) ??
-    typeFromExtension(ext);
+    extensionTypeForContext(context);
 
   if (explicit) {
     return { type: explicit, label: contentTypeLabel(explicit) };
