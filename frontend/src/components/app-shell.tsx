@@ -91,6 +91,8 @@ import { LocaleSwitcher } from '@/components/locale-switcher';
 import { StoryDetailLayoutRoot } from '@/components/story-detail-panel';
 import { WorkspaceSwitcher } from '@/components/navigation/workspace-switcher';
 import { useWorkspaceMemberships } from '@/hooks/use-workspace-memberships';
+import { getDefaultTeamId } from '@/lib/api/workspace-context';
+import { isMockAuthEnabled } from '@/lib/api/config';
 import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import type { ResolvedWorkspace } from '@/lib/workspace/registry';
 import { useWorkspacePageMeta, useWorkspaceShellContext } from '@/components/workspace-shell-provider';
@@ -153,6 +155,10 @@ export function AppShellFrame({
 
   const { workspace } = useWorkspace();
   const { workspaces: membershipWorkspaces, loading: membershipsLoading } = useWorkspaceMemberships();
+  const triageTeamId = React.useMemo(
+    () => (isMockAuthEnabled() ? DEMO_TEAM_ID : getDefaultTeamId() ?? DEMO_TEAM_ID),
+    [workspace.id],
+  );
 
   const tNav = useTranslations('navigation');
 
@@ -452,7 +458,7 @@ export function AppShellFrame({
 
         group: tNav('command_palette.navigation_group'),
 
-        onSelect: () => navigate(`/workspace/team/${DEMO_TEAM_ID}/triage`),
+        onSelect: () => navigate(`/workspace/team/${triageTeamId}/triage`),
 
       },
 
@@ -506,7 +512,7 @@ export function AppShellFrame({
 
     ],
 
-    [navigate, openCreateStory, openCreateEpic, tCommon, tEntity, tNav],
+    [navigate, openCreateStory, openCreateEpic, tCommon, tEntity, tNav, triageTeamId],
 
   );
 
@@ -686,7 +692,7 @@ export function AppShellFrame({
 
           label: 'Triage',
 
-          href: `/workspace/team/${DEMO_TEAM_ID}/triage`,
+          href: `/workspace/team/${triageTeamId}/triage`,
 
           icon: <Inbox className="h-4 w-4" />,
 

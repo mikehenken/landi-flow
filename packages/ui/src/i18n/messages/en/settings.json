@@ -1,0 +1,14 @@
+{
+  "title": "Workspace settings",
+  "section": "Settings",
+  "general": "General",
+  "members": "Members",
+  "general_placeholder": "Workspace name, terminology, and display preferences will live here.",
+  "members_placeholder": "Invite teammates and manage roles — coming in a follow-up release.",
+  "account_hint": "Manage workspace-wide defaults and team membership.",
+  "open_workspace": "Open workspace settings",
+  "cycles": "Cycles",
+  "taxonomy": "Taxonomy",
+  "recurring_stories": "Recurring stories",
+  "mcp_tools": "MCP tools"
+}

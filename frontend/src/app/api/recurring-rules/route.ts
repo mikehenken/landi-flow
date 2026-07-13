@@ -2,9 +2,17 @@ import type { NextRequest } from 'next/server';
 import type { RecurringStoryRule } from '@landi-flow/core/types';
 import { createClient } from '@/lib/supabase/server';
 import { isMockAuthEnabled } from '@/lib/api/config';
+import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 import { SEED_RECURRING_RULES } from '@/lib/recurring-stories/recurring-stories-store';
 
 export const dynamic = 'force-dynamic';
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
 
 const mockRules: RecurringStoryRule[] = [...SEED_RECURRING_RULES];
 
@@ -29,6 +37,13 @@ export async function GET(request: NextRequest): Promise<Response> {
     return Response.json({ ok: false, errorText: 'team_id is required' }, { status: 400 });
   }
 
+  if (!isUuid(teamId)) {
+    return Response.json(
+      { ok: false, errorText: `team_id "${teamId}" must be a UUID` },
+      { status: 400 },
+    );
+  }
+
   if (isMockAuthEnabled()) {
     return Response.json({
       ok: true,
@@ -39,15 +54,24 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   try {
     const supabase = await createClient();
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session?.user) {
+      return Response.json({ ok: false, errorText: 'Authentication required' }, { status: 401 });
+    }
+
     const { data, error } = await supabase
-      .schema('linear_clone')
       .from('recurring_story_rules')
       .select('*')
       .eq('team_id', teamId)
       .order('created_at', { ascending: true });
 
     if (error) {
-      return Response.json({ ok: false, errorText: error.message }, { status: 502 });
+      const status = error.message.toLowerCase().includes('does not exist') ? 503 : 502;
+      return Response.json({ ok: false, errorText: error.message }, { status });
     }
 
     return Response.json({
@@ -83,6 +107,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ ok: false, errorText: 'workspace_id, team_id, title_template required' }, { status: 400 });
   }
 
+  if (!isWorkspaceUuid(body.workspace_id) || !isUuid(body.team_id)) {
+    return Response.json(
+      { ok: false, errorText: 'workspace_id and team_id must be UUIDs' },
+      { status: 400 },
+    );
+  }
+
   const now = new Date().toISOString();
   const rule: RecurringStoryRule = {
     id: `recur-${crypto.randomUUID()}`,
@@ -104,8 +135,16 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   try {
     const supabase = await createClient();
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session?.user) {
+      return Response.json({ ok: false, errorText: 'Authentication required' }, { status: 401 });
+    }
+
     const { data, error } = await supabase
-      .schema('linear_clone')
       .from('recurring_story_rules')
       .insert({
         workspace_id: rule.workspace_id,
@@ -164,6 +203,15 @@ export async function PATCH(request: NextRequest): Promise<Response> {
 
   try {
     const supabase = await createClient();
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session?.user) {
+      return Response.json({ ok: false, errorText: 'Authentication required' }, { status: 401 });
+    }
+
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (body.enabled !== undefined) {
       patch.enabled = body.enabled;
@@ -176,7 +224,6 @@ export async function PATCH(request: NextRequest): Promise<Response> {
     }
 
     const { data, error } = await supabase
-      .schema('linear_clone')
       .from('recurring_story_rules')
       .update(patch)
       .eq('id', body.rule_id)

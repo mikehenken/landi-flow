@@ -9,6 +9,7 @@ import enEntity from './messages/en/entity.json';
 import enMembers from './messages/en/members.json';
 import enInbox from './messages/en/inbox.json';
 import enViews from './messages/en/views.json';
+import enSettings from './messages/en/settings.json';
 
 import esCommon from './messages/es/common.json';
 import esEpics from './messages/es/epics.json';
@@ -19,6 +20,7 @@ import esAgents from './messages/es/agents.json';
 import esCustomers from './messages/es/customers.json';
 import esEntity from './messages/es/entity.json';
 import esMembers from './messages/en/members.json';
+import esSettings from './messages/es/settings.json';
 
 import deCommon from './messages/de/common.json';
 import deEpics from './messages/de/epics.json';
@@ -29,6 +31,7 @@ import deAgents from './messages/de/agents.json';
 import deCustomers from './messages/de/customers.json';
 import deEntity from './messages/de/entity.json';
 import deMembers from './messages/en/members.json';
+import deSettings from './messages/de/settings.json';
 
 import arCommon from './messages/ar/common.json';
 import arEpics from './messages/ar/epics.json';
@@ -39,6 +42,7 @@ import arAgents from './messages/ar/agents.json';
 import arCustomers from './messages/ar/customers.json';
 import arEntity from './messages/ar/entity.json';
 import arMembers from './messages/en/members.json';
+import arSettings from './messages/ar/settings.json';
 
 /** Supported locales for Landi Flow UI. */
 export const SUPPORTED_LOCALES = ['en', 'es', 'de', 'ar'] as const;
@@ -74,6 +78,7 @@ export const messages = {
     members: enMembers,
     inbox: enInbox,
     views: enViews,
+    settings: enSettings,
   },
   es: {
     common: esCommon,
@@ -87,6 +92,7 @@ export const messages = {
     members: esMembers,
     inbox: enInbox,
     views: enViews,
+    settings: esSettings,
   },
   de: {
     common: deCommon,
@@ -100,6 +106,7 @@ export const messages = {
     members: deMembers,
     inbox: enInbox,
     views: enViews,
+    settings: deSettings,
   },
   ar: {
     common: arCommon,
@@ -113,6 +120,7 @@ export const messages = {
     members: arMembers,
     inbox: enInbox,
     views: enViews,
+    settings: arSettings,
   },
 } as const;
 
@@ -130,6 +138,7 @@ export type EntityMessages = typeof enEntity;
 export type MembersMessages = typeof enMembers;
 export type InboxMessages = typeof enInbox;
 export type ViewsMessages = typeof enViews;
+export type SettingsMessages = typeof enSettings;
 
 /** next-intl configuration for Next.js App Router integration. */
 export const i18nConfig = {

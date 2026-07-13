@@ -5,6 +5,7 @@ import {
   type WorkspaceThemeSettings,
 } from '@landi-flow/core/types';
 import { DEMO_WORKSPACE_ID } from '@/lib/seed-data';
+import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 
 /** Resolved workspace record with parsed settings for frontend theming/i18n. */
 export interface ResolvedWorkspace extends Workspace {
@@ -121,16 +122,51 @@ export function getWorkspaceBySlug(slug: string): ResolvedWorkspace | undefined 
   return WORKSPACE_REGISTRY.find((ws) => ws.slug === slug);
 }
 
+/** Host-derived workspace id for mock-auth / white-label domains only. */
 export function resolveWorkspaceIdFromHost(hostHeader: string | null | undefined): string {
   const hostname = normalizeHostname(hostHeader);
   return DOMAIN_INDEX.get(hostname) ?? DEMO_WORKSPACE_ID;
+}
+
+/**
+ * Placeholder workspace for a resolved Postgres UUID before the client loads
+ * membership details from the Workers API. Never use demo seed ids here.
+ */
+export function buildPlaceholderWorkspace(workspaceId: string): ResolvedWorkspace {
+  const now = new Date().toISOString();
+  return {
+    id: workspaceId,
+    slug: workspaceId,
+    name: 'Workspace',
+    icon_url: null,
+    settings: {},
+    parsedSettings: {},
+    created_at: now,
+    updated_at: now,
+    deleted_at: null,
+  };
+}
+
+/**
+ * SSR/bootstrap workspace: registry hit for demo hosts, placeholder for real UUIDs,
+ * demo registry entry only for non-UUID host ids (mock-auth / local dev).
+ */
+export function resolveInitialWorkspace(workspaceId: string): ResolvedWorkspace {
+  const registryHit = getWorkspaceById(workspaceId);
+  if (registryHit) {
+    return registryHit;
+  }
+  if (isWorkspaceUuid(workspaceId)) {
+    return buildPlaceholderWorkspace(workspaceId);
+  }
+  return WORKSPACE_REGISTRY[0]!;
 }
 
 export function resolveWorkspaceFromHost(
   hostHeader: string | null | undefined,
 ): ResolvedWorkspace {
   const id = resolveWorkspaceIdFromHost(hostHeader);
-  return getWorkspaceById(id) ?? WORKSPACE_REGISTRY[0]!;
+  return resolveInitialWorkspace(id);
 }
 
 export function getWorkspaceTheme(

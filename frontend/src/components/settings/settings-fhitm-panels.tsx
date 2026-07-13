@@ -17,6 +17,7 @@ import {
 import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import { useWorkspace } from '@/lib/workspace';
 import { isMockAuthEnabled } from '@/lib/api/config';
+import { getDefaultTeamId } from '@/lib/api/workspace-context';
 import {
   createPersonalApiKey,
   loadPersonalApiKeys,
@@ -27,8 +28,15 @@ import {
 } from '@/controllers/workflow-states-controller';
 
 function resolveTeamIdForSettings(teamId: string): string {
+  if (isMockAuthEnabled()) {
+    if (teamId === 'default' || teamId === 'team-default') {
+      return DEMO_TEAM_ID;
+    }
+    return teamId;
+  }
+
   if (teamId === 'default' || teamId === 'team-default') {
-    return DEMO_TEAM_ID;
+    return getDefaultTeamId() ?? teamId;
   }
   return teamId;
 }

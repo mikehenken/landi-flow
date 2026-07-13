@@ -1,0 +1,14 @@
+{
+  "title": "Arbeitsbereich-Einstellungen",
+  "section": "Einstellungen",
+  "general": "Allgemein",
+  "members": "Mitglieder",
+  "general_placeholder": "Arbeitsbereichsname, Terminologie und Anzeigeeinstellungen werden hier angezeigt.",
+  "members_placeholder": "Teammitglieder einladen und Rollen verwalten — folgt in Kürze.",
+  "account_hint": "Arbeitsbereichsweite Standardwerte und Teammitgliedschaft verwalten.",
+  "open_workspace": "Arbeitsbereich-Einstellungen öffnen",
+  "cycles": "Zyklen",
+  "taxonomy": "Taxonomie",
+  "recurring_stories": "Wiederkehrende Stories",
+  "mcp_tools": "MCP-Tools"
+}

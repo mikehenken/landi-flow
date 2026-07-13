@@ -3,6 +3,7 @@ import createIntlMiddleware from 'next-intl/middleware';
 import { updateSession } from '@/lib/supabase/middleware';
 import { routing } from '@/i18n/routing';
 import { resolveWorkspaceIdFromHost } from '@/lib/workspace/registry';
+import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 
 const PROTECTED_PREFIXES = ['/workspace', '/settings', '/onboarding'] as const;
 const AUTH_PAGES = ['/auth/login', '/auth/signup'] as const;
@@ -55,6 +56,22 @@ function localeAwarePath(locale: string, path: string): string {
   return `/${locale}${normalized === '/' ? '' : normalized}`;
 }
 
+/** Safe post-login destination when an authenticated user hits an auth page. */
+function resolveAuthenticatedAuthRedirect(
+  locale: string,
+  redirectParam: string | null,
+): string {
+  if (!redirectParam) {
+    return localeAwarePath(locale, '/workspace/inbox');
+  }
+  const normalized = redirectParam.startsWith('/') ? redirectParam : `/${redirectParam}`;
+  const bare = stripLocalePrefix(normalized);
+  if (isProtectedPath(normalized) || bare.startsWith('/workspace/')) {
+    return localeAwarePath(locale, bare);
+  }
+  return localeAwarePath(locale, '/workspace/inbox');
+}
+
 function mergeCookies(target: NextResponse, source: NextResponse): void {
   for (const cookie of source.cookies.getAll()) {
     target.cookies.set(cookie);
@@ -65,10 +82,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
   const mockAuth = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
   const locale = extractLocale(pathname);
-  const workspaceId = resolveWorkspaceIdFromHost(request.headers.get('host'));
 
   const intlResponse = handleI18nRouting(request);
-  intlResponse.cookies.set('workspace-id', workspaceId, {
+  const existingWorkspaceCookie = request.cookies.get('workspace-id')?.value;
+  const hostWorkspaceId = resolveWorkspaceIdFromHost(request.headers.get('host'));
+  const workspaceIdForCookie =
+    existingWorkspaceCookie && isWorkspaceUuid(existingWorkspaceCookie)
+      ? existingWorkspaceCookie
+      : hostWorkspaceId;
+
+  intlResponse.cookies.set('workspace-id', workspaceIdForCookie, {
     path: '/',
     sameSite: 'lax',
   });
@@ -110,10 +133,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(loginUrl);
   }
 
-  // MOCK_AUTH dev shell: allow auth pages to render for visual-regression capture.
+  // Authenticated users should not linger on auth pages — honor deep-link redirect.
   if (user && isAuthPage(pathname) && !mockAuth) {
+    const redirectParam = request.nextUrl.searchParams.get('redirect');
     return NextResponse.redirect(
-      new URL(localeAwarePath(locale, '/workspace/inbox'), request.url),
+      new URL(resolveAuthenticatedAuthRedirect(locale, redirectParam), request.url),
     );
   }
 

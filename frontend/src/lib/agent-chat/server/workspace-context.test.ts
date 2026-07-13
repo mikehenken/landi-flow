@@ -188,6 +188,26 @@ describe('agent workspace context', () => {
     expect(enriched.workflow_state_id).toBe(DONE_STATE_UUID);
   });
 
+  it('maps completion status to workflow_state_id instead of priority for story.update', () => {
+    const enriched = enrichToolInputWithWorkspaceContext(
+      'story.update',
+      { story_id: 'story-1', status: 'done', priority: 'high' },
+      sampleContext,
+    );
+    expect(enriched.workflow_state_id).toBe(DONE_STATE_UUID);
+    expect(enriched.priority).toBe('high');
+  });
+
+  it('removes mistaken priority alias when completion intent is present', () => {
+    const enriched = enrichToolInputWithWorkspaceContext(
+      'story.update',
+      { story_id: 'story-1', status: 'complete', priority: 'done' },
+      sampleContext,
+    );
+    expect(enriched.workflow_state_id).toBe(DONE_STATE_UUID);
+    expect(enriched.priority).toBeUndefined();
+  });
+
   it('resolves mark-epic-complete via epic.update status alias', () => {
     const enriched = enrichToolInputWithWorkspaceContext(
       'epic.update',

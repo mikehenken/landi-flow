@@ -3,6 +3,8 @@ export {
   normalizeHostname,
   getWorkspaceById,
   getWorkspaceBySlug,
+  buildPlaceholderWorkspace,
+  resolveInitialWorkspace,
   resolveWorkspaceIdFromHost,
   resolveWorkspaceFromHost,
   getWorkspaceTheme,

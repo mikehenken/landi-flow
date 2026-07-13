@@ -70,6 +70,8 @@ function workspaceResolveErrorMessage(resolveError: unknown): string {
 
 export interface ActiveWorkspaceProviderProps {
   initialWorkspace: ResolvedWorkspace;
+  /** Server-verified Supabase session — avoids client bootstrap race to login. */
+  serverAuthenticated?: boolean;
   children: React.ReactNode;
 }
 
@@ -79,6 +81,7 @@ export interface ActiveWorkspaceProviderProps {
  */
 export function ActiveWorkspaceProvider({
   initialWorkspace,
+  serverAuthenticated = false,
   children,
 }: ActiveWorkspaceProviderProps): React.ReactElement {
   const pathname = usePathname();
@@ -131,6 +134,10 @@ export function ActiveWorkspaceProvider({
       return;
     }
 
+    if (serverAuthenticated) {
+      return;
+    }
+
     resolvedUserIdRef.current = null;
     resolvedWorkspaceIdRef.current = null;
     lastResolveAttemptRef.current = -1;
@@ -140,7 +147,7 @@ export function ActiveWorkspaceProvider({
       pathname: '/auth/login',
       query: { redirect: loginRedirectPath(pathnameRef.current) },
     });
-  }, [onAuthPage, router, sessionReady, userId]);
+  }, [onAuthPage, router, serverAuthenticated, sessionReady, userId]);
 
   React.useEffect(() => {
     if (isMockAuthEnabled()) {

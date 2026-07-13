@@ -2,10 +2,9 @@ import type { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { ApplyToolRequestBody } from '@/lib/agent-chat/protocol';
 import { applyTool } from '@/lib/agent-chat/server/apply';
-import {
-  buildMockAgentWorkspaceContext,
-  loadAgentWorkspaceContext,
-} from '@/lib/agent-chat/server/workspace-context';
+import { resolveAgentWorkspaceContext } from '@/lib/agent-chat/server/resolve-workspace-context';
+import { isMockAuthEnabled } from '@/lib/api/config';
+import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,20 +32,23 @@ export async function POST(request: NextRequest): Promise<Response> {
   } = await supabase.auth.getSession();
   const authToken = session?.access_token ?? null;
 
-  let workspaceContext =
-    body.workspaceId && authToken
-      ? await loadAgentWorkspaceContext(body.workspaceId, authToken)
-      : null;
-
-  if (!workspaceContext && body.workspaceId) {
-    workspaceContext = buildMockAgentWorkspaceContext(body.workspaceId);
-    if (body.teamId) {
-      workspaceContext = {
-        ...workspaceContext,
-        teamId: body.teamId,
-      };
-    }
+  if (body.workspaceId && !isWorkspaceUuid(body.workspaceId) && !isMockAuthEnabled()) {
+    return Response.json(
+      {
+        ok: false,
+        live: false,
+        errorText:
+          'Workspace is not resolved (non-UUID workspace id). Reload and retry after workspace bootstrap.',
+      },
+      { status: 400 },
+    );
   }
+
+  const workspaceContext = await resolveAgentWorkspaceContext({
+    workspaceId: body.workspaceId,
+    teamId: body.teamId,
+    authToken,
+  });
 
   const result = await applyTool({
     toolName: body.toolName,

@@ -416,6 +416,18 @@ export function buildWorkspaceSystemPromptSection(ctx: AgentWorkspaceContext): s
   );
 }
 
+function hasCompletionIntent(input: Record<string, unknown>): boolean {
+  const statusAlias = hasNonEmptyString(input.status) ? input.status : null;
+  const workflowAlias = hasNonEmptyString(input.workflow_state_id) ? input.workflow_state_id : null;
+  const priorityAlias = hasNonEmptyString(input.priority) ? input.priority : null;
+
+  return (
+    (statusAlias !== null && COMPLETE_ALIASES.has(normalizeLookup(statusAlias))) ||
+    (workflowAlias !== null && COMPLETE_ALIASES.has(normalizeLookup(workflowAlias))) ||
+    (priorityAlias !== null && COMPLETE_ALIASES.has(normalizeLookup(priorityAlias)))
+  );
+}
+
 function resolveWorkflowStateForInput(
   input: Record<string, unknown>,
   ctx: AgentWorkspaceContext,
@@ -464,6 +476,23 @@ export function enrichToolInputWithWorkspaceContext(
       !hasNonEmptyString(enriched.workflow_state_id)
     ) {
       enriched = { ...enriched, workflow_state_id: ctx.defaultWorkflowStateId };
+    }
+
+    if (toolName === 'story.update' && hasCompletionIntent(enriched)) {
+      const completedStateId =
+        ctx.completedWorkflowStateId ??
+        resolveWorkflowStateId(ctx.workflowStates, 'done', { intent: 'complete' });
+      if (completedStateId) {
+        enriched = { ...enriched, workflow_state_id: completedStateId };
+        if (
+          hasNonEmptyString(enriched.priority) &&
+          !hasNonEmptyString(input.workflow_state_id) &&
+          COMPLETE_ALIASES.has(normalizeLookup(enriched.priority))
+        ) {
+          const { priority: _removed, ...withoutPriority } = enriched;
+          enriched = withoutPriority;
+        }
+      }
     }
   }
 

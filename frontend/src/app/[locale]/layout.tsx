@@ -7,10 +7,8 @@ import { AssignableMembersProvider } from '@/hooks/use-assignable-members';
 import { CollaborationProvider } from '@/components/collaboration';
 import { SupabaseSessionProvider } from '@/lib/supabase/session-provider';
 import { ActiveWorkspaceProvider } from '@/lib/workspace/active-workspace-provider';
-import {
-  getWorkspaceById,
-  resolveWorkspaceFromHost,
-} from '@/lib/workspace/registry';
+import { resolveInitialWorkspace, resolveWorkspaceIdFromHost } from '@/lib/workspace/registry';
+import { createClient } from '@/lib/supabase/server';
 import { routing } from '@/i18n/routing';
 import { isRtlLocale } from '@landi-flow/ui';
 import '../globals.css';
@@ -52,8 +50,13 @@ export default async function LocaleLayout({
   const headersList = await headers();
   const workspaceId =
     cookieStore.get('workspace-id')?.value ??
-    resolveWorkspaceFromHost(headersList.get('host')).id;
-  const workspace = getWorkspaceById(workspaceId) ?? resolveWorkspaceFromHost(null);
+    resolveWorkspaceIdFromHost(headersList.get('host'));
+  const workspace = resolveInitialWorkspace(workspaceId);
+
+  const supabase = await createClient();
+  const {
+    data: { user: serverUser },
+  } = await supabase.auth.getUser();
 
   return (
     <html
@@ -64,7 +67,10 @@ export default async function LocaleLayout({
       <body className="h-full antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <SupabaseSessionProvider>
-            <ActiveWorkspaceProvider initialWorkspace={workspace}>
+            <ActiveWorkspaceProvider
+              initialWorkspace={workspace}
+              serverAuthenticated={Boolean(serverUser)}
+            >
               <CollaborationProvider>
                 <AssignableMembersProvider>
                   {children}
