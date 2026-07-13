@@ -4,7 +4,7 @@ import * as React from 'react';
 import type { Cycle, Epic, Story, WorkflowState } from '@landi-flow/core/types';
 import { LiveList, LiveObject } from '@liveblocks/client';
 import type { JsonObject } from '@liveblocks/client';
-import { hydrateBoardRoom } from '@landi-flow/collaboration';
+import { hydrateBoardRoom, storiesToBoardStorage } from '@landi-flow/collaboration';
 import { useMutation, useStorage } from '@liveblocks/react/suspense';
 import { Card, CardContent, CardHeader, CardTitle, cn } from '@landi-flow/ui';
 import { BoardColumnsGrid } from '@/components/board-columns-grid';
@@ -87,6 +87,7 @@ export function CollaborativeBoard({
       initialStorage={hydrated.initialStorage as unknown as JsonObject}
     >
       <BoardInner
+        stories={stories}
         workflowStates={workflowStates}
         storyTitles={storyTitles}
         onCardSelect={onCardSelect}
@@ -158,6 +159,7 @@ function OfflineBoard({
 }
 
 interface BoardInnerProps {
+  stories: Story[];
   workflowStates: WorkflowState[];
   storyTitles: Record<string, string>;
   onCardSelect?: (storyId: string) => void;
@@ -166,6 +168,7 @@ interface BoardInnerProps {
 }
 
 function BoardInner({
+  stories,
   workflowStates,
   storyTitles,
   onCardSelect,
@@ -173,13 +176,28 @@ function BoardInner({
   className,
 }: BoardInnerProps): React.ReactElement {
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const columns = useStorage((root) => {
+  const storageColumns = useStorage((root) => {
     const raw = root.columns;
     if (!Array.isArray(raw)) {
       return [];
     }
     return raw as Array<{ statusId: string; cards: string[] }>;
   });
+
+  const columns = React.useMemo(() => {
+    const stored = storageColumns ?? [];
+    const storedCardCount = stored.reduce(
+      (total, column) => total + (column.cards?.length ?? 0),
+      0,
+    );
+    if (stored.length > 0 && (storedCardCount > 0 || stories.length === 0)) {
+      return stored;
+    }
+    return storiesToBoardStorage(stories, workflowStates).columns as Array<{
+      statusId: string;
+      cards: string[];
+    }>;
+  }, [storageColumns, stories, workflowStates]);
 
   const moveCard = useMutation(
     ({ storage }, columnIndex: number, fromIndex: number, toIndex: number) => {

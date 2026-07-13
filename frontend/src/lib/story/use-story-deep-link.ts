@@ -91,7 +91,11 @@ export function useStoryModalSelect(): (
   return React.useCallback(
     (storyId: string, options?: OpenStoryModalOptions) => {
       openStoryModal(storyId, options);
-      const story = storyStore.getServerSnapshot().stories.find((row) => row.id === storyId);
+      const story =
+        storyStore.getServerSnapshot().stories.find((row) => row.id === storyId) ??
+        storyStore.getServerSnapshot().stories.find(
+          (row) => row.identifier.toLowerCase() === storyId.toLowerCase(),
+        );
       router.replace(syncStoryModalUrl(pathname, story, options), { scroll: false });
     },
     [pathname, router],

@@ -41,7 +41,7 @@ function useDismissOnOutside(
         (ref) => ref.current !== null && ref.current.contains(target),
       );
       if (!clickedInside) {
-        onClose();
+        window.requestAnimationFrame(() => onClose());
       }
     }
     function onKeyDown(event: KeyboardEvent): void {

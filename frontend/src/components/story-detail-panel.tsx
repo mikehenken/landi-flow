@@ -38,7 +38,12 @@ function StoryDetailModalHost(): React.ReactElement | null {
   const pathname = usePathname();
   const { isModal, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
   const { stories, selectedStoryId } = useStoryStore();
-  const selectedStory = stories.find((story) => story.id === selectedStoryId) ?? null;
+  const selectedStory =
+    stories.find((story) => story.id === selectedStoryId) ??
+    (selectedStoryId
+      ? storyStore.getServerSnapshot().stories.find((story) => story.id === selectedStoryId) ??
+        null
+      : null);
 
   const dialogRef = React.useRef<HTMLDialogElement>(null);
   /** Ignore native `close` fired by programmatic `dialog.close()` / unmount. */
