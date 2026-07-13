@@ -5,7 +5,7 @@ import type { Story } from '@landi-flow/core/types';
 import { Button, cn } from '@landi-flow/ui';
 import { StoryListView } from '@/components/story-list-view';
 import { useCurrentUserId } from '@/hooks/use-current-user-id';
-import { useStoryStore } from '@/hooks/use-story-store';
+import { useSelectedStoryId } from '@/hooks/use-selected-story-id';
 import { useStoryModalSelect } from '@/lib/story/use-story-deep-link';
 import {
   filterMyIssuesTab,
@@ -28,7 +28,7 @@ export interface MyIssuesTabsProps {
 export function MyIssuesTabs({ stories, className }: MyIssuesTabsProps): React.ReactElement {
   const [activeTab, setActiveTab] = React.useState<MyIssuesTab>('assigned');
   const currentUserId = useCurrentUserId();
-  const { selectedStoryId } = useStoryStore();
+  const selectedStoryId = useSelectedStoryId();
   const handleStorySelect = useStoryModalSelect();
   const filtered = React.useMemo(
     () => filterMyIssuesTab(stories, activeTab, currentUserId),
