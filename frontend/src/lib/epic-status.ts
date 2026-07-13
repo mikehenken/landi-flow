@@ -1,4 +1,6 @@
 import type { Epic, EpicStatusCategory } from '@landi-flow/core/types';
+import { getEpicStatuses } from '@/lib/api/workspace-context';
+import type { EpicStatusRef } from '@/lib/resolve-epic-status-id';
 
 /** Maps Epic.status_id values to UI status categories. */
 export const EPIC_STATUS_IDS: Record<EpicStatusCategory, string> = {
@@ -9,11 +11,24 @@ export const EPIC_STATUS_IDS: Record<EpicStatusCategory, string> = {
   cancelled: 'epic-status-cancelled',
 };
 
-export function getEpicStatusCategory(epic: Epic): EpicStatusCategory {
-  const match = Object.entries(EPIC_STATUS_IDS).find(
+export function getEpicStatusCategory(
+  epic: Epic,
+  statusRoster?: EpicStatusRef[],
+): EpicStatusCategory {
+  const slugMatch = Object.entries(EPIC_STATUS_IDS).find(
     ([, statusId]) => statusId === epic.status_id,
   );
-  return (match?.[0] as EpicStatusCategory | undefined) ?? 'backlog';
+  if (slugMatch) {
+    return slugMatch[0] as EpicStatusCategory;
+  }
+
+  const roster = statusRoster ?? getEpicStatuses();
+  const statusRow = roster.find((status) => status.id === epic.status_id);
+  if (statusRow) {
+    return statusRow.category;
+  }
+
+  return 'backlog';
 }
 
 export const EPIC_BOARD_COLUMNS: EpicStatusCategory[] = [

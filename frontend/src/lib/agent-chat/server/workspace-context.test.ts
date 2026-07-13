@@ -263,6 +263,14 @@ describe('validateEnrichedToolInput', () => {
     expect(error).toContain('team_id "team-design" is not a UUID');
   });
 
+  it('rejects unresolved epic status slug before MCP call', () => {
+    const error = validateEnrichedToolInput('epic.create', {
+      name: 'New epic',
+      status_id: EPIC_STATUS_IDS.backlog,
+    });
+    expect(error).toContain('status_id "epic-status-backlog" is not a UUID');
+  });
+
   it('accepts resolved UUID team_id and story_id', () => {
     const error = validateEnrichedToolInput('story.update', {
       team_id: DESIGN_TEAM_UUID,

@@ -56,6 +56,14 @@ describe('production hydration API paths (G-09m-07)', () => {
         return Promise.resolve(jsonResponse({ data: [{ id: 'state-todo', name: 'Todo' }] }));
       }
 
+      if (url.includes('/api/v1/workspaces/ws-e2e-persist/epic-statuses')) {
+        return Promise.resolve(
+          jsonResponse({
+            data: [{ id: 'status-active', name: 'Active', category: 'backlog' }],
+          }),
+        );
+      }
+
       if (url.includes('/teams/team-1/stories')) {
         return Promise.resolve(
           jsonResponse({
@@ -131,6 +139,7 @@ describe('production hydration API paths (G-09m-07)', () => {
     );
 
     expect(requestedUrls.some((url) => url.includes('/context/defaults'))).toBe(true);
+    expect(requestedUrls.some((url) => url.includes('/epic-statuses'))).toBe(true);
     expect(requestedUrls.some((url) => url.includes('/teams/team-1/stories'))).toBe(true);
     expect(requestedUrls.some((url) => url.includes('/epics'))).toBe(true);
     expect(requestedUrls.some((url) => url.includes('/customers'))).toBe(true);

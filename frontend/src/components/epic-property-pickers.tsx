@@ -15,6 +15,12 @@ import {
   EPIC_STATUS_LABELS,
   getEpicStatusCategory,
 } from '@/lib/epic-status';
+import { isMockAuthEnabled } from '@/lib/api/config';
+import {
+  getEpicStatuses,
+  type EpicStatusRow,
+} from '@/lib/api/workspace-context';
+import { getTaxonomySettings } from '@/lib/taxonomy/taxonomy-store';
 import { useEpicStore } from '@/hooks/use-epic-store';
 
 const EPIC_PRIORITIES: EpicPriority[] = ['none', 'low', 'medium', 'high', 'urgent'];
@@ -152,22 +158,63 @@ const statusVariant: Record<
 export interface EpicStatusPickerProps {
   statusId: string;
   onSelect: (statusId: string) => void;
+  epicStatuses?: EpicStatusRow[];
+}
+
+function resolvePickerEpicStatuses(epicStatuses?: EpicStatusRow[]): EpicStatusRow[] {
+  if (epicStatuses && epicStatuses.length > 0) {
+    return epicStatuses;
+  }
+  if (isMockAuthEnabled()) {
+    return getTaxonomySettings().epic_status_groups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      category: group.category,
+    }));
+  }
+  const cached = getEpicStatuses();
+  return cached.length > 0 ? cached : [];
 }
 
 export function EpicStatusPicker({
   statusId,
   onSelect,
+  epicStatuses,
 }: EpicStatusPickerProps): React.ReactElement {
   const t = useTranslations('epics');
   const { epics } = useEpicStore();
+  const statuses = React.useMemo(
+    () => resolvePickerEpicStatuses(epicStatuses),
+    [epicStatuses],
+  );
   const statusCategory = React.useMemo((): EpicStatusCategory => {
+    const selected = statuses.find((status) => status.id === statusId);
+    if (selected) {
+      return selected.category;
+    }
     const match = Object.entries(EPIC_STATUS_IDS).find(([, id]) => id === statusId);
     if (match) {
       return match[0] as EpicStatusCategory;
     }
     const sample = epics[0];
-    return sample ? getEpicStatusCategory(sample) : 'backlog';
-  }, [statusId, epics]);
+    return sample ? getEpicStatusCategory(sample, statuses) : 'backlog';
+  }, [statusId, epics, statuses]);
+
+  const boardStatuses = React.useMemo(() => {
+    if (statuses.length > 0) {
+      return EPIC_BOARD_COLUMNS.map((category) => {
+        const row =
+          statuses.find((status) => status.category === category) ??
+          statuses.find((status) => EPIC_STATUS_IDS[category] === status.id);
+        return row ?? null;
+      }).filter((row): row is EpicStatusRow => row !== null);
+    }
+    return EPIC_BOARD_COLUMNS.map((category) => ({
+      id: EPIC_STATUS_IDS[category],
+      name: EPIC_STATUS_LABELS[category],
+      category,
+    }));
+  }, [statuses]);
 
   return (
     <InlinePopover
@@ -178,14 +225,14 @@ export function EpicStatusPicker({
         </Badge>
       }
     >
-      {EPIC_BOARD_COLUMNS.map((category) => (
+      {boardStatuses.map((status) => (
         <PopoverOption
-          key={category}
-          selected={EPIC_STATUS_IDS[category] === statusId}
-          onSelect={() => onSelect(EPIC_STATUS_IDS[category])}
+          key={status.id}
+          selected={status.id === statusId}
+          onSelect={() => onSelect(status.id)}
         >
-          <Badge variant={statusVariant[category]} size="sm" className="capitalize">
-            {EPIC_STATUS_LABELS[category]}
+          <Badge variant={statusVariant[status.category]} size="sm" className="capitalize">
+            {status.name}
           </Badge>
         </PopoverOption>
       ))}

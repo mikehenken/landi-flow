@@ -11,9 +11,11 @@ import {
 import type { EpicPriority } from '@landi-flow/core/types';
 import { useWorkspace } from '@/lib/workspace';
 import { EPIC_STATUS_IDS } from '@/lib/epic-status';
+import { isMockAuthEnabled } from '@/lib/api/config';
 import { createEpic } from '@/controllers/epic-controller';
 import { EpicPriorityPicker, EpicStatusPicker } from '@/components/epic-property-pickers';
 import { useCap004Dialog } from '@/components/create-modal-utils';
+import { useWorkspaceEpicStatuses } from '@/hooks/use-workspace-epic-statuses';
 
 export interface CreateEpicModalProps {
   open: boolean;
@@ -28,6 +30,7 @@ export function CreateEpicModal({
   onOpenChange,
 }: CreateEpicModalProps): React.ReactElement {
   const { workspace } = useWorkspace();
+  const { epicStatuses, defaultStatusId } = useWorkspaceEpicStatuses(workspace.id);
   const t = useTranslations('epics');
   const panelRef = React.useRef<HTMLDivElement>(null);
   const nameInputRef = React.useRef<HTMLInputElement>(null);
@@ -40,10 +43,32 @@ export function CreateEpicModal({
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (epicStatuses.length === 0) {
+      return;
+    }
+    const stillValid = epicStatuses.some((status) => status.id === statusId);
+    if (!stillValid) {
+      const fallback =
+        (defaultStatusId ? epicStatuses.find((status) => status.id === defaultStatusId) : null) ??
+        epicStatuses.find((status) => status.category === 'backlog') ??
+        epicStatuses[0];
+      if (fallback) {
+        setStatusId(fallback.id);
+      }
+    }
+  }, [epicStatuses, defaultStatusId, statusId]);
+
   const resetPropertyFields = React.useCallback((): void => {
-    setStatusId(EPIC_STATUS_IDS.backlog);
+    setStatusId(
+      isMockAuthEnabled()
+        ? EPIC_STATUS_IDS.backlog
+        : defaultStatusId ??
+            epicStatuses.find((status) => status.category === 'backlog')?.id ??
+            EPIC_STATUS_IDS.backlog,
+    );
     setPriority('none');
-  }, []);
+  }, [defaultStatusId, epicStatuses]);
 
   const resetFormFields = React.useCallback((): void => {
     setName('');
@@ -184,7 +209,11 @@ export function CreateEpicModal({
                 className="flex flex-wrap items-center gap-2 pt-1"
                 aria-label={t('create.properties_label')}
               >
-                <EpicStatusPicker statusId={statusId} onSelect={setStatusId} />
+                <EpicStatusPicker
+                  statusId={statusId}
+                  onSelect={setStatusId}
+                  epicStatuses={epicStatuses}
+                />
                 <EpicPriorityPicker priority={priority} onSelect={setPriority} />
               </div>
               {error ? (
