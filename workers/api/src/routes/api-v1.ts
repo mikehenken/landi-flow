@@ -212,6 +212,13 @@ export async function handleApiRequest(
         return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
       }
 
+      // GET /workspaces/{wid}/epic-statuses
+      if (rest[0] === 'epic-statuses' && rest.length === 1 && request.method === 'GET') {
+        const teamController = controller(TeamController);
+        const data = await teamController.listEpicStatuses(workspaceId);
+        return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+      }
+
       // GET /workspaces/{wid}/context/defaults
       if (rest[0] === 'context' && rest[1] === 'defaults' && rest.length === 2 && request.method === 'GET') {
         const teamController = controller(TeamController);
