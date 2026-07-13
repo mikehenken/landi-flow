@@ -21,6 +21,10 @@ import { ProfileController } from '../controllers/profile-controller.js';
 import { MemberController } from '../controllers/member-controller.js';
 import { InboxController } from '../controllers/inbox-controller.js';
 import { TeamController } from '../controllers/team-controller.js';
+import {
+  EpicLabelCatalogController,
+  StoryLabelController,
+} from '../controllers/label-controller.js';
 import { handleIntegrationsRoutes } from './integrations-routes.js';
 
 function parseJsonBody<T>(request: Request): Promise<T> {
@@ -116,6 +120,60 @@ export async function handleApiRequest(
           const body = await parseJsonBody<Record<string, unknown>>(request);
           const result = await wsController.update(workspaceId, body, correlation);
           return jsonResponse(result, 200, correlationId);
+        }
+      }
+
+      // /workspaces/{wid}/labels
+      if (rest[0] === 'labels') {
+        const labelController = controller(StoryLabelController);
+
+        if (rest.length === 1 && request.method === 'GET') {
+          const data = await labelController.list(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+        if (rest.length === 1 && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<StoryLabelController['create']>[1]>(request);
+          const result = await labelController.create(workspaceId, body, correlation);
+          return jsonResponse(result, 201, correlationId);
+        }
+        if (rest.length === 2 && isUuid(rest[1])) {
+          const labelId = rest[1];
+          if (request.method === 'PATCH') {
+            const body = await parseJsonBody<Parameters<StoryLabelController['update']>[2]>(request);
+            const result = await labelController.update(workspaceId, labelId, body, correlation);
+            return jsonResponse(result, 200, correlationId);
+          }
+          if (request.method === 'DELETE') {
+            const result = await labelController.delete(workspaceId, labelId, correlation);
+            return jsonResponse(result, 200, correlationId);
+          }
+        }
+      }
+
+      // /workspaces/{wid}/epic-labels
+      if (rest[0] === 'epic-labels') {
+        const epicLabelController = controller(EpicLabelCatalogController);
+
+        if (rest.length === 1 && request.method === 'GET') {
+          const data = await epicLabelController.list(workspaceId);
+          return jsonResponse({ data, correlation_id: correlationId }, 200, correlationId);
+        }
+        if (rest.length === 1 && request.method === 'POST') {
+          const body = await parseJsonBody<Parameters<EpicLabelCatalogController['create']>[1]>(request);
+          const result = await epicLabelController.create(workspaceId, body, correlation);
+          return jsonResponse(result, 201, correlationId);
+        }
+        if (rest.length === 2 && isUuid(rest[1])) {
+          const labelId = rest[1];
+          if (request.method === 'PATCH') {
+            const body = await parseJsonBody<Parameters<EpicLabelCatalogController['update']>[2]>(request);
+            const result = await epicLabelController.update(workspaceId, labelId, body, correlation);
+            return jsonResponse(result, 200, correlationId);
+          }
+          if (request.method === 'DELETE') {
+            const result = await epicLabelController.delete(workspaceId, labelId, correlation);
+            return jsonResponse(result, 200, correlationId);
+          }
         }
       }
 

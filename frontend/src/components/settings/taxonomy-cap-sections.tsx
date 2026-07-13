@@ -4,11 +4,15 @@ import * as React from 'react';
 import Image from 'next/image';
 import { Button, Input, cn } from '@landi-flow/ui';
 import {
-  deleteStoryLabel,
-  getTaxonomySettings,
-  upsertStoryLabel,
-} from '@/lib/taxonomy/taxonomy-store';
-import type { TaxonomyLabel } from '@/lib/taxonomy/taxonomy-types';
+  createEpicLabel,
+  createStoryLabel,
+  removeStoryLabel,
+} from '@/controllers/labels-controller';
+import { getTaxonomySettings } from '@/lib/taxonomy/taxonomy-store';
+import { useWorkspace } from '@/lib/workspace';
+import { useWorkspaceEpicLabels } from '@/hooks/use-workspace-epic-labels';
+import { useWorkspaceStoryLabels } from '@/hooks/use-workspace-story-labels';
+import { isMockAuthEnabled } from '@/lib/api/config';
 
 function useTaxonomySettings() {
   const [settings, setSettings] = React.useState(getTaxonomySettings);
@@ -43,13 +47,12 @@ export function WorkflowStatesSection({ className }: { className?: string }): Re
 const STORY_LABEL_COLORS = ['#ef4444', '#3b82f6', '#a855f7', '#22c55e', '#f59e0b'] as const;
 
 export function StoryLabelsSection({ className }: { className?: string }): React.ReactElement {
-  const [settings, setSettings] = React.useState(getTaxonomySettings);
+  const { workspace } = useWorkspace();
+  const { labels, loading, error, refresh } = useWorkspaceStoryLabels(workspace.id);
   const [name, setName] = React.useState('');
   const [color, setColor] = React.useState<string>(STORY_LABEL_COLORS[0]);
-
-  const refreshSettings = React.useCallback((): void => {
-    setSettings(getTaxonomySettings());
-  }, []);
+  const [busy, setBusy] = React.useState(false);
+  const [actionError, setActionError] = React.useState<string | null>(null);
 
   const handleAddLabel = React.useCallback(
     (event: React.FormEvent<HTMLFormElement>): void => {
@@ -58,30 +61,50 @@ export function StoryLabelsSection({ className }: { className?: string }): React
       if (!trimmedName) {
         return;
       }
-      const label: TaxonomyLabel = {
-        id: `label-${Date.now()}`,
+      setBusy(true);
+      setActionError(null);
+      void createStoryLabel({
+        workspaceId: workspace.id,
         name: trimmedName,
         color,
-        scope: 'story',
-      };
-      upsertStoryLabel(label);
-      setName('');
-      refreshSettings();
+      })
+        .then(() => {
+          setName('');
+          refresh();
+        })
+        .catch((err: unknown) => {
+          setActionError(err instanceof Error ? err.message : 'Failed to create label');
+        })
+        .finally(() => {
+          setBusy(false);
+        });
     },
-    [color, name, refreshSettings],
+    [color, name, refresh, workspace.id],
   );
 
   const handleDeleteLabel = React.useCallback(
     (labelId: string): void => {
-      deleteStoryLabel(labelId);
-      refreshSettings();
+      setBusy(true);
+      setActionError(null);
+      void removeStoryLabel(workspace.id, labelId)
+        .then(() => {
+          refresh();
+        })
+        .catch((err: unknown) => {
+          setActionError(err instanceof Error ? err.message : 'Failed to delete label');
+        })
+        .finally(() => {
+          setBusy(false);
+        });
     },
-    [refreshSettings],
+    [refresh, workspace.id],
   );
 
   return (
     <section className={cn('rounded-lg border border-border bg-card p-6', className)} data-cap="CAP-090">
       <h2 className="text-base font-semibold">Story labels</h2>
+      {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+      {actionError ? <p className="mt-2 text-sm text-destructive">{actionError}</p> : null}
       <form className="mt-4 flex flex-wrap items-end gap-2" onSubmit={handleAddLabel}>
         <div className="flex min-w-[200px] flex-1 flex-col gap-1">
           <label htmlFor="story-label-name" className="text-sm text-muted-foreground">
@@ -114,12 +137,15 @@ export function StoryLabelsSection({ className }: { className?: string }): React
             ))}
           </div>
         </div>
-        <Button type="submit" data-testid="story-label-add-button">
+        <Button type="submit" data-testid="story-label-add-button" disabled={busy}>
           Add label
         </Button>
       </form>
-      <ul className="mt-4 flex flex-wrap gap-2" data-testid="story-labels-list">
-        {settings.story_labels.map((label) => (
+      {loading ? (
+        <p className="mt-4 text-sm text-muted-foreground">Loading labels…</p>
+      ) : (
+        <ul className="mt-4 flex flex-wrap gap-2" data-testid="story-labels-list">
+          {labels.map((label) => (
           <li
             key={label.id}
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-white"
@@ -138,19 +164,101 @@ export function StoryLabelsSection({ className }: { className?: string }): React
             </button>
           </li>
         ))}
-      </ul>
+        </ul>
+      )}
+      {!isMockAuthEnabled() ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Labels are stored in your workspace database when connected to the live API.
+        </p>
+      ) : null}
     </section>
   );
 }
 
 export function EpicLabelsSection({ className }: { className?: string }): React.ReactElement {
-  const settings = useTaxonomySettings();
+  const { workspace } = useWorkspace();
+  const { labels, loading, error, refresh } = useWorkspaceEpicLabels(workspace.id);
+  const [name, setName] = React.useState('');
+  const [color, setColor] = React.useState<string>(STORY_LABEL_COLORS[0]);
+  const [busy, setBusy] = React.useState(false);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+
+  const handleAddLabel = React.useCallback(
+    (event: React.FormEvent<HTMLFormElement>): void => {
+      event.preventDefault();
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        return;
+      }
+      setBusy(true);
+      setActionError(null);
+      void createEpicLabel({
+        workspaceId: workspace.id,
+        name: trimmedName,
+        color,
+      })
+        .then(() => {
+          setName('');
+          refresh();
+        })
+        .catch((err: unknown) => {
+          setActionError(err instanceof Error ? err.message : 'Failed to create epic label');
+        })
+        .finally(() => {
+          setBusy(false);
+        });
+    },
+    [color, name, refresh, workspace.id],
+  );
 
   return (
     <section className={cn('rounded-lg border border-border bg-card p-6', className)} data-cap="CAP-091">
       <h2 className="text-base font-semibold">Epic labels</h2>
-      <ul className="mt-2 flex flex-wrap gap-2" data-testid="epic-labels-list">
-        {settings.epic_labels.map((label) => (
+      {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+      {actionError ? <p className="mt-2 text-sm text-destructive">{actionError}</p> : null}
+      {!isMockAuthEnabled() ? (
+        <form className="mt-4 flex flex-wrap items-end gap-2" onSubmit={handleAddLabel}>
+          <div className="flex min-w-[200px] flex-1 flex-col gap-1">
+            <label htmlFor="epic-label-name" className="text-sm text-muted-foreground">
+              Label name
+            </label>
+            <Input
+              id="epic-label-name"
+              data-testid="epic-label-name-input"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="e.g. Platform"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-muted-foreground">Color</span>
+            <div className="flex gap-1" data-testid="epic-label-color-picker">
+              {STORY_LABEL_COLORS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  aria-label={`Color ${option}`}
+                  aria-pressed={color === option ? 'true' : 'false'}
+                  className={cn(
+                    'h-7 w-7 rounded-full border-2',
+                    color === option ? 'border-foreground' : 'border-transparent',
+                  )}
+                  style={{ backgroundColor: option }}
+                  onClick={() => setColor(option)}
+                />
+              ))}
+            </div>
+          </div>
+          <Button type="submit" data-testid="epic-label-add-button" disabled={busy}>
+            Add label
+          </Button>
+        </form>
+      ) : null}
+      {loading ? (
+        <p className="mt-4 text-sm text-muted-foreground">Loading epic labels…</p>
+      ) : (
+        <ul className="mt-4 flex flex-wrap gap-2" data-testid="epic-labels-list">
+          {labels.map((label) => (
           <li
             key={label.id}
             className="rounded-md px-2 py-1 text-sm text-white"
@@ -159,7 +267,8 @@ export function EpicLabelsSection({ className }: { className?: string }): React.
             {label.name}
           </li>
         ))}
-      </ul>
+        </ul>
+      )}
     </section>
   );
 }

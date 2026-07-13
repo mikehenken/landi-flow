@@ -90,6 +90,7 @@ import { useWorkspace, getWorkspaceLogoUrl, getWorkspaceTheme } from '@/lib/work
 import { LocaleSwitcher } from '@/components/locale-switcher';
 import { StoryDetailLayoutRoot } from '@/components/story-detail-panel';
 import { WorkspaceSwitcher } from '@/components/navigation/workspace-switcher';
+import { useWorkspaceMemberships } from '@/hooks/use-workspace-memberships';
 import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import type { ResolvedWorkspace } from '@/lib/workspace/registry';
 import { useWorkspacePageMeta, useWorkspaceShellContext } from '@/components/workspace-shell-provider';
@@ -151,6 +152,7 @@ export function AppShellFrame({
   const pathname = usePathname();
 
   const { workspace } = useWorkspace();
+  const { workspaces: membershipWorkspaces, loading: membershipsLoading } = useWorkspaceMemberships();
 
   const tNav = useTranslations('navigation');
 
@@ -1056,6 +1058,8 @@ export function AppShellFrame({
 
             <WorkspaceSwitcher
               activeWorkspace={workspace}
+              workspaces={membershipWorkspaces}
+              loading={membershipsLoading}
               onSwitch={handleWorkspaceSwitch}
               className="hidden shrink-0 sm:block"
             />

@@ -2,7 +2,10 @@ import type { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { ApplyToolRequestBody } from '@/lib/agent-chat/protocol';
 import { applyTool } from '@/lib/agent-chat/server/apply';
-import { loadAgentWorkspaceContext } from '@/lib/agent-chat/server/workspace-context';
+import {
+  buildMockAgentWorkspaceContext,
+  loadAgentWorkspaceContext,
+} from '@/lib/agent-chat/server/workspace-context';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,20 +33,20 @@ export async function POST(request: NextRequest): Promise<Response> {
   } = await supabase.auth.getSession();
   const authToken = session?.access_token ?? null;
 
-  const workspaceContext =
+  let workspaceContext =
     body.workspaceId && authToken
       ? await loadAgentWorkspaceContext(body.workspaceId, authToken)
-      : body.teamId && body.workspaceId
-        ? {
-            workspaceId: body.workspaceId,
-            teamId: body.teamId,
-            teamName: null,
-            teamKey: null,
-            teamSlug: null,
-            defaultWorkflowStateId: null,
-            teams: [],
-          }
-        : null;
+      : null;
+
+  if (!workspaceContext && body.workspaceId) {
+    workspaceContext = buildMockAgentWorkspaceContext(body.workspaceId);
+    if (body.teamId) {
+      workspaceContext = {
+        ...workspaceContext,
+        teamId: body.teamId,
+      };
+    }
+  }
 
   const result = await applyTool({
     toolName: body.toolName,

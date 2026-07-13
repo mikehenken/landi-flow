@@ -16,6 +16,8 @@ export interface ConfirmationProps {
   approveLabel?: string;
   rejectLabel?: string;
   disabled?: boolean;
+  /** Shown when state is `failed` (approved but MCP apply errored). */
+  applyErrorText?: string;
   className?: string;
 }
 
@@ -34,6 +36,7 @@ export function Confirmation({
   approveLabel = 'Approve & apply',
   rejectLabel = 'Reject',
   disabled = false,
+  applyErrorText,
   className,
 }: ConfirmationProps): React.ReactElement {
   const resolved = state !== 'pending';
@@ -44,6 +47,7 @@ export function Confirmation({
         'rounded-md border border-status-warning/30 bg-status-warning/5 p-3',
         state === 'approved' && 'border-status-done/30 bg-status-done/5',
         state === 'rejected' && 'border-status-error/30 bg-status-error/5',
+        state === 'failed' && 'border-status-error/30 bg-status-error/5',
         className,
       )}
       role="group"
@@ -91,6 +95,15 @@ export function Confirmation({
             <>
               <Check className="h-3.5 w-3.5" /> Approved — applied via Agent Action Bus
             </>
+          ) : state === 'failed' ? (
+            <span className="flex flex-col gap-1">
+              <span className="flex items-center gap-1">
+                <X className="h-3.5 w-3.5" /> Approved but apply failed — no write was applied
+              </span>
+              {applyErrorText ? (
+                <span className="font-normal text-status-error/90">{applyErrorText}</span>
+              ) : null}
+            </span>
           ) : (
             <>
               <X className="h-3.5 w-3.5" /> Rejected — no write was applied

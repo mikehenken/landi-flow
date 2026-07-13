@@ -3,72 +3,125 @@
 import * as React from 'react';
 import type { Cycle } from '@landi-flow/core/types';
 import { Button, cn, Input } from '@landi-flow/ui';
-import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import {
   completeCycle,
   createCycle,
-  listCyclesForTeam,
-  readCycleAutomation,
-  runCycleAutomation,
-  writeCycleAutomation,
+  executeCycleAutomation,
+  loadCycleAutomation,
+  saveCycleAutomation,
   type CycleAutomationSettings,
-} from '@/lib/cycles/cycle-store';
+} from '@/controllers/cycles-controller';
+import { TeamSelector } from '@/components/settings/team-selector';
+import { useTeamCycles } from '@/hooks/use-team-cycles';
+import { useWorkspaceTeams } from '@/hooks/use-workspace-teams';
+import { useWorkspace } from '@/lib/workspace';
 
 export interface CyclesPanelProps {
   teamId?: string;
   className?: string;
 }
 
-/** CAP-061/062: team cycles CRUD + automation settings. */
-export function CyclesPanel({
-  teamId = DEMO_TEAM_ID,
-  className,
-}: CyclesPanelProps): React.ReactElement {
-  const [cycles, setCycles] = React.useState<Cycle[]>(() => listCyclesForTeam(teamId));
-  const [automation, setAutomation] = React.useState<CycleAutomationSettings>(() =>
-    readCycleAutomation(teamId),
-  );
+/** Team cycles CRUD + automation settings. */
+export function CyclesPanel({ teamId: initialTeamId, className }: CyclesPanelProps): React.ReactElement {
+  const { workspace } = useWorkspace();
+  const { teams, loading: teamsLoading, defaultTeamId } = useWorkspaceTeams(workspace.id);
+  const [teamId, setTeamId] = React.useState<string | null>(initialTeamId ?? null);
+  const resolvedTeamId = teamId ?? defaultTeamId;
+  const { cycles, refresh: refreshCycles } = useTeamCycles(workspace.id, resolvedTeamId);
+  const [automation, setAutomation] = React.useState<CycleAutomationSettings | null>(null);
   const [newName, setNewName] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const refresh = (): void => {
-    setCycles(listCyclesForTeam(teamId));
-    setAutomation(readCycleAutomation(teamId));
-  };
+  React.useEffect(() => {
+    if (!teamId && defaultTeamId) {
+      setTeamId(defaultTeamId);
+    }
+  }, [teamId, defaultTeamId]);
 
-  const handleCreate = (): void => {
+  React.useEffect(() => {
+    if (!resolvedTeamId) {
+      setAutomation(null);
+      return;
+    }
+    setAutomation(loadCycleAutomation(resolvedTeamId));
+  }, [resolvedTeamId]);
+
+  const handleCreate = React.useCallback(async (): Promise<void> => {
     const trimmed = newName.trim();
-    if (!trimmed) {
+    if (!trimmed || !resolvedTeamId) {
       return;
     }
     const now = new Date();
     const ends = new Date(now);
     ends.setDate(ends.getDate() + 14);
-    createCycle(teamId, trimmed, now.toISOString(), ends.toISOString());
-    setNewName('');
-    refresh();
-  };
+    setBusy(true);
+    setError(null);
+    try {
+      await createCycle({
+        workspaceId: workspace.id,
+        teamId: resolvedTeamId,
+        name: trimmed,
+        startsAt: now.toISOString(),
+        endsAt: ends.toISOString(),
+      });
+      setNewName('');
+      refreshCycles();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create cycle');
+    } finally {
+      setBusy(false);
+    }
+  }, [newName, resolvedTeamId, workspace.id, refreshCycles]);
 
-  const handleComplete = (cycleId: string): void => {
-    completeCycle(cycleId);
-    refresh();
-  };
+  const handleComplete = React.useCallback(
+    async (cycle: Cycle): Promise<void> => {
+      if (!resolvedTeamId) {
+        return;
+      }
+      setBusy(true);
+      setError(null);
+      try {
+        await completeCycle({
+          workspaceId: workspace.id,
+          teamId: resolvedTeamId,
+          cycleId: cycle.id,
+        });
+        refreshCycles();
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to complete cycle');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [resolvedTeamId, workspace.id, refreshCycles],
+  );
 
-  const handleRunAutomation = (): void => {
-    runCycleAutomation(teamId);
-    refresh();
-  };
+  const handleRunAutomation = React.useCallback((): void => {
+    if (!resolvedTeamId) {
+      return;
+    }
+    const updated = executeCycleAutomation(resolvedTeamId);
+    setAutomation(updated);
+  }, [resolvedTeamId]);
 
-  const toggleAutoAdd = (): void => {
+  const toggleAutoAdd = React.useCallback((): void => {
+    if (!automation) {
+      return;
+    }
     const next = { ...automation, auto_add_stories: !automation.auto_add_stories };
-    writeCycleAutomation(next);
+    saveCycleAutomation(next);
     setAutomation(next);
-  };
+  }, [automation]);
 
-  const toggleRollover = (): void => {
+  const toggleRollover = React.useCallback((): void => {
+    if (!automation) {
+      return;
+    }
     const next = { ...automation, rollover_incomplete: !automation.rollover_incomplete };
-    writeCycleAutomation(next);
+    saveCycleAutomation(next);
     setAutomation(next);
-  };
+  }, [automation]);
 
   return (
     <section
@@ -76,10 +129,20 @@ export function CyclesPanel({
       data-testid="cycles-panel"
       data-cap="CAP-061"
     >
-      <header>
-        <h2 className="text-lg font-semibold">Cycles</h2>
-        <p className="text-sm text-muted-foreground">Sprint containers for Team Design.</p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Cycles</h2>
+          <p className="text-sm text-muted-foreground">Sprint containers scoped per team.</p>
+        </div>
+        <TeamSelector
+          teams={teams}
+          teamId={resolvedTeamId}
+          onTeamIdChange={setTeamId}
+          loading={teamsLoading}
+        />
       </header>
+
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <ul className="flex flex-col gap-2" data-testid="cycles-list">
         {cycles.map((cycle) => (
@@ -90,7 +153,8 @@ export function CyclesPanel({
           >
             <div>
               <p className="font-medium">
-                {cycle.name} <span className="font-mono text-xs text-muted-foreground">#{cycle.number}</span>
+                {cycle.name}{' '}
+                <span className="font-mono text-xs text-muted-foreground">#{cycle.number}</span>
               </p>
               <p className="text-xs text-muted-foreground">
                 {cycle.completed_at ? 'Completed' : 'Active'}
@@ -101,8 +165,9 @@ export function CyclesPanel({
                 type="button"
                 size="sm"
                 variant="outline"
+                disabled={busy}
                 data-testid="cycle-complete"
-                onClick={() => handleComplete(cycle.id)}
+                onClick={() => void handleComplete(cycle)}
               >
                 Complete
               </Button>
@@ -119,50 +184,58 @@ export function CyclesPanel({
           data-testid="cycle-create-input"
           className="h-8 max-w-xs text-sm"
         />
-        <Button type="button" size="sm" data-testid="cycle-create" onClick={handleCreate}>
+        <Button
+          type="button"
+          size="sm"
+          disabled={busy || !resolvedTeamId}
+          data-testid="cycle-create"
+          onClick={() => void handleCreate()}
+        >
           Create cycle
         </Button>
       </div>
 
-      <section
-        className="rounded-lg border border-border p-4"
-        data-testid="cycle-automation-panel"
-        data-cap="CAP-062"
-      >
-        <h3 className="text-sm font-semibold">Cycle automation</h3>
-        <div className="mt-3 flex flex-col gap-2">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={automation.auto_add_stories}
-              data-testid="cycle-auto-add"
-              onChange={toggleAutoAdd}
-            />
-            Auto-add new Stories to active cycle
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={automation.rollover_incomplete}
-              data-testid="cycle-rollover"
-              onChange={toggleRollover}
-            />
-            Rollover incomplete Stories on cycle complete
-          </label>
-          <p className="text-xs text-muted-foreground">
-            Last run: {automation.last_run_at ?? 'Never'}
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            data-testid="cycle-automation-run"
-            onClick={handleRunAutomation}
-          >
-            Run automation now
-          </Button>
-        </div>
-      </section>
+      {automation ? (
+        <section
+          className="rounded-lg border border-border p-4"
+          data-testid="cycle-automation-panel"
+          data-cap="CAP-062"
+        >
+          <h3 className="text-sm font-semibold">Cycle automation</h3>
+          <div className="mt-3 flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={automation.auto_add_stories}
+                data-testid="cycle-auto-add"
+                onChange={toggleAutoAdd}
+              />
+              Auto-add new Stories to active cycle
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={automation.rollover_incomplete}
+                data-testid="cycle-rollover"
+                onChange={toggleRollover}
+              />
+              Rollover incomplete Stories on cycle complete
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Last run: {automation.last_run_at ?? 'Never'}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              data-testid="cycle-automation-run"
+              onClick={handleRunAutomation}
+            >
+              Run automation now
+            </Button>
+          </div>
+        </section>
+      ) : null}
     </section>
   );
 }

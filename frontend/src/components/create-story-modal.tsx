@@ -34,13 +34,14 @@ import { useWorkspace } from '@/lib/workspace';
 import { WORKFLOW_STATES } from '@/lib/workflow-states';
 import {
   getDefaultTeamId,
-  getDefaultWorkflowStateId,
 } from '@/lib/api/workspace-context';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { createStory as persistCreateStory } from '@/controllers/story-controller';
 import { getTaxonomySettings, getStoryTemplateById } from '@/lib/taxonomy/taxonomy-store';
-import { listCyclesForTeam } from '@/lib/cycles/cycle-store';
-import { listMockTeams } from '@/lib/mock/settings-completion-store';
+import { useTeamCycles } from '@/hooks/use-team-cycles';
+import { useTeamWorkflowStates } from '@/hooks/use-team-workflow-states';
+import { useWorkspaceStoryLabels } from '@/hooks/use-workspace-story-labels';
+import { useWorkspaceTeams } from '@/hooks/use-workspace-teams';
 import { CURRENT_USER } from '@/lib/agent-roster';
 import { useAssignableMembers } from '@/hooks/use-assignable-members';
 import {
@@ -107,9 +108,32 @@ export function CreateStoryModal({
   const [selectedTemplateId, setSelectedTemplateId] = React.useState('');
 
   const storyTemplates = React.useMemo(() => getTaxonomySettings().story_templates, []);
-  const storyTypes = React.useMemo(() => getTaxonomySettings().story_labels, []);
-  const teams = React.useMemo(() => listMockTeams(workspace.id), [workspace.id]);
-  const cycles = React.useMemo(() => listCyclesForTeam(teamId), [teamId]);
+  const { labels: storyTypes } = useWorkspaceStoryLabels(workspace.id);
+  const { teams, defaultTeamId } = useWorkspaceTeams(workspace.id);
+  const { cycles } = useTeamCycles(workspace.id, teamId);
+  const { workflowStates } = useTeamWorkflowStates(workspace.id, teamId);
+
+  React.useEffect(() => {
+    if (!teamId && defaultTeamId) {
+      setTeamId(defaultTeamId);
+    }
+  }, [teamId, defaultTeamId]);
+
+  React.useEffect(() => {
+    if (workflowStates.length === 0) {
+      return;
+    }
+    const stillValid = workflowStates.some((state) => state.id === workflowStateId);
+    if (!stillValid) {
+      const fallback =
+        workflowStates.find((state) => state.is_default) ??
+        workflowStates.find((state) => state.category === 'unstarted') ??
+        workflowStates[0];
+      if (fallback) {
+        setWorkflowStateId(fallback.id);
+      }
+    }
+  }, [workflowStates, workflowStateId]);
   const requester = React.useMemo(
     () => pickerMembers.find((member) => member.id === CURRENT_USER.id) ?? null,
     [pickerMembers],
@@ -178,14 +202,12 @@ export function CreateStoryModal({
         return;
       }
 
-      const resolvedTeamId = isMockAuthEnabled() ? teamId : getDefaultTeamId() ?? teamId;
+      const resolvedTeamId = teamId;
       if (!resolvedTeamId) {
         return;
       }
 
-      const resolvedWorkflowStateId = isMockAuthEnabled()
-        ? workflowStateId
-        : getDefaultWorkflowStateId() ?? workflowStateId;
+      const resolvedWorkflowStateId = workflowStateId;
 
       void persistCreateStory({
         title: trimmedTitle,
@@ -335,6 +357,7 @@ export function CreateStoryModal({
                     <MetadataPropertyRow icon={<CircleDot className="h-4 w-4" />} label="State">
                       <StoryStatusPicker
                         workflowStateId={workflowStateId}
+                        workflowStates={workflowStates}
                         onSelect={setWorkflowStateId}
                       />
                     </MetadataPropertyRow>

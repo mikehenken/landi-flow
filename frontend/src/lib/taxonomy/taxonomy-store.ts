@@ -204,6 +204,24 @@ export function deleteStoryLabel(labelId: string): void {
   });
 }
 
+export function upsertEpicLabel(label: TaxonomyLabel): void {
+  const settings = readTaxonomy();
+  const index = settings.epic_labels.findIndex((row) => row.id === label.id);
+  const epic_labels =
+    index >= 0
+      ? settings.epic_labels.map((row, i) => (i === index ? label : row))
+      : [...settings.epic_labels, label];
+  writeTaxonomy({ ...settings, epic_labels });
+}
+
+export function deleteEpicLabel(labelId: string): void {
+  const settings = readTaxonomy();
+  writeTaxonomy({
+    ...settings,
+    epic_labels: settings.epic_labels.filter((row) => row.id !== labelId),
+  });
+}
+
 export function upsertCustomEmoji(emoji: CustomEmoji): void {
   const settings = readTaxonomy();
   const index = settings.custom_emojis.findIndex((row) => row.id === emoji.id);

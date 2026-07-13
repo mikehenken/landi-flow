@@ -12,6 +12,17 @@ export interface McpCallResult {
   errorText?: string;
 }
 
+interface McpJsonRpcResponse {
+  result?: McpToolCallResult;
+  error?: { message?: string };
+}
+
+interface McpToolCallResult {
+  content?: Array<{ type?: string; text?: string }>;
+  structuredContent?: unknown;
+  isError?: boolean;
+}
+
 export function resolveMcpWorkerUrl(): string | null {
   const raw = process.env.MCP_WORKER_URL ?? process.env.NEXT_PUBLIC_MCP_URL;
   return raw ? raw.replace(/\/$/, '') : null;
@@ -25,6 +36,14 @@ export function resolveMcpAuthToken(sessionToken?: string | null): string | null
 /** True when a live MCP call can be attempted (URL + auth available). */
 export function isMcpWorkerConfigured(sessionToken?: string | null): boolean {
   return Boolean(resolveMcpWorkerUrl() && resolveMcpAuthToken(sessionToken));
+}
+
+function extractMcpErrorText(result: McpToolCallResult): string {
+  const first = result.content?.[0];
+  if (first && typeof first.text === 'string' && first.text.length > 0) {
+    return first.text;
+  }
+  return 'MCP tool returned isError without a message';
 }
 
 export async function callMcpTool(params: {
@@ -85,7 +104,7 @@ export async function callMcpTool(params: {
         errorText: `MCP worker returned ${response.status}`,
       };
     }
-    const body = (await response.json()) as { result?: unknown; error?: { message?: string } };
+    const body = (await response.json()) as McpJsonRpcResponse;
     if (body.error) {
       return {
         ok: false,
@@ -94,7 +113,18 @@ export async function callMcpTool(params: {
         errorText: body.error.message ?? 'MCP tool error',
       };
     }
-    return { ok: true, live: true, tool: toolName, output: body.result };
+
+    const result = body.result;
+    if (result?.isError === true) {
+      return {
+        ok: false,
+        live: true,
+        tool: toolName,
+        errorText: extractMcpErrorText(result),
+      };
+    }
+
+    return { ok: true, live: true, tool: toolName, output: result };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'MCP dispatch failed';
     return { ok: false, live: true, tool: toolName, errorText: message };

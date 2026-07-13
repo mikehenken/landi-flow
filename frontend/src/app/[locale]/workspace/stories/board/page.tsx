@@ -13,20 +13,14 @@ import { BoardColumnControls } from '@/components/views/board-column-controls';
 import { useBoardGroupByPreference } from '@/hooks/use-board-group-by-preference';
 import { useEpicStore } from '@/hooks/use-epic-store';
 import { useStoryStore } from '@/hooks/use-story-store';
+import { useTeamCycles } from '@/hooks/use-team-cycles';
+import { useTeamWorkflowStates } from '@/hooks/use-team-workflow-states';
+import { useWorkspaceTeams } from '@/hooks/use-workspace-teams';
 import { storyStore } from '@/stores/story-store';
 import { useWorkspace } from '@/lib/workspace';
-import { isMockAuthEnabled } from '@/lib/api/config';
-import {
-  getDefaultTeamId,
-  getWorkflowStatesForTeam,
-} from '@/lib/api/workspace-context';
-import { readHiddenColumnIds } from '@/lib/views/board-column-preferences';
 import { createStory as persistCreateStory } from '@/controllers/story-controller';
-import {
-  DEMO_CYCLES,
-  DEMO_TEAM_ID,
-  DEMO_WORKFLOW_STATE_ROWS,
-} from '@/lib/seed-data';
+import { readHiddenColumnIds } from '@/lib/views/board-column-preferences';
+import { DEMO_TEAM_ID, DEMO_WORKFLOW_STATE_ROWS } from '@/lib/seed-data';
 
 function StoriesBoardBody(): React.ReactElement {
   const { workspace } = useWorkspace();
@@ -34,11 +28,12 @@ function StoriesBoardBody(): React.ReactElement {
   const { epics } = useEpicStore();
   const { visibleStories } = useStoriesViewContext();
   const { groupBy, setGroupBy } = useBoardGroupByPreference();
-  const teamId = isMockAuthEnabled() ? DEMO_TEAM_ID : getDefaultTeamId() ?? DEMO_TEAM_ID;
-  const workflowStates = isMockAuthEnabled()
-    ? DEMO_WORKFLOW_STATE_ROWS
-    : getWorkflowStatesForTeam();
-  const cycles = DEMO_CYCLES;
+  const { defaultTeamId } = useWorkspaceTeams(workspace.id);
+  const teamId = defaultTeamId ?? DEMO_TEAM_ID;
+  const { workflowStates } = useTeamWorkflowStates(workspace.id, teamId);
+  const { cycles } = useTeamCycles(workspace.id, teamId);
+  const resolvedWorkflowStates =
+    workflowStates.length > 0 ? workflowStates : DEMO_WORKFLOW_STATE_ROWS;
   const [hiddenColumnIds, setHiddenColumnIds] = React.useState<Set<string>>(() =>
     readHiddenColumnIds(teamId),
   );
@@ -82,7 +77,7 @@ function StoriesBoardBody(): React.ReactElement {
         {groupBy === 'none' ? (
           <BoardColumnControls
             teamId={teamId}
-            workflowStates={workflowStates.length > 0 ? workflowStates : DEMO_WORKFLOW_STATE_ROWS}
+            workflowStates={resolvedWorkflowStates}
             onQuickAdd={handleQuickAdd}
             onVisibilityChange={setHiddenColumnIds}
           />
@@ -92,7 +87,7 @@ function StoriesBoardBody(): React.ReactElement {
             workspaceId={workspace.id}
             teamId={teamId}
             stories={visibleStories}
-            workflowStates={workflowStates.length > 0 ? workflowStates : DEMO_WORKFLOW_STATE_ROWS}
+            workflowStates={resolvedWorkflowStates}
             storyTitles={storyTitles}
             selectedStoryId={selectedStoryId}
             onCardSelect={handleCardSelect}

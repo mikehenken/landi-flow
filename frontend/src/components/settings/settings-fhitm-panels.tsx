@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { PulseSchedule } from '@landi-flow/core/types';
+import type { PulseSchedule, WorkflowCategory, WorkflowState } from '@landi-flow/core/types';
 import { Button, Input } from '@landi-flow/ui';
 import { McpIdeToolsPanel } from '@/components/mcp/mcp-ide-tools-panel';
 import { SlaRulesPanel } from '@/components/settings/admin-settings-panels';
@@ -14,13 +14,17 @@ import {
   listPulseSchedules,
   runPulseSchedule,
 } from '@/lib/pulse/pulse-store';
-import { getWorkflowStatesForTeamSettings } from '@/lib/taxonomy/taxonomy-store';
 import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import { useWorkspace } from '@/lib/workspace';
+import { isMockAuthEnabled } from '@/lib/api/config';
 import {
   createPersonalApiKey,
   loadPersonalApiKeys,
 } from '@/controllers/settings-completion-controller';
+import {
+  createWorkflowState,
+  loadWorkflowStates,
+} from '@/controllers/workflow-states-controller';
 
 function resolveTeamIdForSettings(teamId: string): string {
   if (teamId === 'default' || teamId === 'team-default') {
@@ -29,28 +33,126 @@ function resolveTeamIdForSettings(teamId: string): string {
   return teamId;
 }
 
+const WORKFLOW_CATEGORY_OPTIONS: Array<{ value: WorkflowCategory; label: string }> = [
+  { value: 'triage', label: 'Triage' },
+  { value: 'unstarted', label: 'Unstarted' },
+  { value: 'started', label: 'Started' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'canceled', label: 'Canceled' },
+];
+
 export function TeamWorkflowStatesPanel({
   teamId,
 }: {
   teamId: string;
 }): React.ReactElement {
+  const { workspace } = useWorkspace();
   const resolvedTeamId = resolveTeamIdForSettings(teamId);
-  const states = getWorkflowStatesForTeamSettings(resolvedTeamId);
+  const [states, setStates] = React.useState<WorkflowState[]>([]);
+  const [name, setName] = React.useState('');
+  const [category, setCategory] = React.useState<WorkflowCategory>('unstarted');
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  const refresh = React.useCallback(() => {
+    setLoading(true);
+    setError(null);
+    void loadWorkflowStates(workspace.id, resolvedTeamId)
+      .then((rows) => setStates(rows))
+      .catch((err: unknown) => {
+        setStates([]);
+        setError(err instanceof Error ? err.message : 'Failed to load workflow states');
+      })
+      .finally(() => setLoading(false));
+  }, [workspace.id, resolvedTeamId]);
+
+  React.useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const handleCreate = React.useCallback(async (): Promise<void> => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await createWorkflowState({
+        workspaceId: workspace.id,
+        teamId: resolvedTeamId,
+        name: trimmed,
+        category,
+        position: states.length,
+      });
+      setName('');
+      refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create workflow state');
+    } finally {
+      setBusy(false);
+    }
+  }, [name, category, states.length, workspace.id, resolvedTeamId, refresh]);
 
   return (
-    <section className="rounded-lg border border-border bg-card p-6" data-testid="team-settings-panel" data-cap="CAP-008">
-      <h2 className="mb-4 text-lg font-medium">Team workflow states (CAP-008)</h2>
+    <section
+      className="rounded-lg border border-border bg-card p-6"
+      data-testid="team-settings-panel"
+      data-cap="CAP-008"
+    >
+      <h2 className="mb-4 text-lg font-medium">Team workflow states</h2>
       <p className="mb-4 text-sm text-muted-foreground">Team: {teamId}</p>
-      <ul className="flex flex-wrap gap-2" data-testid="workflow-states-list">
-        {states.map((state) => (
-          <li
-            key={state.id}
-            className="rounded-md border border-border px-2 py-1 text-sm"
-          >
-            {state.name}
-          </li>
-        ))}
-      </ul>
+      {error ? <p className="mb-3 text-sm text-destructive">{error}</p> : null}
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading workflow states…</p>
+      ) : (
+        <ul className="flex flex-wrap gap-2" data-testid="workflow-states-list">
+          {states.map((state) => (
+            <li
+              key={state.id}
+              className="rounded-md border border-border px-2 py-1 text-sm"
+            >
+              {state.name}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!isMockAuthEnabled() ? (
+        <div className="mt-4 flex flex-wrap items-end gap-2" data-testid="workflow-state-create">
+          <label className="flex min-w-[160px] flex-col gap-1 text-sm">
+            <span className="text-muted-foreground">State name</span>
+            <Input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="e.g. In review"
+              data-testid="workflow-state-name-input"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted-foreground">Category</span>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value as WorkflowCategory)}
+              className="h-9 rounded-md border border-border bg-background px-3 text-sm"
+              data-testid="workflow-state-category-select"
+            >
+              {WORKFLOW_CATEGORY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button type="button" size="sm" disabled={busy} onClick={() => void handleCreate()}>
+            Add state
+          </Button>
+        </div>
+      ) : (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Workflow state creation is available when connected to the live API.
+        </p>
+      )}
     </section>
   );
 }
@@ -68,7 +170,7 @@ export function PulseSchedulesSettingsPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="pulse-schedules-settings" data-cap="CAP-065">
-      <h2 className="mb-4 text-lg font-medium">Pulse schedules (CAP-065)</h2>
+      <h2 className="mb-4 text-lg font-medium">Pulse schedules</h2>
       <ul className="mb-3 space-y-2">
         {schedules.map((schedule) => (
           <li
@@ -115,7 +217,7 @@ export function AsksSettingsPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="asks-settings-panel" data-cap="CAP-073">
-      <h2 className="mb-4 text-lg font-medium">Customer asks intake (CAP-073)</h2>
+      <h2 className="mb-4 text-lg font-medium">Customer asks intake</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         Configure inbound webhook endpoints for Slack, email, and web forms.
       </p>
@@ -133,7 +235,7 @@ export function AsksSettingsPanel(): React.ReactElement {
 export function AiSettingsPanel(): React.ReactElement {
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="ai-settings-panel" data-cap="CAP-075">
-      <h2 className="mb-4 text-lg font-medium">AI settings (CAP-075)</h2>
+      <h2 className="mb-4 text-lg font-medium">AI settings</h2>
       <p className="text-sm text-muted-foreground">
         Workspace AI provider routing via Cloudflare AI Gateway. Model overrides and usage limits
         apply per workspace.
@@ -155,7 +257,7 @@ export function AiSettingsPanel(): React.ReactElement {
 export function AiGuidancePanel(): React.ReactElement {
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="ai-guidance-panel" data-cap="CAP-076">
-      <h2 className="mb-4 text-lg font-medium">AI guidance (CAP-076)</h2>
+      <h2 className="mb-4 text-lg font-medium">AI guidance</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         System prompts and guardrails injected into agent workflows.
       </p>
@@ -172,7 +274,7 @@ export function AiGuidancePanel(): React.ReactElement {
 export function AiLoopsPanel(): React.ReactElement {
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="ai-loops-panel" data-cap="CAP-077">
-      <h2 className="mb-4 text-lg font-medium">AI loops (CAP-077)</h2>
+      <h2 className="mb-4 text-lg font-medium">AI loops</h2>
       <ul className="divide-y divide-border rounded-md border border-border">
         <li className="px-3 py-2 text-sm" data-testid="ai-loop-row">
           Triage assistant · active
@@ -207,9 +309,7 @@ export function IntegrationSettingsPanel({
       data-testid={`${provider}-integration-panel`}
       data-cap={capId}
     >
-      <h2 className="mb-4 text-lg font-medium">
-        {title} integration ({capId})
-      </h2>
+      <h2 className="mb-4 text-lg font-medium">{title} integration</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         Connect {title} to sync issues, pull requests, and notifications.
       </p>
@@ -224,7 +324,7 @@ export function IntegrationSettingsPanel({
 export function UpdatesSettingsPanel(): React.ReactElement {
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="updates-settings-panel" data-cap="CAP-096">
-      <h2 className="mb-4 text-lg font-medium">Project updates (CAP-096)</h2>
+      <h2 className="mb-4 text-lg font-medium">Project updates</h2>
       <p className="text-sm text-muted-foreground">
         Configure default cadence and notification channels for initiative and epic updates.
       </p>
@@ -258,7 +358,7 @@ export function WorkspaceApiSettingsPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="workspace-api-settings-panel" data-cap="CAP-105">
-      <h2 className="mb-4 text-lg font-medium">Workspace API (CAP-105)</h2>
+      <h2 className="mb-4 text-lg font-medium">Workspace API</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         Programmatic access for {workspace.name} via REST API keys.
       </p>
@@ -329,7 +429,7 @@ export function McpCredentialVaultPanel(): React.ReactElement {
       data-testid="mcp-credential-vault-panel"
       data-cap="IDEA-007"
     >
-      <h2 className="mb-4 text-lg font-medium">MCP credential vault (IDEA-007)</h2>
+      <h2 className="mb-4 text-lg font-medium">MCP credential vault</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         Scoped, revocable tokens for IDE MCP clients. Raw secrets shown once on create.
       </p>

@@ -262,6 +262,28 @@ export interface Cycle {
   updated_at: string;
 }
 
+/** Workspace-scoped story label catalog (linear_clone.labels). */
+export interface StoryLabel {
+  id: string;
+  workspace_id: string;
+  team_id: string | null;
+  name: string;
+  color: string | null;
+  description: string | null;
+  group_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Workspace-scoped epic label catalog (linear_clone.epic_labels_catalog). */
+export interface EpicLabelCatalogEntry {
+  id: string;
+  workspace_id: string;
+  name: string;
+  color: string | null;
+  created_at: string;
+}
+
 export interface StoryRelation {
   id: string;
   workspace_id: string;

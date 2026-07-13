@@ -40,9 +40,10 @@ import type { StoryCustomFieldValues } from '@/components/story-custom-fields-se
 import { StorySlaBadge } from '@/components/story-sla-badge';
 import { useEpicStore } from '@/hooks/use-epic-store';
 import { useStoryPropertyHandlers } from '@/hooks/use-story-property-handlers';
-import { listCyclesForTeam } from '@/lib/cycles/cycle-store';
-import { listMockTeams } from '@/lib/mock/settings-completion-store';
-import { getTaxonomySettings } from '@/lib/taxonomy/taxonomy-store';
+import { useTeamCycles } from '@/hooks/use-team-cycles';
+import { useTeamWorkflowStates } from '@/hooks/use-team-workflow-states';
+import { useWorkspaceStoryLabels } from '@/hooks/use-workspace-story-labels';
+import { useWorkspaceTeams } from '@/hooks/use-workspace-teams';
 import { useWorkspace } from '@/lib/workspace';
 import { buildStoryModalQueryString } from '@/lib/story/open-story-modal';
 
@@ -105,15 +106,10 @@ export function StoryMetadataSidebar({
   const { epics } = useEpicStore();
   const epic = epics.find((entry) => entry.id === story.epic_id) ?? null;
   const handlers = useStoryPropertyHandlers(story);
-  const teams = React.useMemo(() => listMockTeams(workspace.id), [workspace.id]);
-  const cycles = React.useMemo(
-    () => listCyclesForTeam(story.team_id),
-    [story.team_id],
-  );
-  const storyTypes = React.useMemo(
-    () => getTaxonomySettings().story_labels,
-    [],
-  );
+  const { teams } = useWorkspaceTeams(workspace.id);
+  const { cycles } = useTeamCycles(workspace.id, story.team_id);
+  const { workflowStates } = useTeamWorkflowStates(workspace.id, story.team_id);
+  const { labels: storyTypes } = useWorkspaceStoryLabels(workspace.id);
   const [storyTypeId, setStoryTypeId] = React.useState<string | null>(null);
   const [customFields, setCustomFields] = React.useState<StoryCustomFieldValues>(
     EMPTY_CUSTOM_FIELDS,
@@ -240,6 +236,7 @@ export function StoryMetadataSidebar({
           <MetadataPropertyRow icon={<CircleDot className="h-4 w-4" />} label="State">
             <StoryStatusPicker
               workflowStateId={story.workflow_state_id}
+              workflowStates={workflowStates}
               onSelect={handlers.handleStatusChange}
             />
           </MetadataPropertyRow>

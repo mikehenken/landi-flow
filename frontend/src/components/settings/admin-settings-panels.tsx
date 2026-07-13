@@ -47,7 +47,7 @@ export function WorkspaceGeneralSettingsPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="workspace-general-settings">
-      <h2 className="mb-4 text-lg font-medium">Workspace general (CAP-099)</h2>
+      <h2 className="mb-4 text-lg font-medium">Workspace general</h2>
       <div className="space-y-3">
         <label className="block text-sm">
           <span className="mb-1 block text-muted-foreground">Name</span>
@@ -96,7 +96,7 @@ export function TeamsAdminPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="teams-admin-panel">
-      <h2 className="mb-4 text-lg font-medium">Teams (CAP-100)</h2>
+      <h2 className="mb-4 text-lg font-medium">Teams</h2>
       <ul className="mb-4 divide-y divide-border rounded-md border border-border">
         {teams.map((team) => (
           <li key={team.id} className="px-3 py-2 text-sm" data-testid="team-admin-row">
@@ -142,7 +142,7 @@ export function SecuritySettingsPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="security-settings-panel">
-      <h2 className="mb-4 text-lg font-medium">Security (CAP-103)</h2>
+      <h2 className="mb-4 text-lg font-medium">Security</h2>
       <label className="mb-4 block text-sm">
         <span className="mb-1 block text-muted-foreground">Allowed email domains (comma-separated)</span>
         <Input value={domains} onChange={(event) => setDomains(event.target.value)} data-testid="allowed-domains-input" />
@@ -210,7 +210,7 @@ export function SlaRulesPanel({ className }: { className?: string }): React.Reac
 
   return (
     <section className={cn('rounded-lg border border-border bg-card p-6', className)} data-testid="sla-rules-panel">
-      <h2 className="mb-4 text-lg font-medium">SLA rules (CAP-074)</h2>
+      <h2 className="mb-4 text-lg font-medium">SLA rules</h2>
       <ul className="mb-4 divide-y divide-border rounded-md border border-border">
         {rules.map((rule) => (
           <li key={rule.id} className="px-3 py-2 text-sm" data-testid="sla-rule-row">
@@ -228,13 +228,13 @@ export function SlaRulesPanel({ className }: { className?: string }): React.Reac
   );
 }
 
-/** Workspace billing summary — mock-friendly surface for CAP-082 / CAP-107. */
+/** Workspace billing summary — honest placeholder until Stripe ships. */
 export function BillingSettingsPanel(): React.ReactElement {
   const { workspace } = useWorkspace();
 
   return (
-    <section className="rounded-lg border border-border bg-card p-6" data-testid="billing-settings-panel">
-      <h2 className="mb-4 text-lg font-medium">Billing (CAP-082)</h2>
+    <section className="rounded-lg border border-border bg-card p-6" data-testid="billing-settings-panel" data-cap="CAP-082">
+      <h2 className="mb-4 text-lg font-medium">Billing</h2>
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-muted-foreground">Workspace</dt>
@@ -243,22 +243,25 @@ export function BillingSettingsPanel(): React.ReactElement {
         <div>
           <dt className="text-muted-foreground">Plan</dt>
           <dd className="font-medium" data-testid="billing-plan-label">
-            Team (mock)
+            Billing coming soon
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Seats</dt>
-          <dd className="font-medium">5 included</dd>
+          <dd className="font-medium text-muted-foreground">Not configured</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Status</dt>
-          <dd className="font-medium text-emerald-400">Active</dd>
+          <dd className="font-medium text-muted-foreground">Unavailable</dd>
         </div>
       </dl>
-      <p className="mt-4 text-xs text-muted-foreground">
-        Stripe billing integration is configured at the controller layer. This panel surfaces plan metadata for
-        workspace admins during mock-auth review.
+      <p className="mt-4 text-sm text-muted-foreground">
+        Paid plans and seat management are not available yet. Stripe integration is planned at the
+        controller layer — this panel will surface live plan metadata when billing ships.
       </p>
+      <Button type="button" className="mt-4" disabled data-testid="billing-upgrade-button">
+        Upgrade plan
+      </Button>
     </section>
   );
 }
@@ -285,7 +288,7 @@ export function ImportExportPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="import-export-panel">
-      <h2 className="mb-4 text-lg font-medium">Import / export (CAP-108)</h2>
+      <h2 className="mb-4 text-lg font-medium">Import / export</h2>
       <textarea
         className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-xs"
         value={csvText}

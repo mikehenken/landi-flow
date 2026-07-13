@@ -30,7 +30,7 @@ export function PersonalPreferencesPanel(): React.ReactElement {
       data-testid="personal-preferences-panel"
       data-cap="CAP-109"
     >
-      <h2 className="mb-4 text-lg font-medium">Preferences (CAP-109)</h2>
+      <h2 className="mb-4 text-lg font-medium">Preferences</h2>
       <div className="space-y-6">
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-foreground">Navigation sidebar</h3>
@@ -93,7 +93,7 @@ export function PersonalProfilePanel({
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="personal-profile-panel">
-      <h2 className="mb-4 text-lg font-medium">Profile (CAP-110)</h2>
+      <h2 className="mb-4 text-lg font-medium">Profile</h2>
       <Input
         value={displayName}
         onChange={(event) => setDisplayName(event.target.value)}
@@ -134,7 +134,7 @@ export function NotificationPrefsPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="notification-prefs-panel">
-      <h2 className="mb-4 text-lg font-medium">Notifications (CAP-111)</h2>
+      <h2 className="mb-4 text-lg font-medium">Notifications</h2>
       <label className="mb-2 flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -182,7 +182,7 @@ export function PersonalApiKeysPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="personal-api-keys-panel">
-      <h2 className="mb-4 text-lg font-medium">API keys (CAP-112)</h2>
+      <h2 className="mb-4 text-lg font-medium">API keys</h2>
       <Button type="button" onClick={() => void handleCreate()} data-testid="api-key-create">
         Create API key
       </Button>
@@ -230,7 +230,7 @@ export function ConnectedAccountsPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="connected-accounts-panel">
-      <h2 className="mb-4 text-lg font-medium">Connected accounts (CAP-089)</h2>
+      <h2 className="mb-4 text-lg font-medium">Connected accounts</h2>
       {['github', 'google', 'slack'].map((provider) => (
         <label key={provider} className="mb-2 flex items-center gap-2 text-sm capitalize">
           <input
@@ -257,7 +257,7 @@ export function ApplicationMembersPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="application-members-panel">
-      <h2 className="mb-4 text-lg font-medium">Application members (CAP-102)</h2>
+      <h2 className="mb-4 text-lg font-medium">Application members</h2>
       <ul className="divide-y divide-border rounded-md border border-border">
         {members.length === 0 ? (
           <li className="px-3 py-2 text-sm text-muted-foreground">No application members registered.</li>
@@ -283,7 +283,7 @@ export function AuthorizedAppsPanel(): React.ReactElement {
 
   return (
     <section className="rounded-lg border border-border bg-card p-6" data-testid="authorized-apps-panel">
-      <h2 className="mb-4 text-lg font-medium">Authorized apps (CAP-106)</h2>
+      <h2 className="mb-4 text-lg font-medium">Authorized apps</h2>
       <ul className="divide-y divide-border rounded-md border border-border">
         {apps.length === 0 ? (
           <li className="px-3 py-2 text-sm text-muted-foreground">No authorized third-party apps.</li>

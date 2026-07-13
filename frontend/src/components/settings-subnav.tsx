@@ -17,6 +17,7 @@ const SETTINGS_LINKS = [
   { href: '/workspace/settings/apps', label: 'Apps' },
   { href: '/workspace/settings/import', label: 'Import' },
   { href: '/workspace/settings/taxonomy', label: 'Taxonomy' },
+  { href: '/workspace/settings/labels', label: 'Labels' },
   { href: '/workspace/settings/cycles', label: 'Cycles' },
   { href: '/workspace/settings/recurring-stories', label: 'Recurring stories' },
   { href: '/workspace/settings/mcp-tools', label: 'MCP tools' },

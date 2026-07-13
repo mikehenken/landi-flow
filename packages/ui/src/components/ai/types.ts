@@ -22,7 +22,7 @@ export type ToolState =
   | 'output-error';
 
 /** Agent Handoff Queue governance state for write-capable tools (IDEA-003). */
-export type ApprovalState = 'pending' | 'approved' | 'rejected';
+export type ApprovalState = 'pending' | 'approved' | 'rejected' | 'failed';
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 

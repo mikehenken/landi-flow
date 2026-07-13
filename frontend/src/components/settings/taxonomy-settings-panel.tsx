@@ -2,14 +2,15 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { cn } from '@landi-flow/ui';
+import { Button, cn } from '@landi-flow/ui';
+import { Link } from '@/i18n/navigation';
 import { getTaxonomySettings } from '@/lib/taxonomy/taxonomy-store';
 
 export interface TaxonomySettingsPanelProps {
   className?: string;
 }
 
-/** CAP-008,009,090-095,097,098: settings taxonomy overview. */
+/** Settings taxonomy overview with CTAs to editable routes. */
 export function TaxonomySettingsPanel({
   className,
 }: TaxonomySettingsPanelProps): React.ReactElement {
@@ -25,8 +26,19 @@ export function TaxonomySettingsPanel({
       data-testid="taxonomy-settings-panel"
       data-cap="CAP-008"
     >
+      <p className="text-sm text-muted-foreground">
+        Read-only overview of workspace taxonomy. Story labels are editable under{' '}
+        <Link href="/workspace/settings/labels" className="text-primary underline underline-offset-2">
+          Workspace settings → Labels
+        </Link>
+        .
+      </p>
+
       <section data-cap="CAP-008">
         <h2 className="text-base font-semibold">Workflow states</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Per-team workflow states are managed on each team&apos;s settings page.
+        </p>
         <ul className="mt-2 flex flex-wrap gap-2" data-testid="workflow-states-list">
           {settings.workflow_states.map((state) => (
             <li
@@ -40,7 +52,17 @@ export function TaxonomySettingsPanel({
       </section>
 
       <section data-cap="CAP-090">
-        <h2 className="text-base font-semibold">Story labels</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">Story labels</h2>
+          <Button type="button" size="sm" variant="outline" asChild>
+            <Link href="/workspace/settings/labels" data-testid="taxonomy-labels-cta">
+              Manage story labels
+            </Link>
+          </Button>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Create, rename, and delete story labels on the dedicated labels settings page.
+        </p>
         <ul className="mt-2 flex flex-wrap gap-2" data-testid="story-labels-list">
           {settings.story_labels.map((label) => (
             <li
@@ -56,6 +78,13 @@ export function TaxonomySettingsPanel({
 
       <section data-cap="CAP-091">
         <h2 className="text-base font-semibold">Epic labels</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Epic label editing is available under{' '}
+          <Link href="/workspace/settings/epic-labels" className="text-primary underline underline-offset-2">
+            Epic labels
+          </Link>
+          .
+        </p>
         <ul className="mt-2 flex flex-wrap gap-2" data-testid="epic-labels-list">
           {settings.epic_labels.map((label) => (
             <li
@@ -71,6 +100,13 @@ export function TaxonomySettingsPanel({
 
       <section data-cap="CAP-009">
         <h2 className="text-base font-semibold">Story templates</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Template CRUD is available under{' '}
+          <Link href="/workspace/settings/issue-templates" className="text-primary underline underline-offset-2">
+            Issue templates
+          </Link>
+          .
+        </p>
         <ul className="mt-2 flex flex-col gap-2" data-testid="story-templates-list">
           {settings.story_templates.map((tpl) => (
             <li key={tpl.id} className="rounded-md border border-border px-3 py-2 text-sm">

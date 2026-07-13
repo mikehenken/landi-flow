@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { Cycle, Epic, StoryPriority, Team } from '@landi-flow/core/types';
+import type { Cycle, Epic, StoryPriority, Team, WorkflowState } from '@landi-flow/core/types';
 import type { TaxonomyLabel } from '@/lib/taxonomy/taxonomy-types';
 import {
   Badge,
@@ -15,20 +15,11 @@ import { Check, ChevronDown, Bot, User, UserMinus, Users } from 'lucide-react';
 import { getEpicStatusCategory } from '@/lib/epic-status';
 import { DEMO_WORKFLOW_STATE_ROWS } from '@/lib/seed-data';
 import { useEpicStore } from '@/hooks/use-epic-store';
-import { workflowStateToStatus, type WorkflowStateKey } from '@/lib/workflow-states';
+import { isMockAuthEnabled } from '@/lib/api/config';
+import { getWorkflowStatesForTeam } from '@/lib/api/workspace-context';
+import { workflowStateBadgeVariant } from '@/lib/workflow-state-display';
 
 const STORY_PRIORITIES: StoryPriority[] = ['none', 'low', 'medium', 'high', 'urgent'];
-
-const statusVariant: Record<
-  WorkflowStateKey,
-  'statusTodo' | 'statusInProgress' | 'statusDone' | 'secondary'
-> = {
-  triage: 'secondary',
-  todo: 'statusTodo',
-  in_progress: 'statusInProgress',
-  done: 'statusDone',
-  canceled: 'secondary',
-};
 
 function useDismissOnOutside(
   open: boolean,
@@ -488,37 +479,63 @@ export function CustomFieldPicker({
 export interface StoryStatusPickerProps {
   workflowStateId: string;
   onSelect: (workflowStateId: string) => void;
+  workflowStates?: WorkflowState[];
+}
+
+function resolvePickerWorkflowStates(workflowStates?: WorkflowState[]): WorkflowState[] {
+  if (workflowStates && workflowStates.length > 0) {
+    return workflowStates;
+  }
+  if (isMockAuthEnabled()) {
+    return DEMO_WORKFLOW_STATE_ROWS;
+  }
+  const cached = getWorkflowStatesForTeam();
+  return cached.length > 0 ? cached : DEMO_WORKFLOW_STATE_ROWS;
 }
 
 export function StoryStatusPicker({
   workflowStateId,
   onSelect,
+  workflowStates,
 }: StoryStatusPickerProps): React.ReactElement {
-  const status = workflowStateToStatus(workflowStateId);
+  const states = React.useMemo(
+    () => resolvePickerWorkflowStates(workflowStates),
+    [workflowStates],
+  );
+  const selected = states.find((state) => state.id === workflowStateId) ?? states[0] ?? null;
 
   return (
     <InlinePopover
       testId="story-status-picker"
       trigger={
-        <Badge variant={statusVariant[status]} className="cursor-pointer capitalize">
-          {status.replace('_', ' ')}
-        </Badge>
+        selected ? (
+          <Badge
+            variant={workflowStateBadgeVariant(selected.id, selected.category)}
+            className="cursor-pointer"
+          >
+            {selected.name}
+          </Badge>
+        ) : (
+          <Badge variant="secondary" className="cursor-pointer">
+            Unknown
+          </Badge>
+        )
       }
     >
-      {DEMO_WORKFLOW_STATE_ROWS.map((state) => {
-        const stateKey = workflowStateToStatus(state.id);
-        return (
-          <PopoverOption
-            key={state.id}
-            selected={state.id === workflowStateId}
-            onSelect={() => onSelect(state.id)}
+      {states.map((state) => (
+        <PopoverOption
+          key={state.id}
+          selected={state.id === workflowStateId}
+          onSelect={() => onSelect(state.id)}
+        >
+          <Badge
+            variant={workflowStateBadgeVariant(state.id, state.category)}
+            size="sm"
           >
-            <Badge variant={statusVariant[stateKey]} size="sm" className="capitalize">
-              {state.name}
-            </Badge>
-          </PopoverOption>
-        );
-      })}
+            {state.name}
+          </Badge>
+        </PopoverOption>
+      ))}
     </InlinePopover>
   );
 }

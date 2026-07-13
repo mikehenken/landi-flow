@@ -249,10 +249,13 @@ export function useAgentChat({
             parts: message.parts.map((part) => {
               if (part.type === 'tool' && part.toolCallId === toolCallId) {
                 target = part;
-                return {
-                  ...part,
-                  approvalState: approve ? 'approved' : 'rejected',
-                } satisfies ToolPart;
+                if (!approve) {
+                  return {
+                    ...part,
+                    approvalState: 'rejected',
+                  } satisfies ToolPart;
+                }
+                return part;
               }
               return part;
             }),
@@ -280,6 +283,7 @@ export function useAgentChat({
         updateMessage(messageId, (m) => {
           const patched = patchTool(m, toolCallId, (tool) => ({
             ...tool,
+            approvalState: result.ok ? 'approved' : 'failed',
             state: result.ok ? 'output-available' : 'output-error',
             output: result.output,
             errorText: result.errorText,
@@ -289,11 +293,13 @@ export function useAgentChat({
             : patched;
         });
       } catch (err) {
+        const errorText = err instanceof Error ? err.message : 'Apply failed';
         updateMessage(messageId, (m) =>
           patchTool(m, toolCallId, (tool) => ({
             ...tool,
+            approvalState: 'failed',
             state: 'output-error',
-            errorText: err instanceof Error ? err.message : 'Apply failed',
+            errorText,
           })),
         );
       }

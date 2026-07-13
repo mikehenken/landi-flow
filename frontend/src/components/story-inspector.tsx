@@ -34,11 +34,13 @@ import { SubStoriesList } from '@/components/story-lifecycle/sub-story-progress'
 import { StorySlaBadge } from '@/components/story-sla-badge';
 import { publishStory } from '@/controllers/story-controller';
 import { useStoryPropertyHandlers } from '@/hooks/use-story-property-handlers';
+import { useTeamWorkflowStates } from '@/hooks/use-team-workflow-states';
 import { useAssignableMembers } from '@/hooks/use-assignable-members';
 import { useStoryStore } from '@/hooks/use-story-store';
 import { getDelegateAttributionLabel } from '@/lib/agents/roster-client';
 import { assignAndActRequest } from '@/lib/agents/assign-client';
 import { getEpicStatusCategory } from '@/lib/epic-status';
+import { useWorkspace } from '@/lib/workspace';
 import { storyStore } from '@/stores/story-store';
 
 /** Matches create-story-modal description field styling (CAP-004 / task-09p). */
@@ -110,6 +112,8 @@ function StoryInspectorContent({
   const highlightedSignalId =
     detailFocus.highlightedSignalId ?? localHighlightedSignalId;
   const handlers = useStoryPropertyHandlers(story);
+  const { workspace } = useWorkspace();
+  const { workflowStates } = useTeamWorkflowStates(workspace.id, story.team_id);
 
   return (
     <div
@@ -178,6 +182,7 @@ function StoryInspectorContent({
             <PropertyRow label="Status">
               <StoryStatusPicker
                 workflowStateId={story.workflow_state_id}
+                workflowStates={workflowStates}
                 onSelect={handlers.handleStatusChange}
               />
             </PropertyRow>

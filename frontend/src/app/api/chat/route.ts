@@ -7,7 +7,10 @@ import {
 } from '@/lib/agent-chat/protocol';
 import { isMockForced, resolveGatewayConfig } from '@/lib/agent-chat/server/gateway';
 import { gatewayStream } from '@/lib/agent-chat/server/stream-gateway';
-import { loadAgentWorkspaceContext } from '@/lib/agent-chat/server/workspace-context';
+import {
+  buildMockAgentWorkspaceContext,
+  loadAgentWorkspaceContext,
+} from '@/lib/agent-chat/server/workspace-context';
 import { mockStream } from '@/lib/agent-chat/server/mock';
 
 export const dynamic = 'force-dynamic';
@@ -48,20 +51,20 @@ export async function POST(request: NextRequest): Promise<Response> {
   const userText = lastUser?.content ?? '';
 
   const authToken = await resolveSessionToken();
-  const workspaceContext =
+  let workspaceContext =
     body.workspaceId && authToken
       ? await loadAgentWorkspaceContext(body.workspaceId, authToken)
-      : body.teamId && body.workspaceId
-        ? {
-            workspaceId: body.workspaceId,
-            teamId: body.teamId,
-            teamName: null,
-            teamKey: null,
-            teamSlug: null,
-            defaultWorkflowStateId: null,
-            teams: [],
-          }
-        : null;
+      : null;
+
+  if (!workspaceContext && body.workspaceId) {
+    workspaceContext = buildMockAgentWorkspaceContext(body.workspaceId);
+    if (body.teamId) {
+      workspaceContext = {
+        ...workspaceContext,
+        teamId: body.teamId,
+      };
+    }
+  }
 
   const config = isMockForced() ? null : resolveGatewayConfig();
 

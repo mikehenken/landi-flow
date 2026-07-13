@@ -233,6 +233,9 @@ function MessageView({
                   summary={part.summary ?? `Apply ${part.toolName}?`}
                   diff={part.diff}
                   state={part.approvalState ?? 'pending'}
+                  applyErrorText={
+                    part.approvalState === 'failed' ? part.errorText : undefined
+                  }
                   onApprove={() => onApprove(part.toolCallId)}
                   onReject={() => onReject(part.toolCallId)}
                 />

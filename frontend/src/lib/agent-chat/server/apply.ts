@@ -5,7 +5,8 @@
 // Queue is functional end-to-end in dev without credentials.
 import type { ApplyToolResponseBody } from '../protocol';
 import { callMcpTool, isMcpWorkerConfigured } from './mcp-client';
-import { enrichToolInputWithWorkspaceContext, type AgentWorkspaceContext } from './workspace-context';
+import { resolveToolInputForApply } from './tool-input-resolve';
+import { validateEnrichedToolInput, type AgentWorkspaceContext } from './workspace-context';
 import { TOOL_BY_NAME } from './mcp-catalogue';
 
 export async function applyTool(params: {
@@ -21,16 +22,25 @@ export async function applyTool(params: {
     return { ok: false, live: false, errorText: `Unknown tool: ${toolName}` };
   }
 
-  const enrichedInput = enrichToolInputWithWorkspaceContext(
+  const enrichedInput = await resolveToolInputForApply({
     toolName,
-    params.input,
+    input: params.input,
     workspaceContext,
-  );
+    workspaceId,
+    accessToken: authToken,
+  });
+
   const args = workspaceId
     ? { ...enrichedInput, workspace_id: workspaceId }
     : enrichedInput;
 
-  if (isMcpWorkerConfigured(authToken)) {
+  const liveConfigured = isMcpWorkerConfigured(authToken);
+  if (liveConfigured) {
+    const validationError = validateEnrichedToolInput(toolName, enrichedInput);
+    if (validationError) {
+      return { ok: false, live: true, errorText: validationError };
+    }
+
     const result = await callMcpTool({ toolName, args, authToken });
     if (!result.ok) {
       return { ok: false, live: result.live, errorText: result.errorText };
