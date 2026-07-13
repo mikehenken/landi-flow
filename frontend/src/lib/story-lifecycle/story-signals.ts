@@ -1,5 +1,11 @@
 import type { ActivityEvent } from '@landi-flow/core/types';
 import { SIGNAL_TOPICS } from '@landi-flow/core/events';
+import {
+  buildSignalSummary,
+  buildSignalTitle,
+  extractSignalInlineContent,
+  readPayloadString,
+} from '@/lib/story-lifecycle/signal-payload';
 
 export const SIGNAL_ATTACHED_EVENT = SIGNAL_TOPICS.ATTACHED;
 
@@ -11,15 +17,11 @@ export interface EngineeringSignalView {
   source: string | null;
   title: string;
   summary: string;
+  traceId: string | null;
   correlationId: string | null;
   actorName: string | null;
   createdAt: string;
   payload: Record<string, unknown>;
-}
-
-function readPayloadString(payload: Record<string, unknown>, key: string): string | null {
-  const value = payload[key];
-  return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 export function isSignalAttachedEvent(event: ActivityEvent): boolean {
@@ -35,26 +37,10 @@ export function extractEngineeringSignal(event: ActivityEvent): EngineeringSigna
   const kind = readPayloadString(payload, 'kind') ?? 'engineering';
   const status = readPayloadString(payload, 'status');
   const source = readPayloadString(payload, 'source');
-  const url = readPayloadString(payload, 'url');
+  const traceId = readPayloadString(payload, 'trace_id');
   const correlationId =
     readPayloadString(payload, 'correlation_id') ?? event.correlation_id ?? null;
-
-  const titleParts = [kind.replace(/_/g, ' ')];
-  if (status) {
-    titleParts.push(status);
-  }
-  const title = titleParts.join(' · ');
-
-  const summaryParts: string[] = [];
-  if (source) {
-    summaryParts.push(`Source: ${source}`);
-  }
-  if (url) {
-    summaryParts.push(url);
-  }
-  if (summaryParts.length === 0) {
-    summaryParts.push('Engineering signal attached');
-  }
+  const inlineContent = extractSignalInlineContent(payload);
 
   return {
     id: event.id,
@@ -62,8 +48,9 @@ export function extractEngineeringSignal(event: ActivityEvent): EngineeringSigna
     kind,
     status,
     source,
-    title,
-    summary: summaryParts.join(' · '),
+    title: buildSignalTitle(payload),
+    summary: buildSignalSummary(payload, inlineContent),
+    traceId,
     correlationId,
     actorName: event.actor_name,
     createdAt: event.created_at,

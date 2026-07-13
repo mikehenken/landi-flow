@@ -4,6 +4,8 @@ import * as React from 'react';
 import type { ActivityEvent, Story } from '@landi-flow/core/types';
 import { Button, cn } from '@landi-flow/ui';
 import { Radio, ChevronDown, ChevronRight } from 'lucide-react';
+import { SignalContentViewer } from '@/components/story-lifecycle/signal-content-viewer';
+import { signalKindIcon } from '@/lib/story-lifecycle/signal-payload';
 import {
   extractEngineeringSignal,
   extractEngineeringSignals,
@@ -46,14 +48,18 @@ function SignalRow({
         type="button"
         className="flex w-full items-start gap-2 p-3 text-left"
         onClick={() => setExpanded((value) => !value)}
+        aria-expanded={expanded}
       >
         <span className="text-base" aria-hidden="true">
-          ✅
+          {signalKindIcon(signal.kind)}
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium truncate">{signal.title}</p>
           <p className="text-xs text-muted-foreground truncate">{signal.summary}</p>
           <p className="mt-1 text-[10px] uppercase text-foreground-subtle">
+            {signal.kind.replace(/_/g, ' ')}
+            {signal.status ? ` · ${signal.status}` : ''}
+            {' · '}
             {signal.actorName ?? 'System'}
             {' · '}
             {new Date(signal.createdAt).toLocaleString()}
@@ -64,14 +70,7 @@ function SignalRow({
 
       {expanded ? (
         <div className="border-t border-border px-3 pb-3" data-testid="story-signal-expand-panel">
-          {signal.correlationId ? (
-            <p className="mt-2 font-mono text-[10px] text-foreground-subtle">
-              correlation: {signal.correlationId}
-            </p>
-          ) : null}
-          <pre className="mt-2 max-h-48 overflow-auto rounded bg-black/30 p-2 text-xs">
-            {JSON.stringify(signal.payload, null, 2)}
-          </pre>
+          <SignalContentViewer signal={signal} className="mt-2" />
         </div>
       ) : null}
     </li>
@@ -133,7 +132,7 @@ export function StorySignalsPanel({
           No engineering signals yet — attach via MCP <code className="text-xs">signal.attach</code> or agent assignment.
         </p>
       ) : (
-        <ul className={cn('space-y-2', !unifiedScroll && 'max-h-56 overflow-y-auto')}>
+        <ul className={cn('space-y-2', !unifiedScroll && 'max-h-96 overflow-y-auto')}>
           {signals.map((signal) => (
             <SignalRow
               key={signal.id}

@@ -522,7 +522,9 @@ export const MCP_TOOLS: ToolDefinition[] = [
     name: 'signal.attach',
     title: 'Attach Engineering Signal',
     description:
-      'Attach an engineering signal (CI / QA / observability with correlation ids) to a Story or Epic. MCP-IDE-003.',
+      'Attach an engineering signal (CI / QA / deploy / agent_trace / artifact) to a Story or Epic. MCP-IDE-003. ' +
+      'Include inline `content_preview` or `body` when attaching path-only artifacts so the story Signals panel can render content. ' +
+      'Recommended fields: kind, status, title, trace_id, correlation_id, url (http/https), artifact_ref, content_preview.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -531,7 +533,8 @@ export const MCP_TOOLS: ToolDefinition[] = [
         epic_id: STRING,
         signal: {
           type: 'object',
-          description: 'Signal payload (e.g. { kind: "ci", status: "passed", url, correlation_id })',
+          description:
+            'Signal payload (e.g. { kind: "agent_trace", title, trace_id, correlation_id, artifact_ref, content_preview } or { kind: "ci", status: "passed", url })',
         },
       },
       required: ['signal'],

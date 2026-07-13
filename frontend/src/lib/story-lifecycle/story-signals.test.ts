@@ -25,6 +25,7 @@ function makeSignalEvent(overrides: Partial<ActivityEvent> = {}): ActivityEvent 
       status: 'passed',
       source: 'github',
       correlation_id: 'corr-123',
+      url: 'https://github.com/org/repo/actions/runs/1',
     },
     correlation_id: 'corr-123',
     created_at: '2026-07-09T07:29:02.912572+00:00',
@@ -46,6 +47,24 @@ describe('story-signals', () => {
     expect(signal?.status).toBe('passed');
     expect(signal?.correlationId).toBe('corr-123');
     expect(signal?.title).toContain('ci');
+  });
+
+  it('uses payload title for agent_trace signals', () => {
+    const signal = extractEngineeringSignal(
+      makeSignalEvent({
+        payload: {
+          kind: 'agent_trace',
+          status: 'completed',
+          title: 'P1 settings/product wiring',
+          trace_id: 'b6c33c66-a802-4c53-abb2-082585f39831',
+          correlation_id: '6a3121ea-bf9a-49bb-b283-f63829c6f3a5',
+          content_preview: '## User query\nWire settings APIs',
+        },
+      }),
+    );
+    expect(signal?.title).toBe('P1 settings/product wiring');
+    expect(signal?.traceId).toBe('b6c33c66-a802-4c53-abb2-082585f39831');
+    expect(signal?.summary).toContain('Trace b6c33c66');
   });
 
   it('filters signal events from mixed activity', () => {
