@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import type { AnyExtension } from '@tiptap/core';
 import { InstantMarkdownEditor } from '@landi-flow/ui';
 import { buildEpicRoomId, buildStoryRoomId } from '@landi-flow/collaboration';
 import { useLiveblocksExtension } from '@liveblocks/react-tiptap';
@@ -21,6 +22,8 @@ export interface CollaborativeDescriptionEditorProps {
   className?: string;
   /** When true, parent already mounted `CollaborativeRoom` for this entity. */
   embedded?: boolean;
+  /** Linear-style preview until click (story detail body). */
+  previewWhenBlurred?: boolean;
   'aria-label'?: string;
 }
 
@@ -34,27 +37,40 @@ function buildDescriptionRoomId(
     : buildStoryRoomId(workspaceId, entityId);
 }
 
-function CollaborativeEditorInner({
+/**
+ * Liveblocks TipTap extension identity changes every render; keep the first instance
+ * so metadata sidebar re-renders do not recreate the TipTap editor (Linear stability).
+ */
+function useStableLiveblocksExtension(): AnyExtension {
+  const liveblocksExtension = useLiveblocksExtension({
+    field: 'description',
+    comments: false,
+    mentions: false,
+    // Never pass initialContent here — Liveblocks calls setContent without
+    // contentType: 'markdown', which stores raw `#` / `**` as plain text (GEN-3 bug).
+    // InstantMarkdownEditor seeds via markdown-aware setContent instead.
+  });
+  const stableExtensionRef = React.useRef<AnyExtension | null>(null);
+  if (stableExtensionRef.current === null) {
+    stableExtensionRef.current = liveblocksExtension;
+  }
+  return stableExtensionRef.current;
+}
+
+const CollaborativeEditorInner = React.memo(function CollaborativeEditorInner({
   value,
   onChange,
   placeholder,
   readOnly,
   variant,
   className,
+  previewWhenBlurred,
   'aria-label': ariaLabel,
 }: Omit<
   CollaborativeDescriptionEditorProps,
   'entityType' | 'entityId' | 'workspaceId' | 'embedded'
 >): React.ReactElement {
-  const initialContent = value ?? '';
-
-  const liveblocksExtension = useLiveblocksExtension({
-    field: 'description',
-    comments: false,
-    mentions: false,
-    // Liveblocks seeds Yjs once per room; must not also pass `content` to useEditor.
-    initialContent,
-  });
+  const liveblocksExtension = useStableLiveblocksExtension();
 
   const extraExtensions = React.useMemo(
     () => [liveblocksExtension],
@@ -70,17 +86,48 @@ function CollaborativeEditorInner({
       variant={variant}
       className={className}
       collaborative
+      previewWhenBlurred={previewWhenBlurred}
       extraExtensions={extraExtensions}
       aria-label={ariaLabel}
     />
   );
-}
+});
+
+const SoloDescriptionEditor = React.memo(function SoloDescriptionEditor({
+  value,
+  onChange,
+  placeholder,
+  readOnly,
+  variant,
+  className,
+  previewWhenBlurred,
+  'aria-label': ariaLabel,
+}: Omit<
+  CollaborativeDescriptionEditorProps,
+  'entityType' | 'entityId' | 'workspaceId' | 'embedded'
+>): React.ReactElement {
+  return (
+    <InstantMarkdownEditor
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      variant={variant}
+      className={className}
+      previewWhenBlurred={previewWhenBlurred}
+      aria-label={ariaLabel}
+    />
+  );
+});
 
 /**
  * Description editor with optional Liveblocks co-editing (task-09h) when keys are configured.
  * Falls back to local-only instant markdown when Liveblocks is unavailable.
+ *
+ * Linear-inspired: editor state is keyed by entity only; sidebar metadata mutations must not
+ * remount or re-seed the document.
  */
-export function CollaborativeDescriptionEditor({
+export const CollaborativeDescriptionEditor = React.memo(function CollaborativeDescriptionEditor({
   entityType,
   entityId,
   workspaceId = DEMO_WORKSPACE_ID,
@@ -91,39 +138,31 @@ export function CollaborativeDescriptionEditor({
   variant = 'default',
   className,
   embedded = false,
+  previewWhenBlurred = false,
   'aria-label': ariaLabel,
 }: CollaborativeDescriptionEditorProps): React.ReactElement {
   const useCollaboration =
     isLiveblocksConfigured() && !readOnly && !isMockAuthEnabled();
   const roomId = buildDescriptionRoomId(entityType, entityId, workspaceId);
 
-  const editor = (
-    <CollaborativeEditorInner
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      readOnly={readOnly}
-      variant={variant}
-      className={className}
-      aria-label={ariaLabel}
-    />
+  const editorProps = {
+    value,
+    onChange,
+    placeholder,
+    readOnly,
+    variant,
+    className,
+    previewWhenBlurred,
+    'aria-label': ariaLabel,
+  };
+
+  const editor = useCollaboration ? (
+    <CollaborativeEditorInner {...editorProps} />
+  ) : (
+    <SoloDescriptionEditor {...editorProps} />
   );
 
-  if (!useCollaboration) {
-    return (
-      <InstantMarkdownEditor
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        variant={variant}
-        className={className}
-        aria-label={ariaLabel}
-      />
-    );
-  }
-
-  if (embedded) {
+  if (!useCollaboration || embedded) {
     return editor;
   }
 
@@ -138,4 +177,4 @@ export function CollaborativeDescriptionEditor({
       {editor}
     </CollaborativeRoom>
   );
-}
+});

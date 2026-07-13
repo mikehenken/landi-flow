@@ -10,5 +10,7 @@ export {
   shouldApplyExternalMarkdownValue,
   resolveInstantMarkdownInitialContent,
   shouldSeedCollaborativeMarkdown,
+  shouldReparseCollaborativePlaintext,
+  looksLikeUnparsedMarkdown,
   shouldPersistDescriptionMarkdownChange,
 } from './instant-markdown-sync';

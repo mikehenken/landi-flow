@@ -27,6 +27,10 @@ export interface StoryDetailBodyProps {
   headerActions?: React.ReactNode;
 }
 
+interface StoryDetailBodyLayoutProps extends StoryDetailBodyProps {
+  embeddedCollaboration: boolean;
+}
+
 /**
  * Story detail split layout: left main content (~75%) + right metadata sidebar (~25%).
  * Unified scroll — both columns scroll together inside one overflow container.
@@ -36,45 +40,63 @@ export function StoryDetailBody({
   className,
   headerActions,
 }: StoryDetailBodyProps): React.ReactElement {
-  const [artifactRevision, setArtifactRevision] = React.useState(0);
   const liveblocksReady = isLiveblocksConfigured() && !isMockAuthEnabled();
   const hydrated = React.useMemo(
     () => (liveblocksReady ? hydrateStoryRoom(story) : null),
     [liveblocksReady, story],
   );
 
-  const commentsSection = liveblocksReady && hydrated !== null ? (
+  const layout = (
+    <StoryDetailBodyLayout
+      story={story}
+      className={className}
+      headerActions={headerActions}
+      embeddedCollaboration={liveblocksReady && hydrated !== null}
+    />
+  );
+
+  if (!liveblocksReady || hydrated === null) {
+    return layout;
+  }
+
+  return (
     <CollaborativeRoom
       roomId={hydrated.roomId}
       initialStorage={hydrated.initialStorage as unknown as JsonObject}
-      fallback={
-        <StoryDetailSection
-          title="Comments"
-          icon={<MessageSquare className="h-4 w-4" />}
-          sectionId="comments"
-          testId="story-detail-comments-section"
-        >
-          <p className="text-xs text-muted-foreground">
-            Collaboration unavailable — comments remain available offline below.
-          </p>
-          <UnifiedCommentsPanel storyId={story.id} showTitle={false} />
-        </StoryDetailSection>
-      }
+      initialPresence={{
+        editingSurface: 'description',
+        editingTarget: story.id,
+      }}
+      fallback={layout}
     >
-      <StoryDetailSection
-        title="Comments"
-        icon={<MessageSquare className="h-4 w-4" />}
-        sectionId="comments"
-        actions={<PresenceAvatars />}
-        testId="story-detail-comments-section"
-      >
-        <CollaborativeComments
-          entityLabel="Story"
-          showTitle={false}
-          placeholder="Add a comment…"
-        />
-      </StoryDetailSection>
+      {layout}
     </CollaborativeRoom>
+  );
+}
+
+function StoryDetailBodyLayout({
+  story,
+  className,
+  headerActions,
+  embeddedCollaboration,
+}: StoryDetailBodyLayoutProps): React.ReactElement {
+  const [artifactRevision, setArtifactRevision] = React.useState(0);
+  const liveblocksReady = embeddedCollaboration;
+
+  const commentsSection = liveblocksReady ? (
+    <StoryDetailSection
+      title="Comments"
+      icon={<MessageSquare className="h-4 w-4" />}
+      sectionId="comments"
+      actions={<PresenceAvatars />}
+      testId="story-detail-comments-section"
+    >
+      <CollaborativeComments
+        entityLabel="Story"
+        showTitle={false}
+        placeholder="Add a comment…"
+      />
+    </StoryDetailSection>
   ) : (
     <StoryDetailSection
       title="Comments"
@@ -96,7 +118,11 @@ export function StoryDetailBody({
           <div className="min-w-0 px-6 py-5" data-testid="story-detail-main-scroll">
             <StoryDetailSectionScroller scrollRootTestId="story-detail-unified-scroll" />
             <div className="space-y-8">
-              <StoryMainContent story={story} unifiedScroll />
+              <StoryMainContent
+                story={story}
+                unifiedScroll
+                embeddedCollaboration={embeddedCollaboration}
+              />
               <StoryDetailSection
                 title="Artifacts"
                 icon={<Paperclip className="h-4 w-4" />}

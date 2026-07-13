@@ -108,3 +108,16 @@
 .instant-md-editor--readonly .ProseMirror {
   @apply cursor-default;
 }
+
+/* Linear-style preview: formatted body without focus chrome until click */
+.instant-md-editor--preview {
+  @apply border-transparent bg-transparent;
+}
+
+.instant-md-editor--preview:focus-within {
+  @apply border-transparent bg-transparent;
+}
+
+.instant-md-editor--preview .ProseMirror {
+  @apply min-h-0;
+}

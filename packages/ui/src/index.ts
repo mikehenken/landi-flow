@@ -65,6 +65,8 @@ export {
   shouldApplyExternalMarkdownValue,
   resolveInstantMarkdownInitialContent,
   shouldSeedCollaborativeMarkdown,
+  shouldReparseCollaborativePlaintext,
+  looksLikeUnparsedMarkdown,
   shouldPersistDescriptionMarkdownChange,
   type InstantMarkdownEditorProps,
   type CreateInstantMarkdownExtensionsOptions,

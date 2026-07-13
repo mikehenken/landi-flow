@@ -111,6 +111,7 @@ export function StoryMainContent({
           editorClassName={STORY_DESCRIPTION_EDITOR_CLASS}
           showLabel={false}
           embeddedCollaboration={embeddedCollaboration}
+          previewWhenBlurred
         />
       </section>
 

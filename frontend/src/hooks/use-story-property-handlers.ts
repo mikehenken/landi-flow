@@ -56,12 +56,14 @@ export function useStoryPropertyHandlers(story: Story): StoryPropertyHandlers {
     getMemberById(story.delegate_agent_id),
   );
 
-  const handleDescriptionChange = React.useCallback(
-    (markdown: string) => {
-      void updateStoryDescription(story.workspace_id, story, markdown);
-    },
-    [story],
-  );
+  const storyRef = React.useRef(story);
+  storyRef.current = story;
+
+  // Stable callback — metadata edits must not recreate the description save handler.
+  const handleDescriptionChange = React.useCallback((markdown: string) => {
+    const current = storyRef.current;
+    void updateStoryDescription(current.workspace_id, current, markdown);
+  }, []);
 
   const handleSelectOwner = React.useCallback(
     (userId: string | null) => {

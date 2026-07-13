@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  looksLikeUnparsedMarkdown,
   resolveInstantMarkdownInitialContent,
   shouldApplyExternalMarkdownValue,
   shouldPersistDescriptionMarkdownChange,
+  shouldReparseCollaborativePlaintext,
   shouldSeedCollaborativeMarkdown,
 } from './instant-markdown-sync';
 
@@ -50,6 +52,34 @@ describe('shouldSeedCollaborativeMarkdown', () => {
   it('skips when both sides empty or editor already has content', () => {
     expect(shouldSeedCollaborativeMarkdown('', '')).toBe(false);
     expect(shouldSeedCollaborativeMarkdown('# Hello', '# Hello')).toBe(false);
+  });
+});
+
+describe('looksLikeUnparsedMarkdown', () => {
+  it('detects common markdown block syntax', () => {
+    expect(looksLikeUnparsedMarkdown('# Heading\n\nBody')).toBe(true);
+    expect(looksLikeUnparsedMarkdown('**bold** text')).toBe(true);
+    expect(looksLikeUnparsedMarkdown('- list item')).toBe(true);
+    expect(looksLikeUnparsedMarkdown('Plain paragraph only.')).toBe(false);
+  });
+});
+
+describe('shouldReparseCollaborativePlaintext', () => {
+  it('reparse when editor mirrors persisted raw markdown source', () => {
+    const body = '# GEN-3\n\n**Settings** wiring';
+    expect(shouldReparseCollaborativePlaintext(body, body)).toBe(true);
+  });
+
+  it('skips when editor markdown differs from persisted (already parsed)', () => {
+    expect(
+      shouldReparseCollaborativePlaintext('# Hello', 'Hello'),
+    ).toBe(false);
+  });
+
+  it('skips when persisted has no markdown syntax', () => {
+    expect(
+      shouldReparseCollaborativePlaintext('Plain text', 'Plain text'),
+    ).toBe(false);
   });
 });
 

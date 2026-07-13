@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { shouldPersistDescriptionMarkdownChange } from '@landi-flow/ui';
 import { CollaborativeDescriptionEditor } from '@/components/collaborative-description-editor';
 
 export interface DescriptionEditorProps {
@@ -16,10 +17,15 @@ export interface DescriptionEditorProps {
   label?: string;
   showLabel?: boolean;
   embeddedCollaboration?: boolean;
+  /** Linear-style formatted preview until the field is clicked. */
+  previewWhenBlurred?: boolean;
 }
 
-/** Wired description field for Epic/Story detail surfaces. */
-export function DescriptionEditor({
+/**
+ * Wired description field for Epic/Story detail surfaces.
+ * Debounced save + persist guard isolate the body from spurious Liveblocks hydration.
+ */
+export const DescriptionEditor = React.memo(function DescriptionEditor({
   workspaceId,
   entityType,
   entityId,
@@ -32,20 +38,35 @@ export function DescriptionEditor({
   label = 'Description',
   showLabel = true,
   embeddedCollaboration = false,
+  previewWhenBlurred = false,
 }: DescriptionEditorProps): React.ReactElement {
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onChangeRef = React.useRef(onChange);
+  const valueRef = React.useRef(value);
+  const lastEmittedRef = React.useRef(value ?? '');
 
-  const handleChange = React.useCallback(
-    (markdown: string) => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-      debounceRef.current = setTimeout(() => {
-        onChange(markdown);
-      }, 350);
-    },
-    [onChange],
-  );
+  onChangeRef.current = onChange;
+  valueRef.current = value;
+
+  const handleChange = React.useCallback((markdown: string) => {
+    if (
+      !shouldPersistDescriptionMarkdownChange(
+        valueRef.current,
+        markdown,
+        lastEmittedRef.current,
+      )
+    ) {
+      return;
+    }
+    lastEmittedRef.current = markdown;
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      onChangeRef.current(markdown);
+    }, 350);
+  }, []);
 
   React.useEffect(() => {
     return () => {
@@ -73,8 +94,9 @@ export function DescriptionEditor({
         variant={variant}
         className={editorClassName}
         embedded={embeddedCollaboration}
+        previewWhenBlurred={previewWhenBlurred}
         aria-label={`${label} editor`}
       />
     </section>
   );
-}
+});

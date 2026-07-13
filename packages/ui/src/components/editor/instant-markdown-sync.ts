@@ -3,6 +3,9 @@
  *
  * In Liveblocks collaborative mode, Yjs owns document state. Applying `setContent`
  * from React props fights the Yjs binding and duplicates body text on focus/load.
+ *
+ * Linear-inspired pattern: description body is isolated from sidebar metadata
+ * mutations — props must not re-seed the Yjs document on unrelated story updates.
  */
 export function shouldApplyExternalMarkdownValue(
   collaborative: boolean,
@@ -15,7 +18,7 @@ export function shouldApplyExternalMarkdownValue(
   return nextValue !== lastEmitted;
 }
 
-/** Liveblocks requires seeding via useLiveblocksExtension — not useEditor `content`. */
+/** Liveblocks requires seeding via our markdown-aware path — not useEditor `content`. */
 export function resolveInstantMarkdownInitialContent(
   collaborative: boolean,
   value: string | null,
@@ -32,6 +35,33 @@ export function shouldSeedCollaborativeMarkdown(
   editorMarkdown: string,
 ): boolean {
   return persistedValue.trim().length > 0 && editorMarkdown.trim().length === 0;
+}
+
+/**
+ * Detect Yjs rooms seeded by Liveblocks `initialContent` without `contentType: 'markdown'`.
+ * Those rooms store markdown syntax as literal plain text (visible `#`, `**`, backticks).
+ */
+export function looksLikeUnparsedMarkdown(text: string): boolean {
+  return /^(#{1,6}\s|[-*]\s|\d+\.\s|```|>\s|\*\*[^*])/m.test(text);
+}
+
+/**
+ * Reparse when persisted markdown and editor output match as raw source — headings/lists
+ * were never converted to TipTap block nodes (GEN-3 regression after metadata edits).
+ */
+export function shouldReparseCollaborativePlaintext(
+  persistedValue: string,
+  editorMarkdown: string,
+): boolean {
+  const persistedTrimmed = persistedValue.trim();
+  const editorTrimmed = editorMarkdown.trim();
+  if (persistedTrimmed.length === 0 || editorTrimmed.length === 0) {
+    return false;
+  }
+  if (!looksLikeUnparsedMarkdown(persistedTrimmed)) {
+    return false;
+  }
+  return persistedTrimmed === editorTrimmed;
 }
 
 /**
