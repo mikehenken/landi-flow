@@ -27,12 +27,19 @@ export function useStoryDeepLink(): void {
 
   React.useEffect(() => {
     const storyParam = searchParams.get('story');
+    const stories = storyStore.getServerSnapshot().stories;
     if (!storyParam || stories.length === 0) {
       return;
     }
 
     const storyId = resolveStoryIdFromQuery(storyParam, stories);
     if (!storyId) {
+      const byIdentifier = stories.find(
+        (story) => story.identifier.toLowerCase() === storyParam.toLowerCase(),
+      );
+      if (byIdentifier) {
+        openStoryModal(byIdentifier.id);
+      }
       return;
     }
 
@@ -54,7 +61,7 @@ export function useStoryDeepLink(): void {
       section,
       highlightedSignalId: signalParam,
     });
-  }, [searchParams, selectedStoryId, stories]);
+  }, [searchParams, selectedStoryId, stories.length]);
 
   React.useEffect(() => {
     if (selectedStoryId !== null) {

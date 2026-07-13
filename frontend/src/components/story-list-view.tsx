@@ -112,7 +112,9 @@ export function StoryListView({
     <div className="divide-y divide-border-subtle" role="list" aria-label={t('badge.label')}>
       {stories.map((story, index) => {
         const status = workflowStateToStatus(story.workflow_state_id);
-        const isRowSelected = selectedStoryId === story.id;
+        const isRowSelected =
+          selectedStoryId === story.id ||
+          selectedStoryId === story.identifier;
         const isBulkSelected = isSelected(story.id);
         const hasActiveAgent = story.delegate_agent_id !== null && status === 'in_progress';
         const isSubStory = getParentStoryId(story.id) !== null;

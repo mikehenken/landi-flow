@@ -41,10 +41,13 @@ function StoryDetailModalHost(): React.ReactElement | null {
   const { stories } = useStoryStore();
   const selectedStoryId = useSelectedStoryId();
   const selectedStory =
-    stories.find((story) => story.id === selectedStoryId) ??
+    stories.find(
+      (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+    ) ??
     (selectedStoryId
-      ? storyStore.getServerSnapshot().stories.find((story) => story.id === selectedStoryId) ??
-        null
+      ? storyStore.getServerSnapshot().stories.find(
+          (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+        ) ?? null
       : null);
 
   const dialogRef = React.useRef<HTMLDialogElement>(null);
@@ -410,8 +413,12 @@ export function StoryDetailSurface({
   const story =
     storyProp ??
     (selectedStoryId
-      ? stories.find((row) => row.id === selectedStoryId) ??
-        storyStore.getServerSnapshot().stories.find((row) => row.id === selectedStoryId) ??
+      ? stories.find(
+          (row) => row.id === selectedStoryId || row.identifier === selectedStoryId,
+        ) ??
+        storyStore.getServerSnapshot().stories.find(
+          (row) => row.id === selectedStoryId || row.identifier === selectedStoryId,
+        ) ??
         null
       : null);
 
