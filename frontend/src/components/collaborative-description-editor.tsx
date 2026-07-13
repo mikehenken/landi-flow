@@ -44,13 +44,22 @@ function CollaborativeEditorInner({
   'aria-label': ariaLabel,
 }: Omit<
   CollaborativeDescriptionEditorProps,
-  'entityType' | 'entityId' | 'workspaceId'
+  'entityType' | 'entityId' | 'workspaceId' | 'embedded'
 >): React.ReactElement {
+  const initialContent = value ?? '';
+
   const liveblocksExtension = useLiveblocksExtension({
     field: 'description',
     comments: false,
     mentions: false,
+    // Liveblocks seeds Yjs once per room; must not also pass `content` to useEditor.
+    initialContent,
   });
+
+  const extraExtensions = React.useMemo(
+    () => [liveblocksExtension],
+    [liveblocksExtension],
+  );
 
   return (
     <InstantMarkdownEditor
@@ -61,7 +70,7 @@ function CollaborativeEditorInner({
       variant={variant}
       className={className}
       collaborative
-      extraExtensions={[liveblocksExtension]}
+      extraExtensions={extraExtensions}
       aria-label={ariaLabel}
     />
   );

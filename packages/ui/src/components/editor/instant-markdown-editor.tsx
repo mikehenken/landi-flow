@@ -5,6 +5,10 @@ import type { AnyExtension, Editor } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { cn } from '../../lib/utils';
 import { createInstantMarkdownExtensions } from './create-instant-markdown-extensions';
+import {
+  resolveInstantMarkdownInitialContent,
+  shouldApplyExternalMarkdownValue,
+} from './instant-markdown-sync';
 
 /** Route plain-text clipboard paste through markdown parser (input rules do not fire on paste). */
 function createMarkdownPasteHandler(
@@ -84,10 +88,13 @@ export function InstantMarkdownEditor({
     [placeholder, collaborative, extraExtensions],
   );
 
+  const initialContent = resolveInstantMarkdownInitialContent(collaborative, value);
+
   const editor = useEditor({
     extensions,
-    content: value ?? '',
-    contentType: 'markdown',
+    ...(initialContent !== undefined
+      ? { content: initialContent, contentType: 'markdown' as const }
+      : {}),
     editable: !readOnly,
     immediatelyRender: false,
     editorProps: {
@@ -117,14 +124,20 @@ export function InstantMarkdownEditor({
       return;
     }
     const nextValue = value ?? '';
-    if (nextValue === lastEmittedRef.current) {
+    if (
+      !shouldApplyExternalMarkdownValue(
+        collaborative,
+        nextValue,
+        lastEmittedRef.current,
+      )
+    ) {
       return;
     }
     isExternalUpdateRef.current = true;
     editor.commands.setContent(nextValue, { contentType: 'markdown', emitUpdate: false });
     lastEmittedRef.current = nextValue;
     isExternalUpdateRef.current = false;
-  }, [editor, value]);
+  }, [collaborative, editor, value]);
 
   React.useEffect(() => {
     if (!editor) {

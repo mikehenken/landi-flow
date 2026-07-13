@@ -63,6 +63,7 @@ export function DescriptionEditor({
         </h4>
       ) : null}
       <CollaborativeDescriptionEditor
+        key={`${entityType}:${entityId}`}
         workspaceId={workspaceId}
         entityType={entityType}
         entityId={entityId}
