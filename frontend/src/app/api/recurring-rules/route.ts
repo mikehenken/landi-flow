@@ -64,6 +64,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     const { data, error } = await supabase
+      .schema('linear_clone')
       .from('recurring_story_rules')
       .select('*')
       .eq('team_id', teamId)
@@ -145,6 +146,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const { data, error } = await supabase
+      .schema('linear_clone')
       .from('recurring_story_rules')
       .insert({
         workspace_id: rule.workspace_id,
@@ -224,6 +226,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
     }
 
     const { data, error } = await supabase
+      .schema('linear_clone')
       .from('recurring_story_rules')
       .update(patch)
       .eq('id', body.rule_id)
