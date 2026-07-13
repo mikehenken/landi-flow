@@ -8,6 +8,7 @@ import { createInstantMarkdownExtensions } from './create-instant-markdown-exten
 import {
   resolveInstantMarkdownInitialContent,
   shouldApplyExternalMarkdownValue,
+  shouldSeedCollaborativeMarkdown,
 } from './instant-markdown-sync';
 
 /** Route plain-text clipboard paste through markdown parser (input rules do not fire on paste). */
@@ -73,10 +74,17 @@ export function InstantMarkdownEditor({
   'aria-label': ariaLabel = 'Description editor',
 }: InstantMarkdownEditorProps): React.ReactElement {
   const lastEmittedRef = React.useRef<string>(value ?? '');
+  const persistedMarkdownRef = React.useRef<string>(value ?? '');
+  const collaborativeEmitReadyRef = React.useRef<boolean>(!collaborative);
+  const collaborativeSeededRef = React.useRef(false);
   const isExternalUpdateRef = React.useRef(false);
   const editorRef = React.useRef<Editor | null>(null);
   const readOnlyRef = React.useRef(readOnly);
   readOnlyRef.current = readOnly;
+
+  React.useEffect(() => {
+    persistedMarkdownRef.current = value ?? '';
+  }, [value]);
 
   const extensions = React.useMemo(
     () =>
@@ -110,6 +118,15 @@ export function InstantMarkdownEditor({
         return;
       }
       const markdown = currentEditor.getMarkdown();
+
+      if (collaborative && !collaborativeEmitReadyRef.current) {
+        const persisted = persistedMarkdownRef.current;
+        if (shouldSeedCollaborativeMarkdown(persisted, markdown)) {
+          return;
+        }
+        collaborativeEmitReadyRef.current = true;
+      }
+
       lastEmittedRef.current = markdown;
       onChange(markdown);
     },
@@ -145,6 +162,26 @@ export function InstantMarkdownEditor({
     }
     editor.setEditable(!readOnly);
   }, [editor, readOnly]);
+
+  React.useEffect(() => {
+    if (!editor || !collaborative || collaborativeSeededRef.current) {
+      return;
+    }
+
+    const persisted = persistedMarkdownRef.current;
+    const currentMarkdown = editor.getMarkdown();
+    if (!shouldSeedCollaborativeMarkdown(persisted, currentMarkdown)) {
+      if (currentMarkdown.trim().length > 0) {
+        collaborativeEmitReadyRef.current = true;
+      }
+      return;
+    }
+
+    collaborativeSeededRef.current = true;
+    editor.commands.setContent(persisted, { contentType: 'markdown', emitUpdate: false });
+    lastEmittedRef.current = persisted;
+    collaborativeEmitReadyRef.current = true;
+  }, [collaborative, editor, value]);
 
   return (
     <div

@@ -25,3 +25,35 @@ export function resolveInstantMarkdownInitialContent(
   }
   return value ?? '';
 }
+
+/** Seed Yjs from `description_md` when the Liveblocks room synced empty. */
+export function shouldSeedCollaborativeMarkdown(
+  persistedValue: string,
+  editorMarkdown: string,
+): boolean {
+  return persistedValue.trim().length > 0 && editorMarkdown.trim().length === 0;
+}
+
+/**
+ * Block spurious empty saves when an empty Liveblocks room hydrates before Yjs seeding.
+ * Allows intentional clears once the editor has emitted different markdown.
+ */
+export function shouldPersistDescriptionMarkdownChange(
+  previousMarkdown: string | null | undefined,
+  nextMarkdown: string,
+  lastEmittedMarkdown: string,
+): boolean {
+  const previousTrimmed = (previousMarkdown ?? '').trim();
+  const nextTrimmed = nextMarkdown.trim();
+  const lastEmittedTrimmed = lastEmittedMarkdown.trim();
+
+  if (
+    nextTrimmed === '' &&
+    previousTrimmed !== '' &&
+    lastEmittedTrimmed === previousTrimmed
+  ) {
+    return false;
+  }
+
+  return true;
+}

@@ -62,6 +62,10 @@ export {
 export {
   InstantMarkdownEditor,
   createInstantMarkdownExtensions,
+  shouldApplyExternalMarkdownValue,
+  resolveInstantMarkdownInitialContent,
+  shouldSeedCollaborativeMarkdown,
+  shouldPersistDescriptionMarkdownChange,
   type InstantMarkdownEditorProps,
   type CreateInstantMarkdownExtensionsOptions,
 } from './components/editor';
