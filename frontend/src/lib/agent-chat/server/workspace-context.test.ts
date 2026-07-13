@@ -62,6 +62,14 @@ describe('resolveTeamIdFromRoster', () => {
     expect(resolveTeamIdFromRoster(sampleContext.teams, 'team-design')).toBe(DESIGN_TEAM_UUID);
   });
 
+  it('resolves production-style slug without team- prefix', () => {
+    const productionTeams = [
+      { id: DESIGN_TEAM_UUID, name: 'Design', key: 'DSN', slug: 'design' },
+    ];
+    expect(resolveTeamIdFromRoster(productionTeams, 'team-design')).toBe(DESIGN_TEAM_UUID);
+    expect(resolveTeamIdFromRoster(productionTeams, 'design')).toBe(DESIGN_TEAM_UUID);
+  });
+
   it('resolves team key to UUID (case-insensitive)', () => {
     expect(resolveTeamIdFromRoster(sampleContext.teams, 'dsn')).toBe(DESIGN_TEAM_UUID);
   });
@@ -257,10 +265,35 @@ describe('agent workspace context', () => {
 describe('validateEnrichedToolInput', () => {
   it('rejects unresolved team slug before MCP call', () => {
     const error = validateEnrichedToolInput('story.update', {
-      team_id: 'team-design',
-      story_id: 'story-1',
+      team_id: 'team-unknown',
+      story_id: 'e5f6a7b8-c9d0-4123-a456-426614174000',
     });
-    expect(error).toContain('team_id "team-design" is not a UUID');
+    expect(error).toContain('team_id "team-unknown" is not a UUID');
+  });
+
+  it('accepts resolved team route ref after enrichment', () => {
+    const designWorkflowStateId = 'f1e2d3c4-b5a6-4789-abcd-ef1234567890';
+    const enriched = enrichToolInputWithWorkspaceContext(
+      'story.create',
+      { title: 'dark mode toggle', team_id: 'team-design' },
+      {
+        ...sampleContext,
+        teams: [{ id: DESIGN_TEAM_UUID, name: 'Design', key: 'DSN', slug: 'design' }],
+        workflowStates: [
+          {
+            id: designWorkflowStateId,
+            team_id: DESIGN_TEAM_UUID,
+            name: 'Todo',
+            category: 'unstarted',
+            position: 0,
+            is_default: true,
+          },
+        ],
+        defaultWorkflowStateId: designWorkflowStateId,
+      },
+    );
+    expect(validateEnrichedToolInput('story.create', enriched)).toBeNull();
+    expect(enriched.team_id).toBe(DESIGN_TEAM_UUID);
   });
 
   it('rejects unresolved epic status slug before MCP call', () => {

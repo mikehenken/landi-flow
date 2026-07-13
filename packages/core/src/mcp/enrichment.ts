@@ -2,6 +2,7 @@ import type { AgentWorkspaceContext } from './types.js';
 import {
   COMPLETE_ALIASES,
   hasNonEmptyString,
+  isUuid,
   normalizeLookup,
   resolveEpicStatusId,
   resolveTeamIdFromRoster,
@@ -106,8 +107,14 @@ export function enrichToolInputWithWorkspaceContext(
   if (TOOLS_WITH_TEAM_ID.has(canonical)) {
     const rawTeamId = hasNonEmptyString(enriched.team_id) ? enriched.team_id : ctx.teamId;
     const resolvedTeamId = resolveTeamIdFromRoster(ctx.teams, rawTeamId);
-    if (resolvedTeamId) {
+    if (resolvedTeamId && isUuid(resolvedTeamId)) {
       enriched = { ...enriched, team_id: resolvedTeamId };
+    } else if (
+      !hasNonEmptyString(enriched.team_id) &&
+      ctx.teamId &&
+      isUuid(ctx.teamId)
+    ) {
+      enriched = { ...enriched, team_id: ctx.teamId };
     }
   }
 

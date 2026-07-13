@@ -1,4 +1,5 @@
 // Server-only. Resolves agent workspace context for chat/apply routes.
+import { isUuid, resolveTeamIdFromRoster } from '@landi-flow/core/mcp';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 import {
@@ -29,7 +30,18 @@ export async function resolveAgentWorkspaceContext(
   if (isMockAuthEnabled()) {
     const mockContext = buildMockAgentWorkspaceContext(workspaceId);
     if (teamId) {
-      return { ...mockContext, teamId };
+      const resolvedTeamId = resolveTeamIdFromRoster(mockContext.teams, teamId);
+      const activeTeam =
+        resolvedTeamId && isUuid(resolvedTeamId)
+          ? (mockContext.teams.find((team) => team.id === resolvedTeamId) ?? null)
+          : null;
+      return {
+        ...mockContext,
+        teamId: activeTeam?.id ?? resolvedTeamId ?? teamId,
+        teamName: activeTeam?.name ?? mockContext.teamName,
+        teamKey: activeTeam?.key ?? mockContext.teamKey,
+        teamSlug: activeTeam?.slug ?? mockContext.teamSlug,
+      };
     }
     return mockContext;
   }
@@ -43,8 +55,18 @@ export async function resolveAgentWorkspaceContext(
     return null;
   }
 
-  if (teamId && !liveContext.teamId) {
-    return { ...liveContext, teamId };
+  if (teamId) {
+    const resolvedTeamId = resolveTeamIdFromRoster(liveContext.teams, teamId);
+    if (resolvedTeamId && isUuid(resolvedTeamId)) {
+      const activeTeam = liveContext.teams.find((team) => team.id === resolvedTeamId) ?? null;
+      return {
+        ...liveContext,
+        teamId: resolvedTeamId,
+        teamName: activeTeam?.name ?? liveContext.teamName,
+        teamKey: activeTeam?.key ?? liveContext.teamKey,
+        teamSlug: activeTeam?.slug ?? liveContext.teamSlug,
+      };
+    }
   }
 
   return liveContext;

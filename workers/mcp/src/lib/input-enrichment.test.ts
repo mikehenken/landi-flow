@@ -92,6 +92,53 @@ describe('enrichMutationToolInput', () => {
     expect(enriched.slug).toBe('launch-v2');
     expect(enriched.status_id).toBe(PLANNED_EPIC_STATUS_UUID);
   });
+
+  it('story.create with team-design route ref resolves against production roster', async () => {
+    const DESIGN_TEAM_UUID = 'a1b2c3d4-e5f6-4789-abcd-ef1234567890';
+    const context: McpWorkspaceContext = {
+      ...mockContext,
+      teams: [
+        {
+          id: DESIGN_TEAM_UUID,
+          name: 'Design',
+          key: 'DSN',
+          slug: 'design',
+          workflow_states: [
+            { id: BACKLOG_STATE_UUID, name: 'Backlog', category: 'backlog', team_id: DESIGN_TEAM_UUID },
+          ],
+          default_workflow_state_id: BACKLOG_STATE_UUID,
+          completed_workflow_state_id: null,
+          workflow_defaults: {
+            backlog: BACKLOG_STATE_UUID,
+            unstarted: null,
+            done: null,
+            complete: null,
+          },
+        },
+      ],
+      default_team_id: DESIGN_TEAM_UUID,
+    };
+
+    const service = {
+      searchStories: vi.fn(),
+      getStory: vi.fn(),
+      getEpic: vi.fn(),
+      listEpics: vi.fn(),
+    };
+
+    const enriched = await enrichMutationToolInput({
+      db: {} as never,
+      service: service as never,
+      toolName: 'story.create',
+      input: { title: 'dark mode toggle', team_id: 'team-design' },
+      workspaceId: 'ws-1',
+      userId: null,
+      workspaceContext: context,
+    });
+
+    expect(enriched.team_id).toBe(DESIGN_TEAM_UUID);
+    expect(validateEnrichedToolInput('story.create', enriched)).toBeNull();
+  });
 });
 
 describe('sync enrichment re-export', () => {

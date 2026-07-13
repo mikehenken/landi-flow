@@ -63,6 +63,13 @@ describe('resolveTeamIdFromRoster', () => {
     expect(resolveTeamIdFromRoster(sampleContext.teams, 'team-design')).toBe(DESIGN_TEAM_UUID);
   });
 
+  it('resolves route-style team ref when roster slug omits team- prefix', () => {
+    const productionTeams = [
+      { id: DESIGN_TEAM_UUID, name: 'Design', key: 'DSN', slug: 'design' },
+    ];
+    expect(resolveTeamIdFromRoster(productionTeams, 'team-design')).toBe(DESIGN_TEAM_UUID);
+  });
+
   it('resolves team key to UUID (case-insensitive)', () => {
     expect(resolveTeamIdFromRoster(sampleContext.teams, 'dsn')).toBe(DESIGN_TEAM_UUID);
   });
@@ -145,7 +152,10 @@ describe('enrichToolInputWithWorkspaceContext', () => {
     const enriched = enrichToolInputWithWorkspaceContext(
       'story.create',
       { title: 'x', team_id: 'team-design' },
-      sampleContext,
+      {
+        ...sampleContext,
+        teams: [{ id: DESIGN_TEAM_UUID, name: 'Design', key: 'DSN', slug: 'design' }],
+      },
     );
     expect(enriched.team_id).toBe(DESIGN_TEAM_UUID);
   });

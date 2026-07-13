@@ -65,7 +65,7 @@ export function buildMockAgentWorkspaceContext(workspaceId: string): AgentWorksp
       id: DEMO_TEAM_ID,
       name: 'Design',
       key: 'DSN',
-      slug: 'team-design',
+      slug: 'design',
     },
   ];
   const workflowStates = DEMO_WORKFLOW_STATE_ROWS;
@@ -82,7 +82,7 @@ export function buildMockAgentWorkspaceContext(workspaceId: string): AgentWorksp
     teamId: DEMO_TEAM_ID,
     teamName: 'Design',
     teamKey: 'DSN',
-    teamSlug: 'team-design',
+    teamSlug: 'design',
     defaultWorkflowStateId: workflowStates.find((state) => state.is_default)?.id ?? null,
     defaultEpicStatusId: epicStatuses.find((status) => status.category === 'planned')?.id ?? null,
     completedWorkflowStateId: workflowStates.find((state) => state.category === 'completed')?.id ?? null,

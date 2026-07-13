@@ -1,10 +1,17 @@
 // Server-only. Resolves human-friendly Story/Epic references to UUIDs via the API
 // before live MCP writes (identifiers like LAN-2, slugs, titles).
+import type { WorkflowState } from '@landi-flow/core/types';
+import {
+  hasNonEmptyString,
+  isUuid,
+  normalizeToolName,
+  resolveDefaultWorkflowStateId,
+  resolveTeamIdFromRoster,
+  type McpWorkspaceTeam,
+} from '@landi-flow/core/mcp';
 import { fetchFlowApiUpstream } from '@/lib/api/upstream-fetch';
 import {
   enrichToolInputWithWorkspaceContext,
-  isUuid,
-  resolveTeamIdFromRoster,
   type AgentWorkspaceContext,
 } from './workspace-context';
 
@@ -21,8 +28,24 @@ interface EpicRow {
   slug?: string;
 }
 
+interface TeamRow {
+  id: string;
+  name: string;
+  key: string;
+  slug: string;
+}
+
 function normalizeLookup(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function mapTeamRows(rows: TeamRow[]): McpWorkspaceTeam[] {
+  return rows.map((team) => ({
+    id: team.id,
+    name: team.name,
+    key: team.key,
+    slug: team.slug,
+  }));
 }
 
 async function fetchJson<T>(path: string, accessToken: string): Promise<T | null> {
@@ -37,6 +60,49 @@ async function fetchJson<T>(path: string, accessToken: string): Promise<T | null
     return null;
   }
   return (await response.json()) as T;
+}
+
+async function fetchWorkspaceTeams(
+  workspaceId: string,
+  accessToken: string,
+): Promise<McpWorkspaceTeam[]> {
+  const teamsPayload = await fetchJson<{ data: TeamRow[] }>(
+    `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/teams`,
+    accessToken,
+  );
+  return mapTeamRows(teamsPayload?.data ?? []);
+}
+
+async function fetchWorkflowStatesForTeam(
+  workspaceId: string,
+  teamId: string,
+  accessToken: string,
+): Promise<WorkflowState[]> {
+  const statesPayload = await fetchJson<{ data: WorkflowState[] }>(
+    `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/workflow-states?team_id=${encodeURIComponent(teamId)}`,
+    accessToken,
+  );
+  return statesPayload?.data ?? [];
+}
+
+async function resolveTeamIdForApply(params: {
+  teamRef: string | null | undefined;
+  workspaceContext: AgentWorkspaceContext | null | undefined;
+  workspaceId: string;
+  accessToken: string;
+}): Promise<string | null> {
+  const { teamRef, workspaceContext, workspaceId, accessToken } = params;
+  let teams = workspaceContext?.teams ?? [];
+  if (teams.length === 0) {
+    teams = await fetchWorkspaceTeams(workspaceId, accessToken);
+  }
+
+  const candidate =
+    teamRef ??
+    workspaceContext?.teamId ??
+    (teams.length > 0 ? teams[0]?.id : null);
+  const resolved = resolveTeamIdFromRoster(teams, candidate);
+  return resolved && isUuid(resolved) ? resolved : null;
 }
 
 async function resolveStoryReference(
@@ -121,6 +187,46 @@ export async function resolveToolInputForApply(params: {
     return enriched;
   }
 
+  const canonical = normalizeToolName(toolName);
+
+  if (
+    (canonical === 'story.create' ||
+      canonical === 'story.update' ||
+      canonical === 'story.list' ||
+      canonical === 'story.decompose') &&
+    (typeof enriched.team_id !== 'string' || !isUuid(enriched.team_id))
+  ) {
+    const resolvedTeamId = await resolveTeamIdForApply({
+      teamRef: typeof enriched.team_id === 'string' ? enriched.team_id : null,
+      workspaceContext,
+      workspaceId,
+      accessToken,
+    });
+    if (resolvedTeamId) {
+      enriched = { ...enriched, team_id: resolvedTeamId };
+    }
+  }
+
+  if (
+    canonical === 'story.create' &&
+    typeof enriched.team_id === 'string' &&
+    isUuid(enriched.team_id) &&
+    !hasNonEmptyString(enriched.workflow_state_id)
+  ) {
+    const workflowStates = await fetchWorkflowStatesForTeam(
+      workspaceId,
+      enriched.team_id,
+      accessToken,
+    );
+    const defaultWorkflowStateId = resolveDefaultWorkflowStateId(
+      workspaceContext?.defaultWorkflowStateId ?? null,
+      workflowStates,
+    );
+    if (defaultWorkflowStateId) {
+      enriched = { ...enriched, workflow_state_id: defaultWorkflowStateId };
+    }
+  }
+
   if (typeof enriched.story_id === 'string' && !isUuid(enriched.story_id)) {
     const story = await resolveStoryReference(
       workspaceId,
@@ -132,10 +238,16 @@ export async function resolveToolInputForApply(params: {
       const teamRef =
         story.team_id ||
         (typeof enriched.team_id === 'string' ? enriched.team_id : null);
+      const resolvedTeamId = await resolveTeamIdForApply({
+        teamRef,
+        workspaceContext,
+        workspaceId,
+        accessToken,
+      });
       enriched = {
         ...enriched,
         story_id: story.id,
-        team_id: resolveTeamIdFromRoster(workspaceContext?.teams ?? [], teamRef) ?? story.team_id,
+        team_id: resolvedTeamId ?? story.team_id,
       };
     }
   }

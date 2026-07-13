@@ -27,7 +27,12 @@ export function hasNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
 }
 
-/** Resolve a team reference (UUID, slug, key, or name) to the canonical team UUID. */
+/** Build the URL-style team segment (`team-{slug}`) used in routes and agent prompts. */
+export function teamRouteRef(team: McpWorkspaceTeam): string {
+  return `team-${normalizeLookup(team.slug)}`;
+}
+
+/** Resolve a team reference (UUID, slug, key, name, or `team-{slug}` route ref) to the canonical team UUID. */
 export function resolveTeamIdFromRoster(
   teams: McpWorkspaceTeam[],
   reference: string | null | undefined,
@@ -36,20 +41,36 @@ export function resolveTeamIdFromRoster(
     return null;
   }
 
-  const normalized = normalizeLookup(reference);
-  const byId = teams.find((team) => team.id === reference);
-  if (byId) {
-    return byId.id;
+  if (isUuid(reference)) {
+    const byId = teams.find((team) => team.id === reference);
+    return byId?.id ?? reference;
   }
+
+  const normalized = normalizeLookup(reference);
 
   const bySlugOrKey = teams.find(
     (team) =>
       normalizeLookup(team.slug) === normalized ||
       normalizeLookup(team.key) === normalized ||
-      normalizeLookup(team.name) === normalized,
+      normalizeLookup(team.name) === normalized ||
+      teamRouteRef(team) === normalized,
   );
   if (bySlugOrKey) {
     return bySlugOrKey.id;
+  }
+
+  const legacyRouteMatch = normalized.match(/^team-(.+)$/);
+  if (legacyRouteMatch) {
+    const stripped = legacyRouteMatch[1];
+    const byStripped = teams.find(
+      (team) =>
+        normalizeLookup(team.slug) === stripped ||
+        normalizeLookup(team.key) === stripped ||
+        normalizeLookup(team.name) === stripped,
+    );
+    if (byStripped) {
+      return byStripped.id;
+    }
   }
 
   return reference;

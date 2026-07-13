@@ -15,7 +15,7 @@ vi.mock('./workspace-context', async (importOriginal) => {
       teamId: 'team-design',
       teamName: 'Design',
       teamKey: 'DSN',
-      teamSlug: 'team-design',
+      teamSlug: 'design',
       defaultWorkflowStateId: null,
       defaultEpicStatusId: null,
       completedWorkflowStateId: null,
@@ -96,5 +96,40 @@ describe('resolveAgentWorkspaceContext', () => {
     expect(buildMockAgentWorkspaceContext).toHaveBeenCalledWith(DEMO_WORKSPACE_ID);
     expect(loadAgentWorkspaceContext).not.toHaveBeenCalled();
     expect(result?.teamId).toBe('team-design');
+    expect(result?.teamSlug).toBe('design');
+  });
+
+  it('resolves route-style teamId against live roster', async () => {
+    const liveContext = {
+      workspaceId: LIVE_WORKSPACE_ID,
+      teamId: '09bf14ef-1111-4222-8333-123456789abc',
+      teamName: 'Engineering',
+      teamKey: 'ENG',
+      teamSlug: 'engineering',
+      defaultWorkflowStateId: null,
+      defaultEpicStatusId: null,
+      completedWorkflowStateId: null,
+      completedEpicStatusId: null,
+      teams: [
+        {
+          id: 'a1b2c3d4-e5f6-4789-abcd-ef1234567890',
+          name: 'Design',
+          key: 'DSN',
+          slug: 'design',
+        },
+      ],
+      workflowStates: [],
+      epicStatuses: [],
+    };
+    vi.mocked(loadAgentWorkspaceContext).mockResolvedValue(liveContext);
+
+    const result = await resolveAgentWorkspaceContext({
+      workspaceId: LIVE_WORKSPACE_ID,
+      teamId: 'team-design',
+      authToken: 'token',
+    });
+
+    expect(result?.teamId).toBe('a1b2c3d4-e5f6-4789-abcd-ef1234567890');
+    expect(result?.teamName).toBe('Design');
   });
 });

@@ -8,11 +8,13 @@ import {
   TOOLS_WITH_LEAD_ID,
   TOOLS_WITH_STORY_ID,
   TOOLS_WITH_STORY_REF,
+  TOOLS_WITH_TEAM_ID,
   enrichToolInputWithWorkspaceContext,
   isUuid,
   normalizeLookup,
   normalizeToolName,
   resolveAssigneeId,
+  resolveTeamIdFromRoster,
   toAgentWorkspaceContext,
   validateEnrichedToolInput,
   type McpWorkspaceContext,
@@ -83,6 +85,7 @@ async function resolveEpicReference(
   return (
     epics.find(
       (epic) =>
+        epic.id === epicRef ||
         normalizeLookup(epic.slug ?? '') === normalized ||
         normalizeLookup(epic.name ?? '') === normalized ||
         normalizeLookup(epic.name ?? '').includes(normalized),
@@ -98,6 +101,19 @@ async function resolveEntityReferences(
 ): Promise<Record<string, unknown>> {
   const canonical = normalizeToolName(toolName);
   let enriched = { ...input };
+
+  if (TOOLS_WITH_TEAM_ID.has(canonical)) {
+    const teamRef = typeof enriched.team_id === 'string' ? enriched.team_id : ctx.default_team_id;
+    const resolvedTeamId = resolveTeamIdFromRoster(
+      ctx.teams.map(({ id, name, key, slug }) => ({ id, name, key, slug })),
+      teamRef,
+    );
+    if (resolvedTeamId && isUuid(resolvedTeamId)) {
+      enriched = { ...enriched, team_id: resolvedTeamId };
+    } else if (ctx.default_team_id && isUuid(ctx.default_team_id)) {
+      enriched = { ...enriched, team_id: ctx.default_team_id };
+    }
+  }
 
   if (TOOLS_WITH_STORY_ID.has(canonical) && typeof enriched.story_id === 'string' && !isUuid(enriched.story_id)) {
     const story = await resolveStoryReference(service, enriched.story_id);
