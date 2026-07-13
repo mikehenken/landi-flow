@@ -2,8 +2,13 @@ import type { Epic, EpicPriority } from '@landi-flow/core/types';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { apiFetch, apiList } from '@/lib/api/client';
 import { mapEpicRow, type DbEpicRow } from '@/lib/api/mappers';
-import { getDefaultEpicStatusId, loadWorkspaceRuntimeContext } from '@/lib/api/workspace-context';
+import {
+  getDefaultEpicStatusId,
+  getEpicStatuses,
+  loadWorkspaceRuntimeContext,
+} from '@/lib/api/workspace-context';
 import { EPIC_STATUS_IDS } from '@/lib/epic-status';
+import { resolveEpicStatusId } from '@/lib/resolve-epic-status-id';
 import { persistMockEpicAddition } from '@/lib/epic-mock-persistence';
 import { epicStore } from '@/stores/epic-store';
 
@@ -14,6 +19,34 @@ function slugify(name: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 64);
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
+function resolveEpicStatusIdForCreate(explicitStatusId?: string | null): string {
+  if (isMockAuthEnabled()) {
+    return explicitStatusId ?? EPIC_STATUS_IDS.backlog;
+  }
+
+  const reference = explicitStatusId ?? getDefaultEpicStatusId() ?? EPIC_STATUS_IDS.backlog;
+  const resolved =
+    resolveEpicStatusId(getEpicStatuses(), reference, {
+      defaultStatusId: getDefaultEpicStatusId(),
+      intent: explicitStatusId ? undefined : 'default',
+    }) ?? reference;
+
+  if (!isUuid(resolved)) {
+    throw new Error(
+      `Epic status "${reference}" could not be resolved to a workspace UUID. Reload the page and try again.`,
+    );
+  }
+
+  return resolved;
 }
 
 export interface CreateEpicInput {
@@ -61,7 +94,7 @@ export async function createEpic(input: CreateEpicInput): Promise<Epic> {
   }
 
   await loadWorkspaceRuntimeContext(input.workspaceId);
-  const statusId = input.statusId ?? getDefaultEpicStatusId() ?? EPIC_STATUS_IDS.backlog;
+  const statusId = resolveEpicStatusIdForCreate(input.statusId);
 
   const response = await apiFetch<{ epic: DbEpicRow }>(`workspaces/${input.workspaceId}/epics`, {
     method: 'POST',

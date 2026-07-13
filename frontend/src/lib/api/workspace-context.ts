@@ -1,12 +1,19 @@
-import type { WorkflowState } from '@landi-flow/core/types';
+import type { EpicStatusCategory, WorkflowState } from '@landi-flow/core/types';
 import { apiFetch } from '@/lib/api/client';
 import { resolveDefaultWorkflowStateId } from '@/lib/workflow-state-defaults';
+
+export interface EpicStatusRow {
+  id: string;
+  name: string;
+  category: EpicStatusCategory;
+}
 
 export interface WorkspaceRuntimeContext {
   teamId: string | null;
   defaultWorkflowStateId: string | null;
   defaultEpicStatusId: string | null;
   workflowStates: WorkflowState[];
+  epicStatuses: EpicStatusRow[];
 }
 
 let cachedContext: WorkspaceRuntimeContext | null = null;
@@ -17,6 +24,7 @@ const emptyContext = (): WorkspaceRuntimeContext => ({
   defaultWorkflowStateId: null,
   defaultEpicStatusId: null,
   workflowStates: [],
+  epicStatuses: [],
 });
 
 export function getWorkspaceRuntimeContext(): WorkspaceRuntimeContext {
@@ -37,6 +45,10 @@ export function getDefaultEpicStatusId(): string | null {
 
 export function getWorkflowStatesForTeam(): WorkflowState[] {
   return cachedContext?.workflowStates ?? [];
+}
+
+export function getEpicStatuses(): EpicStatusRow[] {
+  return cachedContext?.epicStatuses ?? [];
 }
 
 export async function loadWorkspaceRuntimeContext(
@@ -61,6 +73,12 @@ export async function loadWorkspaceRuntimeContext(
     workflowStates = statesPayload.data ?? [];
   }
 
+  const epicStatusesPayload = await apiFetch<{ data: EpicStatusRow[] }>(
+    `workspaces/${workspaceId}/epic-statuses`,
+    { method: 'GET' },
+  );
+  const epicStatuses = epicStatusesPayload.data ?? [];
+
   cachedWorkspaceId = workspaceId;
   cachedContext = {
     teamId: defaults.team_id,
@@ -70,6 +88,7 @@ export async function loadWorkspaceRuntimeContext(
     ),
     defaultEpicStatusId: defaults.default_epic_status_id,
     workflowStates,
+    epicStatuses,
   };
 
   return cachedContext;

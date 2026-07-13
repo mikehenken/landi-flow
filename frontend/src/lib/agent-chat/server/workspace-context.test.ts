@@ -96,6 +96,16 @@ describe('resolveEpicStatusId', () => {
       EPIC_STATUS_IDS.planned,
     );
   });
+
+  it('resolves mock slug to roster UUID when statuses use production ids', () => {
+    const productionStatuses = [
+      { id: 'f1e2d3c4-b5a6-4789-abcd-ef1234567890', name: 'Backlog', category: 'backlog' as const },
+      { id: COMPLETED_EPIC_STATUS_UUID, name: 'Completed', category: 'completed' as const },
+    ];
+    expect(resolveEpicStatusId(productionStatuses, EPIC_STATUS_IDS.backlog)).toBe(
+      'f1e2d3c4-b5a6-4789-abcd-ef1234567890',
+    );
+  });
 });
 
 describe('agent workspace context', () => {
@@ -215,6 +225,23 @@ describe('agent workspace context', () => {
       sampleContext,
     );
     expect(enriched.status_id).toBe(COMPLETED_EPIC_STATUS_UUID);
+  });
+
+  it('resolves slug status_id to UUID for epic.create', () => {
+    const productionContext: AgentWorkspaceContext = {
+      ...sampleContext,
+      epicStatuses: [
+        { id: 'f1e2d3c4-b5a6-4789-abcd-ef1234567890', name: 'Backlog', category: 'backlog' },
+        { id: COMPLETED_EPIC_STATUS_UUID, name: 'Completed', category: 'completed' },
+      ],
+      defaultEpicStatusId: 'f1e2d3c4-b5a6-4789-abcd-ef1234567890',
+    };
+    const enriched = enrichToolInputWithWorkspaceContext(
+      'epic.create',
+      { name: 'New epic', status_id: EPIC_STATUS_IDS.backlog },
+      productionContext,
+    );
+    expect(enriched.status_id).toBe('f1e2d3c4-b5a6-4789-abcd-ef1234567890');
   });
 
   it('ignores read tools', () => {

@@ -2,6 +2,7 @@
 import type { EpicStatusCategory, WorkflowState } from '@landi-flow/core/types';
 import { fetchFlowApiUpstream } from '@/lib/api/upstream-fetch';
 import { EPIC_STATUS_LABELS } from '@/lib/epic-status';
+import { resolveEpicStatusId } from '@/lib/resolve-epic-status-id';
 import { DEMO_TEAM_ID, DEMO_WORKFLOW_STATE_ROWS } from '@/lib/seed-data';
 import { resolveDefaultWorkflowStateId } from '@/lib/workflow-state-defaults';
 
@@ -180,44 +181,7 @@ export function resolveWorkflowStateId(
   return reference;
 }
 
-/** Resolve epic status by UUID, name, category, or completion alias. */
-export function resolveEpicStatusId(
-  statuses: AgentEpicStatus[],
-  reference: string | null | undefined,
-  options?: { intent?: 'complete' | 'default'; defaultStatusId?: string | null },
-): string | null {
-  if (!reference || reference.length === 0) {
-    if (options?.intent === 'complete') {
-      return statuses.find((status) => status.category === 'completed')?.id ?? null;
-    }
-    if (options?.intent === 'default') {
-      return options.defaultStatusId ?? statuses[0]?.id ?? null;
-    }
-    return null;
-  }
-
-  const normalized = normalizeLookup(reference);
-  const byId = statuses.find((status) => status.id === reference);
-  if (byId) {
-    return byId.id;
-  }
-
-  const byName = statuses.find((status) => normalizeLookup(status.name) === normalized);
-  if (byName) {
-    return byName.id;
-  }
-
-  const byCategory = statuses.find((status) => normalizeLookup(status.category) === normalized);
-  if (byCategory) {
-    return byCategory.id;
-  }
-
-  if (COMPLETE_ALIASES.has(normalized)) {
-    return statuses.find((status) => status.category === 'completed')?.id ?? null;
-  }
-
-  return reference;
-}
+export { resolveEpicStatusId } from '@/lib/resolve-epic-status-id';
 
 function findCompletedWorkflowStateId(states: WorkflowState[]): string | null {
   return states.find((state) => state.category === 'completed')?.id ?? null;
