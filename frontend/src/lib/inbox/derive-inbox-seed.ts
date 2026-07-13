@@ -141,12 +141,23 @@ function buildActivityFromStory(story: Story): ActivityEvent[] {
       actor_agent_id: story.delegate_agent_id,
       actor_name: 'Cursor Agent',
       event_type: 'signal.attached',
-      payload: {
-        kind: 'agent_lifecycle',
-        status: 'started',
-        source: 'assignment',
-        correlation_id: story.correlation_id,
-      },
+      payload:
+        story.id === 'story-002'
+          ? {
+              kind: 'agent_trace',
+              status: 'completed',
+              source: 'cursor',
+              trace_id: 'e2e-signal-trace-002',
+              correlation_id: story.correlation_id,
+              content_preview:
+                '## Agent trace\n\nDelegated work on command palette suggested actions.\n\n- Opened story LAN-2\n- Ran local verification',
+            }
+          : {
+              kind: 'agent_lifecycle',
+              status: 'started',
+              source: 'assignment',
+              correlation_id: story.correlation_id,
+            },
       correlation_id: story.correlation_id,
       created_at: story.updated_at,
     });

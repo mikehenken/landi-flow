@@ -37,7 +37,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     return Response.json({ ok: false, errorText: 'team_id is required' }, { status: 400 });
   }
 
-  if (!isUuid(teamId)) {
+  if (!isMockAuthEnabled() && !isUuid(teamId)) {
     return Response.json(
       { ok: false, errorText: `team_id "${teamId}" must be a UUID` },
       { status: 400 },
@@ -108,7 +108,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ ok: false, errorText: 'workspace_id, team_id, title_template required' }, { status: 400 });
   }
 
-  if (!isWorkspaceUuid(body.workspace_id) || !isUuid(body.team_id)) {
+  if (
+    !isMockAuthEnabled() &&
+    (!isWorkspaceUuid(body.workspace_id) || !isUuid(body.team_id))
+  ) {
     return Response.json(
       { ok: false, errorText: 'workspace_id and team_id must be UUIDs' },
       { status: 400 },
