@@ -76,7 +76,9 @@ function StoryDetailModalHost(): React.ReactElement | null {
     if (dialog.open) {
       ignoreNativeCloseRef.current = true;
       dialog.close();
-      ignoreNativeCloseRef.current = false;
+      requestAnimationFrame(() => {
+        ignoreNativeCloseRef.current = false;
+      });
     }
     setExpanded(false);
   }, [showModal, setExpanded, selectedStoryId]);

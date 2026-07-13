@@ -12,7 +12,7 @@ import {
 } from '@/components/stories-view-provider';
 import { useDefaultTeamLabel } from '@/hooks/use-default-team-label';
 import { useStoryStore } from '@/hooks/use-story-store';
-import { useStoryDeepLink } from '@/lib/story/use-story-deep-link';
+import { useStoryDeepLink, useStoryModalSelect } from '@/lib/story/use-story-deep-link';
 import { storyStore } from '@/stores/story-store';
 
 function StoriesListBody(): React.ReactElement {
@@ -20,6 +20,7 @@ function StoriesListBody(): React.ReactElement {
   const { selectedStoryId, loading } = useStoryStore();
   const { visibleStories, displayProperties } = useStoriesViewContext();
   useStoryDeepLink();
+  const handleStorySelect = useStoryModalSelect();
   const selectedStory =
     visibleStories.find((story) => story.id === selectedStoryId) ??
     storyStore.getServerSnapshot().stories.find((story) => story.id === selectedStoryId) ??
@@ -33,7 +34,7 @@ function StoriesListBody(): React.ReactElement {
             stories={visibleStories}
             selectedStoryId={selectedStoryId}
             loading={loading}
-            onStorySelect={(id) => storyStore.selectStory(id)}
+            onStorySelect={handleStorySelect}
             onCreateStory={openCreateStory}
             displayProperties={displayProperties}
           />

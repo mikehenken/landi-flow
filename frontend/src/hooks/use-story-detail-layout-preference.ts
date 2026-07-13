@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import {
-  DEFAULT_STORY_DETAIL_LAYOUT,
   readStoryDetailLayoutPreference,
   writeStoryDetailLayoutPreference,
   type StoryDetailLayoutMode,
@@ -17,13 +16,9 @@ export interface UseStoryDetailLayoutPreferenceResult {
 
 /** Reads/writes `landi-flow:story-detail-layout` from localStorage (CR-09r-006). */
 export function useStoryDetailLayoutPreference(): UseStoryDetailLayoutPreferenceResult {
-  const [layout, setLayoutState] = React.useState<StoryDetailLayoutMode>(
-    DEFAULT_STORY_DETAIL_LAYOUT,
+  const [layout, setLayoutState] = React.useState<StoryDetailLayoutMode>(() =>
+    readStoryDetailLayoutPreference(),
   );
-
-  React.useEffect(() => {
-    setLayoutState(readStoryDetailLayoutPreference());
-  }, []);
 
   const setLayout = React.useCallback((mode: StoryDetailLayoutMode): void => {
     writeStoryDetailLayoutPreference(mode);
