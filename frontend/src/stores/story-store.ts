@@ -60,8 +60,11 @@ const emptyState = (): StoryStoreState => ({
  * Story domain store — optimistic writes reconcile against server truth.
  * Mutations: compute next state → persist via controller → notify.
  */
+type StoryStoreGlobal = typeof globalThis & {
+  __landiFlowStoryStore?: StoryStore;
+};
+
 class StoryStore extends BaseDomainStore<StoryStoreState> {
-  private static instance: StoryStore;
   private state: StoryStoreState = emptyState();
 
   private constructor() {
@@ -69,10 +72,11 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
   }
 
   static getInstance(): StoryStore {
-    if (!StoryStore.instance) {
-      StoryStore.instance = new StoryStore();
+    const globalStore = globalThis as StoryStoreGlobal;
+    if (!globalStore.__landiFlowStoryStore) {
+      globalStore.__landiFlowStoryStore = new StoryStore();
     }
-    return StoryStore.instance;
+    return globalStore.__landiFlowStoryStore;
   }
 
   protected getSnapshot(): StoryStoreState {

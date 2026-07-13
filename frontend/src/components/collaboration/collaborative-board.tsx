@@ -53,7 +53,9 @@ export function CollaborativeBoard({
     !isMockAuthEnabled() &&
     isWorkspaceUuid(workspaceId);
   const useSwimlanes = groupBy !== 'none';
-  const useOfflineBoard = useSwimlanes || isMockAuthEnabled() || !liveblocksReady;
+  // Prefer API-hydrated columns until Liveblocks board storage is reconciled (P0 board UX).
+  const useOfflineBoard =
+    useSwimlanes || isMockAuthEnabled() || !liveblocksReady || stories.length > 0;
   const hydrated = React.useMemo(
     () =>
       liveblocksReady && !useOfflineBoard

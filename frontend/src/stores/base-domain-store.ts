@@ -3,10 +3,10 @@
  * Reference: landi-store-extension `CartStateManager` (subscribe → hydrate → unsubscribe).
  */
 
-export type DomainStoreListener<TState> = (state: TState) => void;
+export type DomainStoreListener = () => void;
 
 export abstract class BaseDomainStore<TState> {
-  private listeners = new Set<DomainStoreListener<TState>>();
+  private listeners = new Set<DomainStoreListener>();
   /** Cached snapshot for useSyncExternalStore getServerSnapshot (must be referentially stable). */
   private serverSnapshotCache: TState | null = null;
 
@@ -18,18 +18,20 @@ export abstract class BaseDomainStore<TState> {
 
   protected notify(): void {
     this.invalidateServerSnapshotCache();
-    const snapshot = this.getSnapshot();
     for (const listener of this.listeners) {
-      listener(snapshot);
+      listener();
     }
   }
 
   /** Subscribe with immediate hydration; returns unsubscribe closure. */
-  subscribe(listener: DomainStoreListener<TState>): () => void {
-    this.listeners.add(listener);
-    listener(this.getSnapshot());
+  subscribe(listener: DomainStoreListener): () => void {
+    const wrappedListener = (): void => {
+      listener();
+    };
+    this.listeners.add(wrappedListener);
+    listener();
     return () => {
-      this.listeners.delete(listener);
+      this.listeners.delete(wrappedListener);
     };
   }
 
