@@ -4,6 +4,7 @@ import {
   extractEngineeringSignal,
   extractEngineeringSignals,
   isSignalAttachedEvent,
+  sortEngineeringSignalsNewestFirst,
   SIGNAL_ATTACHED_EVENT,
 } from '@/lib/story-lifecycle/story-signals';
 
@@ -75,5 +76,24 @@ describe('story-signals', () => {
     const signals = extractEngineeringSignals(events);
     expect(signals).toHaveLength(1);
     expect(signals[0]?.activityEventId).toBe('evt-signal-1');
+  });
+
+  it('sorts engineering signals newest first', () => {
+    const older = extractEngineeringSignal(
+      makeSignalEvent({
+        id: 'evt-old',
+        created_at: '2026-07-01T00:00:00.000Z',
+      }),
+    );
+    const newer = extractEngineeringSignal(
+      makeSignalEvent({
+        id: 'evt-new',
+        created_at: '2026-07-09T00:00:00.000Z',
+      }),
+    );
+    expect(older).not.toBeNull();
+    expect(newer).not.toBeNull();
+    const sorted = sortEngineeringSignalsNewestFirst([older!, newer!]);
+    expect(sorted.map((signal) => signal.id)).toEqual(['evt-new', 'evt-old']);
   });
 });

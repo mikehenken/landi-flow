@@ -10,6 +10,14 @@ import {
   listArtifactsForStory,
   uploadUserArtifact,
 } from '@/lib/artifacts/artifact-store';
+import {
+  ARTIFACTS_PAGE_BATCH,
+  ARTIFACTS_PAGE_DEFAULT,
+  buildListResetKey,
+  getNextVisibleCount,
+  getPaginationMeta,
+  sliceVisibleItems,
+} from '@/lib/list-pagination';
 import { isMockAuthEnabled } from '@/lib/api/config';
 
 export interface ArtifactUploadTriggerProps {
@@ -156,6 +164,35 @@ function ArtifactRow({
   );
 }
 
+function ArtifactLoadMoreButton({
+  nextBatchSize,
+  remainingCount,
+  onLoadMore,
+}: {
+  nextBatchSize: number;
+  remainingCount: number;
+  onLoadMore: () => void;
+}): React.ReactElement | null {
+  if (remainingCount <= 0) {
+    return null;
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-7 w-full text-xs text-muted-foreground"
+      onClick={onLoadMore}
+      data-testid="artifact-panel-load-more"
+      aria-label={`Show ${nextBatchSize} more artifacts, ${remainingCount} remaining`}
+    >
+      Show {nextBatchSize} more
+      {remainingCount > nextBatchSize ? ` (${remainingCount} total remaining)` : null}
+    </Button>
+  );
+}
+
 /** ART-001 + IDEA-001 — progressive disclosure artifact panel. */
 export function ArtifactPanel({
   storyId,
@@ -212,6 +249,35 @@ export function ArtifactPanel({
   }, [reload, uploadGeneration]);
 
   const tree = React.useMemo(() => buildArtifactTree(artifacts), [artifacts]);
+  const treeResetKey = React.useMemo(
+    () =>
+      buildListResetKey([
+        storyId,
+        epicId,
+        tree.length,
+        tree[0]?.id,
+        tree[tree.length - 1]?.id,
+      ]),
+    [storyId, epicId, tree],
+  );
+  const [visibleCount, setVisibleCount] = React.useState(ARTIFACTS_PAGE_DEFAULT);
+
+  React.useEffect(() => {
+    setVisibleCount(ARTIFACTS_PAGE_DEFAULT);
+  }, [treeResetKey, uploadGeneration]);
+
+  const visibleTree = sliceVisibleItems(tree, visibleCount);
+  const { hasMore, remainingCount, nextBatchSize } = getPaginationMeta(
+    tree.length,
+    visibleCount,
+    ARTIFACTS_PAGE_BATCH,
+  );
+
+  const handleLoadMore = React.useCallback((): void => {
+    setVisibleCount((current) =>
+      getNextVisibleCount(current, ARTIFACTS_PAGE_BATCH, tree.length),
+    );
+  }, [tree.length]);
 
   const handleUploaded = React.useCallback(() => {
     setUploadGeneration((value) => value + 1);
@@ -243,11 +309,20 @@ export function ArtifactPanel({
           No artifacts yet — agents attach logs automatically when configured.
         </p>
       ) : (
-        <ul className="space-y-2">
-          {tree.map((node) => (
-            <ArtifactRow key={node.id} artifact={node} nestedArtifacts={node.children} />
-          ))}
-        </ul>
+        <div className="space-y-2">
+          <ul className="space-y-2">
+            {visibleTree.map((node) => (
+              <ArtifactRow key={node.id} artifact={node} nestedArtifacts={node.children} />
+            ))}
+          </ul>
+          {hasMore ? (
+            <ArtifactLoadMoreButton
+              nextBatchSize={nextBatchSize}
+              remainingCount={remainingCount}
+              onLoadMore={handleLoadMore}
+            />
+          ) : null}
+        </div>
       )}
     </section>
   );

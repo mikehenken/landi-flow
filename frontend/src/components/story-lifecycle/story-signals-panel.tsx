@@ -10,8 +10,18 @@ import {
   extractEngineeringSignal,
   extractEngineeringSignals,
   isSignalAttachedEvent,
+  sortEngineeringSignalsNewestFirst,
   type EngineeringSignalView,
 } from '@/lib/story-lifecycle/story-signals';
+import {
+  buildListResetKey,
+  ensureIndexVisible,
+  getNextVisibleCount,
+  getPaginationMeta,
+  SIGNALS_PAGE_BATCH,
+  SIGNALS_PAGE_DEFAULT,
+  sliceVisibleItems,
+} from '@/lib/list-pagination';
 
 export interface StorySignalsPanelProps {
   story: Story;
@@ -77,6 +87,39 @@ function SignalRow({
   );
 }
 
+function LoadMoreButton({
+  nextBatchSize,
+  remainingCount,
+  onLoadMore,
+  testId,
+  itemLabel,
+}: {
+  nextBatchSize: number;
+  remainingCount: number;
+  onLoadMore: () => void;
+  testId: string;
+  itemLabel: string;
+}): React.ReactElement | null {
+  if (remainingCount <= 0) {
+    return null;
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-7 w-full text-xs text-muted-foreground"
+      onClick={onLoadMore}
+      data-testid={testId}
+      aria-label={`Show ${nextBatchSize} more ${itemLabel}, ${remainingCount} remaining`}
+    >
+      Show {nextBatchSize} more
+      {remainingCount > nextBatchSize ? ` (${remainingCount} total remaining)` : null}
+    </Button>
+  );
+}
+
 /** MCP-IDE-003: engineering signals attached via MCP or assignment flow. */
 export function StorySignalsPanel({
   story: _story,
@@ -88,7 +131,49 @@ export function StorySignalsPanel({
   onRetry,
   unifiedScroll = false,
 }: StorySignalsPanelProps): React.ReactElement {
-  const signals = React.useMemo(() => extractEngineeringSignals(activity), [activity]);
+  const signals = React.useMemo(
+    () => sortEngineeringSignalsNewestFirst(extractEngineeringSignals(activity)),
+    [activity],
+  );
+  const signalsResetKey = React.useMemo(
+    () =>
+      buildListResetKey([
+        activity.length,
+        signals[0]?.id,
+        signals[signals.length - 1]?.id,
+      ]),
+    [activity.length, signals],
+  );
+  const [visibleCount, setVisibleCount] = React.useState(SIGNALS_PAGE_DEFAULT);
+
+  React.useEffect(() => {
+    setVisibleCount(SIGNALS_PAGE_DEFAULT);
+  }, [signalsResetKey]);
+
+  React.useEffect(() => {
+    if (!highlightedSignalId) {
+      return;
+    }
+    const index = signals.findIndex((signal) => signal.id === highlightedSignalId);
+    if (index >= 0) {
+      setVisibleCount((current) =>
+        ensureIndexVisible(current, index, SIGNALS_PAGE_DEFAULT),
+      );
+    }
+  }, [highlightedSignalId, signals]);
+
+  const visibleSignals = sliceVisibleItems(signals, visibleCount);
+  const { hasMore, remainingCount, nextBatchSize } = getPaginationMeta(
+    signals.length,
+    visibleCount,
+    SIGNALS_PAGE_BATCH,
+  );
+
+  const handleLoadMore = React.useCallback((): void => {
+    setVisibleCount((current) =>
+      getNextVisibleCount(current, SIGNALS_PAGE_BATCH, signals.length),
+    );
+  }, [signals.length]);
 
   React.useEffect(() => {
     if (!highlightedSignalId) {
@@ -132,15 +217,26 @@ export function StorySignalsPanel({
           No engineering signals yet — attach via MCP <code className="text-xs">signal.attach</code> or agent assignment.
         </p>
       ) : (
-        <ul className={cn('space-y-2', !unifiedScroll && 'max-h-96 overflow-y-auto')}>
-          {signals.map((signal) => (
-            <SignalRow
-              key={signal.id}
-              signal={signal}
-              highlighted={highlightedSignalId === signal.id}
+        <div className="space-y-2">
+          <ul className={cn('space-y-2', !unifiedScroll && 'max-h-96 overflow-y-auto')}>
+            {visibleSignals.map((signal) => (
+              <SignalRow
+                key={signal.id}
+                signal={signal}
+                highlighted={highlightedSignalId === signal.id}
+              />
+            ))}
+          </ul>
+          {hasMore ? (
+            <LoadMoreButton
+              nextBatchSize={nextBatchSize}
+              remainingCount={remainingCount}
+              onLoadMore={handleLoadMore}
+              testId="story-signals-load-more"
+              itemLabel="signals"
             />
-          ))}
-        </ul>
+          ) : null}
+        </div>
       )}
     </section>
   );

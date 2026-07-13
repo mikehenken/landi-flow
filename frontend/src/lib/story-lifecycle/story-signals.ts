@@ -64,3 +64,12 @@ export function extractEngineeringSignals(events: ActivityEvent[]): EngineeringS
     .map(extractEngineeringSignal)
     .filter((signal): signal is EngineeringSignalView => signal !== null);
 }
+
+/** Newest-first ordering for story detail signals (CAP / MCP-IDE-003). */
+export function sortEngineeringSignalsNewestFirst(
+  signals: EngineeringSignalView[],
+): EngineeringSignalView[] {
+  return [...signals].sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt),
+  );
+}
