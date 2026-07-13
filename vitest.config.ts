@@ -19,6 +19,7 @@ export default defineConfig({
       { find: '@landi-flow/auth/schema', replacement: path.join(packagesDir, 'auth/src/schema.ts') },
       { find: '@landi-flow/auth', replacement: path.join(packagesDir, 'auth/src/index.ts') },
       { find: '@landi-flow/collaboration', replacement: path.join(packagesDir, 'collaboration/src/index.ts') },
+      { find: '@landi-flow/ui/i18n', replacement: path.join(packagesDir, 'ui/src/i18n/index.ts') },
       { find: '@landi-flow/ui', replacement: path.join(packagesDir, 'ui/src/index.ts') },
       { find: '@/lib/seed-data', replacement: path.join(frontendDir, 'src/lib/seed-data.ts') },
       { find: '@/lib/agents/assign-agent', replacement: path.join(frontendDir, 'src/lib/agents/assign-agent.ts') },

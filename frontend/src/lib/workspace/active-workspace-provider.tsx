@@ -82,7 +82,7 @@ export interface ActiveWorkspaceProviderProps {
  */
 export function ActiveWorkspaceProvider({
   initialWorkspace,
-  serverAuthenticated: _serverAuthenticated = false,
+  serverAuthenticated = false,
   children,
 }: ActiveWorkspaceProviderProps): React.ReactElement {
   const pathname = usePathname();
@@ -134,14 +134,19 @@ export function ActiveWorkspaceProvider({
       return;
     }
 
-    // Session bootstrap finished with no user — clear stale SSR hint and sign in again.
+    // SSR verified a session — wait for client cookie hydration instead of redirecting.
+    if (serverAuthenticated) {
+      return;
+    }
+
+    // Client bootstrap finished with no user and SSR had no session — sign in again.
     resolvedUserIdRef.current = null;
     resolvedWorkspaceIdRef.current = null;
     lastResolveAttemptRef.current = -1;
     setRedirectingToLogin(true);
     setError(null);
     void recoverSessionAndRedirect(loginRedirectPath(pathnameRef.current));
-  }, [onAuthPage, sessionReady, userId]);
+  }, [onAuthPage, serverAuthenticated, sessionReady, userId]);
 
   React.useEffect(() => {
     if (isMockAuthEnabled()) {

@@ -11,6 +11,7 @@ import { isMockAuthEnabled } from '@/lib/api/config';
 import { createClient } from '@/lib/supabase/client';
 
 import { bootstrapSupabaseSession } from '@/lib/supabase/wait-for-user';
+import { clearAuthRecoveryReloadGuard } from '@/lib/auth/recover-session';
 
 
 
@@ -73,6 +74,7 @@ export function SupabaseSessionProvider({
       setStableUser(null);
       return;
     }
+    clearAuthRecoveryReloadGuard();
     setStableUser((previous) => (previous?.id === nextUser.id ? previous : nextUser));
   }, [session]);
 

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ApiRequestError } from '@/lib/api/client';
-import { buildLoginRedirectPath, isAuthFailure } from './recover-session';
+import {
+  buildLoginRedirectPath,
+  extractLocaleFromPath,
+  isAuthFailure,
+} from './recover-session';
 
 describe('isAuthFailure', () => {
   it('detects ApiRequestError 401', () => {
@@ -21,9 +25,25 @@ describe('isAuthFailure', () => {
 });
 
 describe('buildLoginRedirectPath', () => {
-  it('encodes return path in login query', () => {
+  it('encodes return path in login query with default locale', () => {
     expect(buildLoginRedirectPath('/workspace/inbox')).toBe(
-      '/auth/login?redirect=%2Fworkspace%2Finbox',
+      '/en/auth/login?redirect=%2Fworkspace%2Finbox',
     );
+  });
+
+  it('includes locale prefix when provided', () => {
+    expect(buildLoginRedirectPath('/workspace/inbox', 'en')).toBe(
+      '/en/auth/login?redirect=%2Fworkspace%2Finbox',
+    );
+  });
+});
+
+describe('extractLocaleFromPath', () => {
+  it('reads locale from pathname', () => {
+    expect(extractLocaleFromPath('/en/workspace/inbox')).toBe('en');
+  });
+
+  it('falls back to default locale', () => {
+    expect(extractLocaleFromPath('/workspace/inbox')).toBe('en');
   });
 });

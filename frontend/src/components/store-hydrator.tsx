@@ -153,8 +153,7 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
   const { workspace } = useWorkspace();
   const pathname = usePathname();
 
-  const { user, isReady: sessionReady } = useSupabaseSession();
-  const userId = user?.id ?? null;
+  const { isReady: sessionReady } = useSupabaseSession();
 
   const [ready, setReady] = React.useState(
     () => storesHydrated && hydratedWorkspaceId === workspace.id,
@@ -209,14 +208,6 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
       return;
 
-    }
-
-
-
-    if (!userId) {
-      redirectToLogin();
-      setReady(true);
-      return;
     }
 
 
@@ -278,7 +269,7 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
     });
 
-  }, [workspace.id, sessionReady, userId, redirectToLogin]);
+  }, [workspace.id, sessionReady, redirectToLogin]);
 
   if (redirectingToLogin) {
     return (
