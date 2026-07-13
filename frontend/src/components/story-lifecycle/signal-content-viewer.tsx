@@ -1,15 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import { Button, cn, InstantMarkdownEditor } from '@landi-flow/ui';
-import { ExternalLink, Copy, Check } from 'lucide-react';
+import { Button, cn } from '@landi-flow/ui';
+import { ExternalLink, Copy, Check, Eye } from 'lucide-react';
 import type { EngineeringSignalView } from '@/lib/story-lifecycle/story-signals';
+import { SignalContentPreviewModal } from '@/components/story-lifecycle/signal-content-preview-modal';
 import {
-  extractSignalInlineContent,
+  buildSignalContentExcerpt,
+  detectSignalContentType,
+  extractSignalContentContext,
+  extractSignalFullContent,
+} from '@/lib/story-lifecycle/signal-content-type';
+import {
   extractSignalLinks,
   isHttpUrl,
   readPayloadString,
-  truncatePreview,
 } from '@/lib/story-lifecycle/signal-payload';
 
 export interface SignalContentViewerProps {
@@ -65,27 +70,16 @@ function ExternalLinkRow({ href, label }: { href: string; label: string }): Reac
   );
 }
 
-function MarkdownPreview({ content }: { content: string }): React.ReactElement {
-  return (
-    <div
-      className="mt-2 max-h-64 overflow-auto rounded border border-border/60 bg-black/20 p-2"
-      data-testid="signal-markdown-preview"
-    >
-      <InstantMarkdownEditor value={content} readOnly variant="compact" aria-label="Signal content" />
-    </div>
-  );
-}
-
 function JsonPayloadPanel({ payload }: { payload: Record<string, unknown> }): React.ReactElement {
   const [showRaw, setShowRaw] = React.useState(false);
 
   return (
-    <div className="mt-3">
+    <div className="mt-3 border-t border-border/40 pt-2">
       <Button
         type="button"
         size="sm"
         variant="ghost"
-        className="h-7 px-2 text-xs"
+        className="h-7 px-2 text-xs text-muted-foreground"
         onClick={() => setShowRaw((value) => !value)}
         data-testid="signal-toggle-raw-json"
       >
@@ -108,8 +102,11 @@ export function SignalContentViewer({
   signal,
   className,
 }: SignalContentViewerProps): React.ReactElement {
+  const [previewOpen, setPreviewOpen] = React.useState(false);
   const payload = signal.payload;
-  const inlineContent = extractSignalInlineContent(payload);
+  const fullContent = extractSignalFullContent(payload);
+  const contentContext = extractSignalContentContext(payload, signal.kind);
+  const detected = fullContent ? detectSignalContentType(fullContent, contentContext) : null;
   const links = extractSignalLinks(payload);
   const traceId = readPayloadString(payload, 'trace_id');
   const commitSha = readPayloadString(payload, 'commit_sha') ?? readPayloadString(payload, 'sha');
@@ -128,14 +125,7 @@ export function SignalContentViewer({
         ? links.path
         : null;
 
-  const previewText = inlineContent ? truncatePreview(inlineContent) : null;
-  const looksLikeMarkdown =
-    previewText !== null &&
-    (signal.kind === 'artifact' ||
-      /\.md$/i.test(fileRef ?? '') ||
-      readPayloadString(payload, 'mime_type') === 'text/markdown' ||
-      previewText.includes('# ') ||
-      previewText.includes('## '));
+  const excerpt = fullContent ? buildSignalContentExcerpt(fullContent) : null;
 
   return (
     <div className={cn('space-y-1', className)} data-testid="signal-content-viewer">
@@ -170,18 +160,30 @@ export function SignalContentViewer({
 
       {fileRef ? <CopyableMono value={fileRef} label="Artifact reference" /> : null}
 
-      {previewText ? (
-        looksLikeMarkdown ? (
-          <MarkdownPreview content={previewText} />
-        ) : (
-          <pre
-            className="mt-2 max-h-64 overflow-auto rounded border border-border/60 bg-black/20 p-2 text-xs whitespace-pre-wrap"
-            data-testid="signal-text-preview"
-          >
-            {previewText}
-          </pre>
-        )
-      ) : fileRef && !previewText ? (
+      {excerpt && detected ? (
+        <div
+          className="mt-2 rounded border border-border/60 bg-black/20 p-2"
+          data-testid="signal-content-excerpt"
+        >
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="text-[10px] uppercase text-foreground-subtle">
+              {detected.label} preview
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPreviewOpen(true)}
+              data-testid="signal-open-preview"
+            >
+              <Eye className="mr-1 h-3 w-3" />
+              View content
+            </Button>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">{excerpt}</p>
+        </div>
+      ) : fileRef && !fullContent ? (
         <p className="mt-2 text-xs text-muted-foreground" data-testid="signal-no-inline-content">
           No inline preview stored — reference path only. Re-attach with{' '}
           <code className="text-[10px]">content_preview</code> or open the artifact reference locally.
@@ -189,6 +191,12 @@ export function SignalContentViewer({
       ) : null}
 
       <JsonPayloadPanel payload={payload} />
+
+      <SignalContentPreviewModal
+        signal={signal}
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
   );
 }

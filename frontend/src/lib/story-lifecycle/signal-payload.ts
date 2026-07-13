@@ -17,14 +17,14 @@ export function truncatePreview(text: string, maxChars = PREVIEW_MAX_CHARS): str
   return `${text.slice(0, maxChars)}\n\n… [truncated — ${text.length - maxChars} more characters]`;
 }
 
-/** Inline body fields agents may attach on signal.attach. */
+/** Inline body fields agents may attach on signal.attach (abbreviated / list context). */
 export function extractSignalInlineContent(payload: Record<string, unknown>): string | null {
   const candidates = [
     readPayloadString(payload, 'content_preview'),
+    readPayloadString(payload, 'content'),
     readPayloadString(payload, 'body'),
     readPayloadString(payload, 'body_md'),
     readPayloadString(payload, 'inline_body'),
-    readPayloadString(payload, 'summary'),
   ];
   for (const value of candidates) {
     if (value) {

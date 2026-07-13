@@ -21,10 +21,19 @@ describe('signal-payload', () => {
   it('extracts inline content preview fields in priority order', () => {
     expect(
       extractSignalInlineContent({
-        summary: 'fallback',
+        content: 'full body',
         content_preview: 'preview wins',
       }),
     ).toBe('preview wins');
+  });
+
+  it('falls back to content when preview is absent', () => {
+    expect(
+      extractSignalInlineContent({
+        content: 'full body',
+        summary: 'metadata only',
+      }),
+    ).toBe('full body');
   });
 
   it('builds agent_trace summary with trace id', () => {
