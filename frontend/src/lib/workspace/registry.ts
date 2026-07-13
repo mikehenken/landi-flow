@@ -4,6 +4,7 @@ import {
   type WorkspaceSettings,
   type WorkspaceThemeSettings,
 } from '@landi-flow/core/types';
+import { brandAssets } from '@/lib/correlation';
 import { DEMO_WORKSPACE_ID } from '@/lib/seed-data';
 import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 
@@ -14,13 +15,16 @@ export interface ResolvedWorkspace extends Workspace {
 
 const NOW = '2026-07-04T12:00:00.000Z';
 
+/** Canonical mark — never point registry themes at missing `/assets/brand/*` paths. */
+const DEMO_LOGO_URL = brandAssets.logoMark;
+
 /** Demo registry — mirrors multi-tenant Workspaces model with white-label variants. */
 export const WORKSPACE_REGISTRY: ResolvedWorkspace[] = [
   {
     id: DEMO_WORKSPACE_ID,
     slug: 'landi-flow',
     name: 'Landi Flow',
-    icon_url: '/assets/brand/logo-mark.png',
+    icon_url: DEMO_LOGO_URL,
     settings: {},
     parsedSettings: {},
     created_at: NOW,
@@ -36,7 +40,7 @@ export const WORKSPACE_REGISTRY: ResolvedWorkspace[] = [
       theme: {
         brand_primary: '142 76% 36%',
         surface: '140 8% 12%',
-        logo_url: '/assets/brand/logo-mark.png',
+        logo_url: DEMO_LOGO_URL,
         font_family_heading: '"Geist", sans-serif',
         font_google_family: 'Geist',
       },
@@ -53,7 +57,7 @@ export const WORKSPACE_REGISTRY: ResolvedWorkspace[] = [
       theme: {
         brand_primary: '142 76% 36%',
         surface: '140 8% 12%',
-        logo_url: '/assets/brand/logo-mark.png',
+        logo_url: DEMO_LOGO_URL,
         font_family_heading: '"Geist", sans-serif',
         font_google_family: 'Geist',
       },

@@ -228,40 +228,21 @@ export function SlaRulesPanel({ className }: { className?: string }): React.Reac
   );
 }
 
-/** Workspace billing summary — honest placeholder until Stripe ships. */
+/** Workspace billing — honest coming-soon surface until Stripe ships. */
 export function BillingSettingsPanel(): React.ReactElement {
   const { workspace } = useWorkspace();
 
   return (
-    <section className="rounded-lg border border-border bg-card p-6" data-testid="billing-settings-panel" data-cap="CAP-082">
-      <h2 className="mb-4 text-lg font-medium">Billing</h2>
-      <dl className="grid gap-3 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-muted-foreground">Workspace</dt>
-          <dd className="font-medium">{workspace.name}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Plan</dt>
-          <dd className="font-medium" data-testid="billing-plan-label">
-            Billing coming soon
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Seats</dt>
-          <dd className="font-medium text-muted-foreground">Not configured</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Status</dt>
-          <dd className="font-medium text-muted-foreground">Unavailable</dd>
-        </div>
-      </dl>
-      <p className="mt-4 text-sm text-muted-foreground">
-        Paid plans and seat management are not available yet. Stripe integration is planned at the
-        controller layer — this panel will surface live plan metadata when billing ships.
+    <section
+      className="rounded-lg border border-border bg-card p-6"
+      data-testid="billing-settings-panel"
+    >
+      <h2 className="mb-2 text-lg font-medium">Billing coming soon</h2>
+      <p className="text-sm text-muted-foreground" data-testid="billing-plan-label">
+        Paid plans and seat management are not available yet for{' '}
+        <span className="font-medium text-foreground">{workspace.name}</span>. This page will show
+        live plan metadata when billing ships — nothing to configure today.
       </p>
-      <Button type="button" className="mt-4" disabled data-testid="billing-upgrade-button">
-        Upgrade plan
-      </Button>
     </section>
   );
 }

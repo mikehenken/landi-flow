@@ -124,7 +124,17 @@ export function getHumanNameFromMembers(
     return null;
   }
   const member = members.find((m) => m.kind === 'human' && m.id === userId);
-  return member?.name ?? userId;
+  if (member?.name?.trim()) {
+    return member.name.trim();
+  }
+  // Never surface a raw UUID as a display name (P1-5).
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+    return null;
+  }
+  if (userId.includes('@')) {
+    return userId;
+  }
+  return null;
 }
 
 export function getAgentNameFromMembers(

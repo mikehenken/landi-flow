@@ -59,10 +59,28 @@ export function extractEngineeringSignal(event: ActivityEvent): EngineeringSigna
 }
 
 export function extractEngineeringSignals(events: ActivityEvent[]): EngineeringSignalView[] {
-  return events
+  const signals = events
     .filter(isSignalAttachedEvent)
     .map(extractEngineeringSignal)
     .filter((signal): signal is EngineeringSignalView => signal !== null);
+
+  const seen = new Set<string>();
+  const deduped: EngineeringSignalView[] = [];
+  for (const signal of signals) {
+    const key = [
+      signal.correlationId ?? '',
+      signal.kind,
+      signal.status ?? '',
+      signal.source ?? '',
+      signal.traceId ?? '',
+    ].join('|');
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(signal);
+  }
+  return deduped;
 }
 
 /** Newest-first ordering for story detail signals (CAP / MCP-IDE-003). */

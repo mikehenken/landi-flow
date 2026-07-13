@@ -56,17 +56,22 @@ function workspaceResolveErrorMessage(resolveError: unknown): string {
   if (
     lower.includes('pgrst106') ||
     lower.includes('invalid schema') ||
-    lower.includes('linear_clone')
+    lower.includes('linear_clone') ||
+    lower.includes('workspace_members')
   ) {
-    return `${base}. Supabase must expose the linear_clone schema to PostgREST (see docs/setup/supabase-postgrest-schema.md).`;
+    return 'Unable to load your workspace. Check that the database is configured for this app, then reload or retry.';
   }
   if (lower.includes('timed out')) {
-    return `${base}. Check FLOW_API_URL / Workers API health, then reload or retry.`;
+    return 'Workspace lookup timed out. Check API health, then reload or retry.';
   }
   if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('authentication') || lower.includes('session missing')) {
-    return `${base}. Sign in again, then retry.`;
+    return 'Your session expired. Sign in again, then retry.';
   }
-  return `${base}. Reload the page or retry below.`;
+  // Strip schema/table identifiers from any residual message.
+  const sanitized = base
+    .replace(/linear_clone(?:\.\w+)?/gi, 'workspace data')
+    .replace(/\bworkspace_members\b/gi, 'workspace membership');
+  return `${sanitized}. Reload the page or retry below.`;
 }
 
 export interface ActiveWorkspaceProviderProps {

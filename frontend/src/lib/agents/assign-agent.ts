@@ -113,7 +113,8 @@ export async function assignAndAct(req: AssignAgentRequest): Promise<AssignAgent
               kind: 'agent_lifecycle',
               status: 'started',
               source: 'assignment',
-              correlation_id: crypto.randomUUID(),
+              // Stable per story so retries / re-assign loops stay idempotent.
+              correlation_id: `assign-started:${req.entityId}`,
             },
           },
           req.workspaceId,

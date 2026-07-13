@@ -6,6 +6,7 @@ import type {
   Story,
 } from '@landi-flow/core/types';
 import type { DbClient } from '../lib/db.js';
+import { dedupeActivityEvents } from '../lib/dedupe-activity-events.js';
 import { BaseController } from './base-controller.js';
 
 interface DbActivityRow {
@@ -229,7 +230,9 @@ export class InboxController extends BaseController {
       throw new Error(`Failed to list activity events: ${error.message}`);
     }
 
-    return mapActivityRows(this.db, workspaceId, (data ?? []) as DbActivityRow[]);
+    return mapActivityRows(this.db, workspaceId, (data ?? []) as DbActivityRow[]).then(
+      dedupeActivityEvents,
+    );
   }
 
   /** MCP-IDE-003: story-scoped activity (includes engineering signals). */
@@ -266,7 +269,12 @@ export class InboxController extends BaseController {
       throw new Error(`Failed to list story activity events: ${error.message}`);
     }
 
-    return mapActivityRows(this.db, workspaceId, (data ?? []) as DbActivityRow[], story as StoryContextRow);
+    return mapActivityRows(
+      this.db,
+      workspaceId,
+      (data ?? []) as DbActivityRow[],
+      story as StoryContextRow,
+    ).then(dedupeActivityEvents);
   }
 
   /** CAP-035: inbox notifications for the current user (assignments + updates). */

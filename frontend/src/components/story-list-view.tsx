@@ -14,7 +14,12 @@ import { workflowStateToStatus } from '@/lib/workflow-states';
 import { brandAssets } from '@/lib/correlation';
 import { EmptyState } from '@/components/empty-state';
 import { getParentStoryId, getStoryCustomerId } from '@/lib/story-relations-seed';
+import { useAssignableMembers } from '@/hooks/use-assignable-members';
 import { useStorySelection } from '@/hooks/use-story-selection';
+import {
+  formatAssigneeDisplayName,
+  formatAssigneeInitials,
+} from '@/lib/assignee-display';
 import { useWorkspace } from '@/lib/workspace';
 import { updateStorySortOrder } from '@/controllers/story-controller';
 import { StoryListSkeleton } from '@/components/workspace-content-skeleton';
@@ -41,6 +46,7 @@ export function StoryListView({
 }: StoryListViewProps): React.ReactElement {
   const t = useTranslations('stories');
   const { workspace } = useWorkspace();
+  const { getMemberById } = useAssignableMembers();
   const { isSelected, toggle, selectRange } = useStorySelection();
   const [dragIndex, setDragIndex] = React.useState<number | null>(null);
 
@@ -110,6 +116,16 @@ export function StoryListView({
         const hasActiveAgent = story.delegate_agent_id !== null && status === 'in_progress';
         const isSubStory = getParentStoryId(story.id) !== null;
         const customerId = getStoryCustomerId(story.id);
+        const assigneeMember = story.assignee_id ? getMemberById(story.assignee_id) : undefined;
+        const assigneeLabel = formatAssigneeDisplayName(assigneeMember, story.assignee_id);
+        const assigneeInitials = formatAssigneeInitials(assigneeMember, story.assignee_id);
+        const delegateMember = story.delegate_agent_id
+          ? getMemberById(story.delegate_agent_id)
+          : undefined;
+        const delegateLabel = formatAssigneeDisplayName(
+          delegateMember,
+          story.delegate_agent_id,
+        );
 
         return (
           <div
@@ -167,7 +183,7 @@ export function StoryListView({
                     actorType="agent"
                     size="sm"
                     active={hasActiveAgent}
-                    aria-label={`Agent ${story.delegate_agent_id}${hasActiveAgent ? ' (active)' : ''}`}
+                    aria-label={`Agent ${delegateLabel}${hasActiveAgent ? ' (active)' : ''}`}
                   >
                     <AvatarFallback actorType="agent">AI</AvatarFallback>
                   </Avatar>
@@ -175,11 +191,9 @@ export function StoryListView({
                   <Avatar
                     actorType="human"
                     size="sm"
-                    aria-label={`Assignee ${story.assignee_id}`}
+                    aria-label={`Assignee ${assigneeLabel}`}
                   >
-                    <AvatarFallback actorType="human">
-                      {story.assignee_id.charAt(0).toUpperCase()}
-                    </AvatarFallback>
+                    <AvatarFallback actorType="human">{assigneeInitials}</AvatarFallback>
                   </Avatar>
                 ) : null}
               </button>

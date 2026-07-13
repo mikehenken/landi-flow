@@ -3,17 +3,19 @@
 import * as React from 'react';
 import type { Epic, Story } from '@landi-flow/core/types';
 import { Button } from '@landi-flow/ui';
+import { useWorkspaceTeams } from '@/hooks/use-workspace-teams';
 import { SEED_CUSTOMERS } from '@/lib/seed-data';
 import {
   linkCustomerToEpic,
   listEpicCustomerLinks,
 } from '@/lib/epic-surfaces/epic-surfaces-store';
+import { useWorkspace } from '@/lib/workspace';
 
 export interface EpicCustomersTabProps {
   epic: Epic;
 }
 
-/** CAP-045 — Epic Customers tab. */
+/** Epic Customers tab. */
 export function EpicCustomersTab({ epic }: EpicCustomersTabProps): React.ReactElement {
   const [links, setLinks] = React.useState(() => listEpicCustomerLinks(epic.id));
 
@@ -68,12 +70,7 @@ export interface EpicTeamSubTabsProps {
   children: React.ReactNode;
 }
 
-const TEAM_LABELS: Record<string, string> = {
-  'team-design': 'Team Design',
-  'team-engineering': 'Team Engineering',
-};
-
-/** CAP-047 — multi-team epic sub-tabs filter stories by team. */
+/** Multi-team epic sub-tabs filter stories by team — labels from live roster. */
 export function EpicTeamSubTabs({
   epic,
   stories,
@@ -81,12 +78,33 @@ export function EpicTeamSubTabs({
   onTeamChange,
   children,
 }: EpicTeamSubTabsProps): React.ReactElement {
+  const { workspace } = useWorkspace();
+  const { teams } = useWorkspaceTeams(workspace.id);
+
   const teamIds = React.useMemo(() => {
-    const fromStories = new Set(stories.filter((s) => s.epic_id === epic.id).map((s) => s.team_id));
-    fromStories.add('team-design');
-    fromStories.add('team-engineering');
+    const fromStories = new Set(
+      stories.filter((s) => s.epic_id === epic.id).map((s) => s.team_id),
+    );
+    for (const team of teams) {
+      fromStories.add(team.id);
+    }
     return [...fromStories];
-  }, [epic.id, stories]);
+  }, [epic.id, stories, teams]);
+
+  const labelForTeam = (teamId: string): string => {
+    const match = teams.find((team) => team.id === teamId);
+    if (match?.name?.trim()) {
+      return match.name.trim();
+    }
+    // Demo slug fallbacks without hardcoding a wrong live name.
+    if (teamId === 'team-design') {
+      return 'Design';
+    }
+    if (teamId === 'team-engineering') {
+      return 'Engineering';
+    }
+    return 'Team';
+  };
 
   return (
     <div data-testid="epic-team-subtabs" data-cap="CAP-047">
@@ -101,7 +119,7 @@ export function EpicTeamSubTabs({
             onClick={() => onTeamChange(teamId)}
             data-testid={`epic-team-tab-${teamId}`}
           >
-            {TEAM_LABELS[teamId] ?? teamId}
+            {labelForTeam(teamId)}
           </Button>
         ))}
       </div>

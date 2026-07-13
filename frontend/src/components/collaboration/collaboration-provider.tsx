@@ -11,6 +11,7 @@ import { fetchLiveblocksAuthToken } from '@/lib/liveblocks/auth-endpoint';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { useSupabaseSession } from '@/lib/supabase/session-provider';
+import { assertLiveblocksRoomWorkspaceUuid } from '@/lib/workspace/liveblocks-room-workspace';
 import type { JsonObject } from '@liveblocks/client';
 
 /** True only when `LiveblocksProvider` is mounted (session ready + keys configured). */
@@ -69,6 +70,10 @@ export interface CollaborativeRoomProps {
   fallback?: React.ReactNode;
 }
 
+function roomHasResolvedWorkspaceUuid(roomId: string): boolean {
+  return assertLiveblocksRoomWorkspaceUuid(roomId).ok;
+}
+
 export function CollaborativeRoom({
   roomId,
   initialPresence,
@@ -78,7 +83,12 @@ export function CollaborativeRoom({
 }: CollaborativeRoomProps): React.ReactElement {
   const liveblocksActive = useLiveblocksActive();
 
-  if (!isLiveblocksConfigured() || isMockAuthEnabled() || !liveblocksActive) {
+  if (
+    !isLiveblocksConfigured() ||
+    isMockAuthEnabled() ||
+    !liveblocksActive ||
+    !roomHasResolvedWorkspaceUuid(roomId)
+  ) {
     return <>{children}</>;
   }
 

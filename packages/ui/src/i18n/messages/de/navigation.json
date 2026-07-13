@@ -31,7 +31,7 @@
   "inbox": {
     "title": "Posteingang",
     "welcome": "Willkommen zurück — {count} aktive Stories in Ihrem Workspace.",
-    "team_breadcrumb": "Team Design"
+    "team_breadcrumb": "Team"
   },
   "stories": {
     "title": "Stories",

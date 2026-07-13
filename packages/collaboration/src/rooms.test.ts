@@ -33,6 +33,15 @@ describe('parseRoomId', () => {
     expect(parseRoomId('linear_clone:ws:unknown:id')).toBeNull();
     expect(parseRoomId('linear_clone::story:id')).toBeNull();
   });
+
+  it('parses demo workspace slug grammar (auth must still UUID-gate separately)', () => {
+    const parsed = parseRoomId('linear_clone:ws-landi-flow-demo:workspace:ws-landi-flow-demo');
+    expect(parsed).toEqual({
+      workspaceId: 'ws-landi-flow-demo',
+      entityType: 'workspace',
+      entityId: 'ws-landi-flow-demo',
+    });
+  });
 });
 
 describe('workspaceRoomWildcard', () => {

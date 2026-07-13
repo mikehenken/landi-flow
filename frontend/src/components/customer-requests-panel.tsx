@@ -41,7 +41,7 @@ export function CustomerRequestsPanel({
       data-testid="customer-requests-panel"
     >
       <header className="border-b border-border px-4 py-3">
-        <h3 className="text-sm font-medium">Customer requests (CAP-067)</h3>
+        <h3 className="text-sm font-medium">Customer requests</h3>
       </header>
       {requests.length === 0 ? (
         <p className="px-4 py-3 text-sm text-muted-foreground" data-testid="customer-requests-empty">

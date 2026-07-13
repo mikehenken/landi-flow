@@ -12,6 +12,7 @@ describe('resolveInitialWorkspace', () => {
     const workspace = resolveInitialWorkspace(DEMO_WORKSPACE_ID);
     expect(workspace.id).toBe(DEMO_WORKSPACE_ID);
     expect(workspace.slug).toBe('landi-flow');
+    expect(workspace.icon_url).toBe('/assets/logo/logomark-primary.svg');
   });
 
   it('returns placeholder for real UUID workspace ids', () => {

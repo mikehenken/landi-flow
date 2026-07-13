@@ -12,6 +12,7 @@ import { BoardSwimlanesView } from '@/components/board-swimlanes-view';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 import type { BoardGroupBy } from '@/lib/board-swimlane-preference';
+import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 import { CollaborativeRoom } from './collaboration-provider';
 import { CursorOverlay, PresenceAvatars } from './presence-cursors';
 
@@ -47,7 +48,10 @@ export function CollaborativeBoard({
   hiddenColumnIds,
   onQuickAdd,
 }: CollaborativeBoardProps): React.ReactElement {
-  const liveblocksReady = isLiveblocksConfigured() && !isMockAuthEnabled();
+  const liveblocksReady =
+    isLiveblocksConfigured() &&
+    !isMockAuthEnabled() &&
+    isWorkspaceUuid(workspaceId);
   const useSwimlanes = groupBy !== 'none';
   const useOfflineBoard = useSwimlanes || isMockAuthEnabled() || !liveblocksReady;
   const hydrated = React.useMemo(
@@ -274,7 +278,13 @@ function BoardInner({
   return (
     <div ref={containerRef} className={cn('relative flex h-full flex-col', className)}>
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <h2 className="text-sm font-semibold">Live Board</h2>
+        <h2 className="text-sm font-semibold">Board</h2>
+        <span
+          className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-400"
+          data-testid="liveblocks-live-badge"
+        >
+          Live
+        </span>
         <PresenceAvatars />
       </div>
 

@@ -1,9 +1,11 @@
 import type { PulseSchedule, PulseUpdate } from '@landi-flow/core/types';
+import { isMockAuthEnabled } from '@/lib/api/config';
 import { DEMO_WORKSPACE_ID } from '@/lib/seed-data';
 
 export const PULSE_UPDATES_STORAGE_KEY = 'landi-flow:pulse-updates';
 export const PULSE_SCHEDULES_STORAGE_KEY = 'landi-flow:pulse-schedules';
 
+/** Demo seed — MOCK_AUTH only. Never surface in live UUID workspaces. */
 export const SEED_PULSE_UPDATES: PulseUpdate[] = [
   {
     id: 'pulse-001',
@@ -39,6 +41,9 @@ export const SEED_PULSE_SCHEDULES: PulseSchedule[] = [
 ];
 
 function readUpdates(): PulseUpdate[] {
+  if (!isMockAuthEnabled()) {
+    return [];
+  }
   if (typeof window === 'undefined') {
     return SEED_PULSE_UPDATES;
   }
@@ -55,6 +60,9 @@ function readUpdates(): PulseUpdate[] {
 }
 
 function readSchedules(): PulseSchedule[] {
+  if (!isMockAuthEnabled()) {
+    return [];
+  }
   if (typeof window === 'undefined') {
     return SEED_PULSE_SCHEDULES;
   }
@@ -71,7 +79,7 @@ function readSchedules(): PulseSchedule[] {
 }
 
 function writeSchedules(rows: PulseSchedule[]): void {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || !isMockAuthEnabled()) {
     return;
   }
   try {
@@ -82,12 +90,18 @@ function writeSchedules(rows: PulseSchedule[]): void {
 }
 
 export function listPulseUpdates(workspaceId: string = DEMO_WORKSPACE_ID): PulseUpdate[] {
+  if (!isMockAuthEnabled()) {
+    return [];
+  }
   return readUpdates()
     .filter((row) => row.workspace_id === workspaceId)
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 export function listPulseSchedules(workspaceId: string = DEMO_WORKSPACE_ID): PulseSchedule[] {
+  if (!isMockAuthEnabled()) {
+    return [];
+  }
   return readSchedules().filter((row) => row.workspace_id === workspaceId);
 }
 
@@ -107,11 +121,16 @@ export function createPulseSchedule(
     created_at: now,
     updated_at: now,
   };
-  writeSchedules([...readSchedules(), schedule]);
+  if (isMockAuthEnabled()) {
+    writeSchedules([...readSchedules(), schedule]);
+  }
   return schedule;
 }
 
 export function runPulseSchedule(scheduleId: string): PulseSchedule | null {
+  if (!isMockAuthEnabled()) {
+    return null;
+  }
   const rows = readSchedules();
   const index = rows.findIndex((row) => row.id === scheduleId);
   if (index < 0) {

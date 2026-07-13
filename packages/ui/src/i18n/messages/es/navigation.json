@@ -31,7 +31,7 @@
   "inbox": {
     "title": "Bandeja de entrada",
     "welcome": "Bienvenido — {count} Historias activas en tu Espacio de trabajo.",
-    "team_breadcrumb": "Equipo Diseño"
+    "team_breadcrumb": "Equipo"
   },
   "stories": {
     "title": "Historias",

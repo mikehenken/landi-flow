@@ -2,12 +2,12 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClientIfConfigured } from '@/lib/supabase/server';
 import { createCorrelationContext } from '@/lib/correlation';
 import {
-  parseRoomId,
   resolveRoomAccess,
   roomAccessToLiveblocksGrants,
   sessionPermissionsFromGrants,
 } from '@landi-flow/collaboration';
 import type { WorkspaceMemberRole } from '@landi-flow/auth';
+import { assertLiveblocksRoomWorkspaceUuid } from '@/lib/workspace/liveblocks-room-workspace';
 import { Liveblocks } from '@liveblocks/node';
 import { NextResponse } from 'next/server';
 
@@ -66,10 +66,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     return errorJson('missing_room', 'room is required', 400, correlationId);
   }
 
-  const parsed = parseRoomId(room);
-  if (!parsed) {
-    return errorJson('invalid_room', 'Room ID does not match linear_clone grammar', 400, correlationId);
+  const roomGate = assertLiveblocksRoomWorkspaceUuid(room);
+  if (!roomGate.ok) {
+    return errorJson(roomGate.code, roomGate.message, roomGate.status, correlationId);
   }
+  const parsed = roomGate;
 
   const supabase = await createClient();
   const {

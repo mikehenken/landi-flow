@@ -91,15 +91,33 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const intlResponse = handleI18nRouting(request);
   const existingWorkspaceCookie = request.cookies.get('workspace-id')?.value;
   const hostWorkspaceId = resolveWorkspaceIdFromHost(request.headers.get('host'));
-  const workspaceIdForCookie =
-    existingWorkspaceCookie && isWorkspaceUuid(existingWorkspaceCookie)
-      ? existingWorkspaceCookie
-      : hostWorkspaceId;
 
-  intlResponse.cookies.set('workspace-id', workspaceIdForCookie, {
-    path: '/',
-    sameSite: 'lax',
-  });
+  // Production must never persist host/demo ids (e.g. `ws-landi-flow-demo`) —
+  // those cause Liveblocks auth 500s and `/api/v1/workspaces/...` 404s.
+  // Mock auth keeps the registry demo id; real auth waits for a UUID cookie
+  // written by ActiveWorkspaceProvider after membership resolve.
+  if (existingWorkspaceCookie && isWorkspaceUuid(existingWorkspaceCookie)) {
+    intlResponse.cookies.set('workspace-id', existingWorkspaceCookie, {
+      path: '/',
+      sameSite: 'lax',
+    });
+  } else if (mockAuth) {
+    intlResponse.cookies.set('workspace-id', hostWorkspaceId, {
+      path: '/',
+      sameSite: 'lax',
+    });
+  } else if (isWorkspaceUuid(hostWorkspaceId)) {
+    intlResponse.cookies.set('workspace-id', hostWorkspaceId, {
+      path: '/',
+      sameSite: 'lax',
+    });
+  } else if (existingWorkspaceCookie) {
+    intlResponse.cookies.set('workspace-id', '', {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 0,
+    });
+  }
 
   if (mockAuth && isProtectedPath(pathname)) {
     return intlResponse;

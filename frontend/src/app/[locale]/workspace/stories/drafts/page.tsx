@@ -5,15 +5,17 @@ import type { Story } from '@landi-flow/core/types';
 import { Button } from '@landi-flow/ui';
 import { AppShell } from '@/components/app-shell';
 import { StoryListView } from '@/components/story-list-view';
+import { useDefaultTeamLabel } from '@/hooks/use-default-team-label';
 import { useStoryStore } from '@/hooks/use-story-store';
 import { storyStore } from '@/stores/story-store';
 import { publishStory } from '@/controllers/story-controller';
 import { useWorkspace } from '@/lib/workspace';
 
-/** CAP-005: drafts library — unpublished stories. */
+/** Drafts library — unpublished stories. */
 export default function StoryDraftsPage(): React.ReactElement {
   const { workspace } = useWorkspace();
   const { stories, selectedStoryId } = useStoryStore();
+  const teamLabel = useDefaultTeamLabel();
   const drafts = React.useMemo(
     () => stories.filter((story) => story.is_draft),
     [stories],
@@ -26,7 +28,7 @@ export default function StoryDraftsPage(): React.ReactElement {
   return (
     <AppShell
       viewTitle="Drafts"
-      breadcrumbs={['Team Design', 'Stories', 'Drafts']}
+      breadcrumbs={[teamLabel, 'Stories', 'Drafts']}
     >
       <div className="flex h-full min-h-0 flex-col" data-testid="story-drafts-view" data-cap="CAP-005">
         {drafts.length === 0 ? (

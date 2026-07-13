@@ -4,6 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 import { SEED_RECURRING_RULES } from '@/lib/recurring-stories/recurring-stories-store';
+import {
+  isRecoverableRecurringQueryError,
+  sanitizeRecurringError,
+} from '@/lib/recurring-stories/recurring-rules-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +43,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   if (!isMockAuthEnabled() && !isUuid(teamId)) {
     return Response.json(
-      { ok: false, errorText: `team_id "${teamId}" must be a UUID` },
+      { ok: false, errorText: 'team_id must be a valid team id' },
       { status: 400 },
     );
   }
@@ -71,8 +75,19 @@ export async function GET(request: NextRequest): Promise<Response> {
       .order('created_at', { ascending: true });
 
     if (error) {
-      const status = error.message.toLowerCase().includes('does not exist') ? 503 : 502;
-      return Response.json({ ok: false, errorText: error.message }, { status });
+      if (isRecoverableRecurringQueryError(error.message)) {
+        return Response.json({
+          ok: true,
+          rules: [],
+          live: true,
+          empty: true,
+          notice: sanitizeRecurringError(error.message),
+        });
+      }
+      return Response.json(
+        { ok: false, errorText: sanitizeRecurringError(error.message) },
+        { status: 502 },
+      );
     }
 
     return Response.json({
@@ -81,10 +96,20 @@ export async function GET(request: NextRequest): Promise<Response> {
       live: true,
     });
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to list recurring rules';
+    if (isRecoverableRecurringQueryError(message)) {
+      return Response.json({
+        ok: true,
+        rules: [],
+        live: true,
+        empty: true,
+        notice: sanitizeRecurringError(message),
+      });
+    }
     return Response.json(
       {
         ok: false,
-        errorText: err instanceof Error ? err.message : 'Failed to list recurring rules',
+        errorText: sanitizeRecurringError(message),
       },
       { status: 500 },
     );
@@ -113,7 +138,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     (!isWorkspaceUuid(body.workspace_id) || !isUuid(body.team_id))
   ) {
     return Response.json(
-      { ok: false, errorText: 'workspace_id and team_id must be UUIDs' },
+      { ok: false, errorText: 'workspace_id and team_id must be valid ids' },
       { status: 400 },
     );
   }
@@ -162,7 +187,10 @@ export async function POST(request: NextRequest): Promise<Response> {
       .single();
 
     if (error) {
-      return Response.json({ ok: false, errorText: error.message }, { status: 502 });
+      return Response.json(
+        { ok: false, errorText: sanitizeRecurringError(error.message) },
+        { status: 502 },
+      );
     }
 
     return Response.json({ ok: true, rule: mapDbRow(data as Record<string, unknown>), live: true }, { status: 201 });
@@ -170,7 +198,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json(
       {
         ok: false,
-        errorText: err instanceof Error ? err.message : 'Failed to create recurring rule',
+        errorText: err instanceof Error ? sanitizeRecurringError(err.message) : 'Failed to create recurring rule',
       },
       { status: 500 },
     );
@@ -237,7 +265,10 @@ export async function PATCH(request: NextRequest): Promise<Response> {
       .single();
 
     if (error) {
-      return Response.json({ ok: false, errorText: error.message }, { status: 502 });
+      return Response.json(
+        { ok: false, errorText: sanitizeRecurringError(error.message) },
+        { status: 502 },
+      );
     }
 
     return Response.json({ ok: true, rule: mapDbRow(data as Record<string, unknown>), live: true });
@@ -245,7 +276,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
     return Response.json(
       {
         ok: false,
-        errorText: err instanceof Error ? err.message : 'Failed to update recurring rule',
+        errorText: err instanceof Error ? sanitizeRecurringError(err.message) : 'Failed to update recurring rule',
       },
       { status: 500 },
     );

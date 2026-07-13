@@ -53,8 +53,9 @@ const itemClassName = cn(
 );
 
 /**
- * Command palette shell per shared-design-system (Cmd/Ctrl+K).
- * Searchable Stories, Epics, and action groups (Linear / Shortcut style).
+ * Command palette (Cmd/Ctrl+K).
+ * Uses a native `<dialog showModal()>` so it stacks in the browser top layer
+ * above story detail modals (which also use native dialog).
  */
 export function CommandPalette({
   open,
@@ -66,6 +67,9 @@ export function CommandPalette({
   placeholder = 'Search or jump to…',
   emptyMessage = 'No results found.',
 }: CommandPaletteProps): React.ReactElement {
+  const dialogRef = React.useRef<HTMLDialogElement>(null);
+  const ignoreNativeCloseRef = React.useRef(false);
+
   const groupedActions = React.useMemo(() => {
     const groups = new Map<string, CommandPaletteAction[]>();
     for (const action of actions) {
@@ -80,6 +84,28 @@ export function CommandPalette({
   const storiesHeading = groupLabels?.stories ?? 'Stories';
   const epicsHeading = groupLabels?.epics ?? 'Epics';
 
+  React.useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (open) {
+      if (!dialog.open) {
+        try {
+          dialog.showModal();
+        } catch {
+          // Already open or not connected — ignore.
+        }
+      }
+      return;
+    }
+    if (dialog.open) {
+      ignoreNativeCloseRef.current = true;
+      dialog.close();
+      ignoreNativeCloseRef.current = false;
+    }
+  }, [open]);
+
   const handleSelect = React.useCallback(
     (onSelect?: () => void) => {
       onSelect?.();
@@ -88,86 +114,107 @@ export function CommandPalette({
     [onOpenChange],
   );
 
+  const handleNativeClose = React.useCallback((): void => {
+    if (ignoreNativeCloseRef.current) {
+      return;
+    }
+    onOpenChange(false);
+  }, [onOpenChange]);
+
   return (
-    <Command.Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-      label="Command palette"
+    <dialog
+      ref={dialogRef}
       data-testid="command-palette"
-      overlayClassName="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-      contentClassName={cn(
-        'fixed left-1/2 top-[20%] z-50 w-full max-w-[640px] -translate-x-1/2',
-        'overflow-hidden rounded-xl border border-border bg-surface-overlay shadow-xl',
-        'duration-150',
+      aria-label="Command palette"
+      className={cn(
+        'fixed left-1/2 top-[20%] z-[200] m-0 w-full max-w-[640px] -translate-x-1/2',
+        'overflow-hidden rounded-xl border border-border bg-surface-overlay p-0 shadow-xl',
+        'open:flex open:flex-col',
+        'backdrop:bg-black/50 backdrop:backdrop-blur-sm',
       )}
+      onClose={handleNativeClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        onOpenChange(false);
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onOpenChange(false);
+        }
+      }}
     >
-      <div className="flex items-center border-b border-border px-4">
-        <Search className="mr-3 h-5 w-5 shrink-0 text-foreground-subtle" />
-        <Command.Input
-          placeholder={placeholder}
-          className={cn(
-            'flex h-14 w-full bg-transparent text-lg text-foreground outline-none',
-            'placeholder:text-foreground-subtle',
-          )}
-        />
-      </div>
-      <Command.List className="max-h-[360px] overflow-y-auto p-2">
-        <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
-          {emptyMessage}
-        </Command.Empty>
-        {stories.length > 0 ? (
-          <Command.Group key="stories" heading={storiesHeading} className={groupHeadingClassName}>
-            {stories.map((story) => (
-              <Command.Item
-                key={story.id}
-                value={`${story.identifier} ${story.title}`}
-                keywords={[story.identifier, story.title]}
-                onSelect={() => handleSelect(story.onSelect)}
-                className={itemClassName}
-              >
-                <StoryIdentifierBadge identifier={story.identifier} />
-                <span className="min-w-0 flex-1 truncate">{story.title}</span>
-              </Command.Item>
-            ))}
-          </Command.Group>
-        ) : null}
-        {epics.length > 0 ? (
-          <Command.Group key="epics" heading={epicsHeading} className={groupHeadingClassName}>
-            {epics.map((epic) => (
-              <Command.Item
-                key={epic.id}
-                value={epic.name}
-                keywords={[epic.name]}
-                onSelect={() => handleSelect(epic.onSelect)}
-                className={itemClassName}
-              >
-                <Layers className="h-4 w-4 shrink-0 text-foreground-subtle" aria-hidden />
-                <span className="min-w-0 flex-1 truncate">{epic.name}</span>
-              </Command.Item>
-            ))}
-          </Command.Group>
-        ) : null}
-        {Array.from(groupedActions.entries()).map(([group, groupActions]) => (
-          <Command.Group key={group} heading={group} className={groupHeadingClassName}>
-            {groupActions.map((action) => (
-              <Command.Item
-                key={action.id}
-                value={action.label}
-                onSelect={() => handleSelect(action.onSelect)}
-                className={itemClassName}
-              >
-                <span className="min-w-0 flex-1 truncate">{action.label}</span>
-                {action.shortcut ? (
-                  <kbd className="ml-auto rounded-sm bg-black/20 px-1.5 py-0.5 font-mono text-xs">
-                    {action.shortcut}
-                  </kbd>
-                ) : null}
-              </Command.Item>
-            ))}
-          </Command.Group>
-        ))}
-      </Command.List>
-    </Command.Dialog>
+      <Command
+        label="Command palette"
+        className="flex max-h-[min(70vh,520px)] flex-col"
+      >
+        <div className="flex items-center border-b border-border px-4">
+          <Search className="mr-3 h-5 w-5 shrink-0 text-foreground-subtle" />
+          <Command.Input
+            placeholder={placeholder}
+            className={cn(
+              'flex h-14 w-full bg-transparent text-lg text-foreground outline-none',
+              'placeholder:text-foreground-subtle',
+            )}
+          />
+        </div>
+        <Command.List className="max-h-[360px] overflow-y-auto p-2">
+          <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+          </Command.Empty>
+          {stories.length > 0 ? (
+            <Command.Group key="stories" heading={storiesHeading} className={groupHeadingClassName}>
+              {stories.map((story) => (
+                <Command.Item
+                  key={story.id}
+                  value={`${story.identifier} ${story.title}`}
+                  keywords={[story.identifier, story.title]}
+                  onSelect={() => handleSelect(story.onSelect)}
+                  className={itemClassName}
+                >
+                  <StoryIdentifierBadge identifier={story.identifier} />
+                  <span className="min-w-0 flex-1 truncate">{story.title}</span>
+                </Command.Item>
+              ))}
+            </Command.Group>
+          ) : null}
+          {epics.length > 0 ? (
+            <Command.Group key="epics" heading={epicsHeading} className={groupHeadingClassName}>
+              {epics.map((epic) => (
+                <Command.Item
+                  key={epic.id}
+                  value={epic.name}
+                  keywords={[epic.name]}
+                  onSelect={() => handleSelect(epic.onSelect)}
+                  className={itemClassName}
+                >
+                  <Layers className="h-4 w-4 shrink-0 text-foreground-subtle" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{epic.name}</span>
+                </Command.Item>
+              ))}
+            </Command.Group>
+          ) : null}
+          {Array.from(groupedActions.entries()).map(([group, groupActions]) => (
+            <Command.Group key={group} heading={group} className={groupHeadingClassName}>
+              {groupActions.map((action) => (
+                <Command.Item
+                  key={action.id}
+                  value={action.label}
+                  onSelect={() => handleSelect(action.onSelect)}
+                  className={itemClassName}
+                >
+                  <span className="min-w-0 flex-1 truncate">{action.label}</span>
+                  {action.shortcut ? (
+                    <kbd className="ml-auto rounded-sm bg-black/20 px-1.5 py-0.5 font-mono text-xs">
+                      {action.shortcut}
+                    </kbd>
+                  ) : null}
+                </Command.Item>
+              ))}
+            </Command.Group>
+          ))}
+        </Command.List>
+      </Command>
+    </dialog>
   );
 }
 

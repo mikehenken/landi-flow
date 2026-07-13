@@ -89,6 +89,14 @@ export function RecurringStoriesPanel(): React.ReactElement {
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <section data-testid="recurring-rules-list" className="space-y-3">
+        {rules.length === 0 ? (
+          <p
+            className="rounded-md border border-dashed border-border px-4 py-6 text-sm text-muted-foreground"
+            data-testid="recurring-rules-empty"
+          >
+            No recurring story rules yet. Add a title template below to spawn stories on a cadence.
+          </p>
+        ) : null}
         {rules.map((rule) => (
           <div
             key={rule.id}

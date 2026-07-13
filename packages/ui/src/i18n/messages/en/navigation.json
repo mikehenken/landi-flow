@@ -32,7 +32,7 @@
   "inbox": {
     "title": "Inbox",
     "welcome": "Welcome back — {count, plural, one {# notification} other {# notifications}}{unread, plural, =0 {} other { ({unread} unread)}}.",
-    "team_breadcrumb": "Team Design"
+    "team_breadcrumb": "Team"
   },
   "stories": {
     "title": "Stories",

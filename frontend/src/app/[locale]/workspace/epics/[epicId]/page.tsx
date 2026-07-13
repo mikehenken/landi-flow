@@ -22,14 +22,16 @@ import {
 import { EpicDependenciesPanel } from '@/components/milestones/epic-dependencies-panel';
 import { StoryListView } from '@/components/story-list-view';
 import { useEpicStore } from '@/hooks/use-epic-store';
+import { useDefaultTeamLabel } from '@/hooks/use-default-team-label';
 import { useStoryStore } from '@/hooks/use-story-store';
+import { useWorkspaceTeams } from '@/hooks/use-workspace-teams';
 import { epicStore } from '@/stores/epic-store';
 import { storyStore } from '@/stores/story-store';
 import { updateEpicDescription } from '@/controllers/epic-controller';
 import { useWorkspace } from '@/lib/workspace';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { getWorkflowStatesForTeam } from '@/lib/api/workspace-context';
-import { DEMO_TEAM_ID, DEMO_WORKFLOW_STATE_ROWS } from '@/lib/seed-data';
+import { DEMO_WORKFLOW_STATE_ROWS } from '@/lib/seed-data';
 
 type EpicDetailTab =
   | 'overview'
@@ -50,11 +52,29 @@ function EpicStoriesTab({
 }): React.ReactElement {
   const openCreateStory = useOpenCreateStoryModal();
   const { stories } = useStoryStore();
-  const [activeTeamId, setActiveTeamId] = React.useState(DEMO_TEAM_ID);
+  const { workspace } = useWorkspace();
+  const { defaultTeamId, teams } = useWorkspaceTeams(workspace.id);
+  const [activeTeamId, setActiveTeamId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (activeTeamId) {
+      return;
+    }
+    const fromStories = epicStories.find((story) => story.team_id)?.team_id;
+    setActiveTeamId(fromStories ?? defaultTeamId ?? teams[0]?.id ?? null);
+  }, [activeTeamId, epicStories, defaultTeamId, teams]);
 
   const filteredStories = epicStories.filter(
-    (story) => !story.is_draft && story.team_id === activeTeamId,
+    (story) => !story.is_draft && (!activeTeamId || story.team_id === activeTeamId),
   );
+
+  if (!activeTeamId) {
+    return (
+      <div data-testid="epic-stories-tab" data-cap="CAP-044" className="p-6 text-sm text-muted-foreground">
+        No team available for this epic yet.
+      </div>
+    );
+  }
 
   return (
     <EpicTeamSubTabs
@@ -81,6 +101,7 @@ export default function EpicDetailPage(): React.ReactElement {
   const { workspace } = useWorkspace();
   const { epics } = useEpicStore();
   const { stories, selectedStoryId } = useStoryStore();
+  const teamLabel = useDefaultTeamLabel();
   const [activeTab, setActiveTab] = React.useState<EpicDetailTab>('overview');
 
   const epic = epics.find((entry) => entry.id === epicId);
@@ -106,7 +127,7 @@ export default function EpicDetailPage(): React.ReactElement {
 
   if (!epic) {
     return (
-      <AppShell viewTitle="Epic not found" breadcrumbs={['Team Design', 'Epics']}>
+      <AppShell viewTitle="Epic not found" breadcrumbs={[teamLabel, 'Epics']}>
         <p className="p-6 text-sm text-muted-foreground">Epic not found.</p>
       </AppShell>
     );
@@ -124,7 +145,7 @@ export default function EpicDetailPage(): React.ReactElement {
   return (
     <AppShell
       viewTitle={epic.name}
-      breadcrumbs={['Team Design', 'Epics', epic.name]}
+      breadcrumbs={[teamLabel, 'Epics', epic.name]}
     >
       <div className="flex h-full min-h-0 flex-col lg:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">

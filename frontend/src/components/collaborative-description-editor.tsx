@@ -8,11 +8,12 @@ import { useLiveblocksExtension } from '@liveblocks/react-tiptap';
 import { CollaborativeRoom } from '@/components/collaboration/collaboration-provider';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
-import { DEMO_WORKSPACE_ID } from '@/lib/seed-data';
+import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 
 export interface CollaborativeDescriptionEditorProps {
   entityType: 'epic' | 'story';
   entityId: string;
+  /** Resolved workspace UUID required for Liveblocks rooms; demo ids fall back to solo editor. */
   workspaceId?: string;
   value: string | null;
   onChange?: (markdown: string) => void;
@@ -130,7 +131,7 @@ const SoloDescriptionEditor = React.memo(function SoloDescriptionEditor({
 export const CollaborativeDescriptionEditor = React.memo(function CollaborativeDescriptionEditor({
   entityType,
   entityId,
-  workspaceId = DEMO_WORKSPACE_ID,
+  workspaceId,
   value,
   onChange,
   placeholder,
@@ -141,9 +142,12 @@ export const CollaborativeDescriptionEditor = React.memo(function CollaborativeD
   previewWhenBlurred = false,
   'aria-label': ariaLabel,
 }: CollaborativeDescriptionEditorProps): React.ReactElement {
+  const resolvedWorkspaceId = isWorkspaceUuid(workspaceId) ? workspaceId : null;
   const useCollaboration =
-    isLiveblocksConfigured() && !readOnly && !isMockAuthEnabled();
-  const roomId = buildDescriptionRoomId(entityType, entityId, workspaceId);
+    isLiveblocksConfigured() &&
+    !readOnly &&
+    !isMockAuthEnabled() &&
+    resolvedWorkspaceId !== null;
 
   const editorProps = {
     value,
@@ -162,9 +166,11 @@ export const CollaborativeDescriptionEditor = React.memo(function CollaborativeD
     <SoloDescriptionEditor {...editorProps} />
   );
 
-  if (!useCollaboration || embedded) {
+  if (!useCollaboration || embedded || resolvedWorkspaceId === null) {
     return editor;
   }
+
+  const roomId = buildDescriptionRoomId(entityType, entityId, resolvedWorkspaceId);
 
   return (
     <CollaborativeRoom

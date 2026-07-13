@@ -4,6 +4,8 @@ import * as React from 'react';
 import type { Story } from '@landi-flow/core/types';
 import { Button, cn } from '@landi-flow/ui';
 import { StoryListView } from '@/components/story-list-view';
+import { useCurrentUserId } from '@/hooks/use-current-user-id';
+import { useStoryStore } from '@/hooks/use-story-store';
 import { storyStore } from '@/stores/story-store';
 import {
   filterMyIssuesTab,
@@ -22,12 +24,14 @@ export interface MyIssuesTabsProps {
   className?: string;
 }
 
-/** CAP-036: My Issues with four distinct live-query tabs. */
+/** My Issues with four distinct live-query tabs (session user identity). */
 export function MyIssuesTabs({ stories, className }: MyIssuesTabsProps): React.ReactElement {
   const [activeTab, setActiveTab] = React.useState<MyIssuesTab>('assigned');
+  const currentUserId = useCurrentUserId();
+  const { selectedStoryId } = useStoryStore();
   const filtered = React.useMemo(
-    () => filterMyIssuesTab(stories, activeTab),
-    [stories, activeTab],
+    () => filterMyIssuesTab(stories, activeTab, currentUserId),
+    [stories, activeTab, currentUserId],
   );
 
   return (
@@ -50,7 +54,7 @@ export function MyIssuesTabs({ stories, className }: MyIssuesTabsProps): React.R
           >
             {tab.label}
             <span className="ml-1.5 font-mono text-xs opacity-70">
-              {filterMyIssuesTab(stories, tab.id).length}
+              {filterMyIssuesTab(stories, tab.id, currentUserId).length}
             </span>
           </Button>
         ))}
@@ -58,7 +62,7 @@ export function MyIssuesTabs({ stories, className }: MyIssuesTabsProps): React.R
       <div className="min-h-0 flex-1 overflow-auto" role="tabpanel">
         <StoryListView
           stories={filtered}
-          selectedStoryId={null}
+          selectedStoryId={selectedStoryId}
           onStorySelect={(id) => storyStore.selectStory(id)}
         />
       </div>

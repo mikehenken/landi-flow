@@ -8,6 +8,7 @@ import { CollaborationProvider } from '@/components/collaboration';
 import { SupabaseSessionProvider } from '@/lib/supabase/session-provider';
 import { ActiveWorkspaceProvider } from '@/lib/workspace/active-workspace-provider';
 import { resolveInitialWorkspace, resolveWorkspaceIdFromHost } from '@/lib/workspace/registry';
+import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 import { createClient } from '@/lib/supabase/server';
 import { routing } from '@/i18n/routing';
 import { isRtlLocale } from '@landi-flow/ui';
@@ -48,9 +49,17 @@ export default async function LocaleLayout({
   const messages = await getMessages();
   const cookieStore = await cookies();
   const headersList = await headers();
+  const cookieWorkspaceId = cookieStore.get('workspace-id')?.value;
+  const hostWorkspaceId = resolveWorkspaceIdFromHost(headersList.get('host'));
+  const mockAuth = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
+  // Prefer a real UUID cookie. Avoid treating demo/host ids as resolved production
+  // workspaces (API + Liveblocks require Postgres uuids).
   const workspaceId =
-    cookieStore.get('workspace-id')?.value ??
-    resolveWorkspaceIdFromHost(headersList.get('host'));
+    cookieWorkspaceId && isWorkspaceUuid(cookieWorkspaceId)
+      ? cookieWorkspaceId
+      : mockAuth
+        ? (cookieWorkspaceId ?? hostWorkspaceId)
+        : hostWorkspaceId;
   const workspace = resolveInitialWorkspace(workspaceId);
 
   const supabase = await createClient();

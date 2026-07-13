@@ -10,13 +10,16 @@ import {
   StoriesViewProvider,
   useStoriesViewContext,
 } from '@/components/stories-view-provider';
+import { useDefaultTeamLabel } from '@/hooks/use-default-team-label';
 import { useStoryStore } from '@/hooks/use-story-store';
+import { useStoryDeepLink } from '@/lib/story/use-story-deep-link';
 import { storyStore } from '@/stores/story-store';
 
 function StoriesListBody(): React.ReactElement {
   const openCreateStory = useOpenCreateStoryModal();
   const { selectedStoryId, loading } = useStoryStore();
   const { visibleStories, displayProperties } = useStoriesViewContext();
+  useStoryDeepLink();
   const selectedStory =
     visibleStories.find((story) => story.id === selectedStoryId) ??
     storyStore.getServerSnapshot().stories.find((story) => story.id === selectedStoryId) ??
@@ -47,11 +50,12 @@ function StoriesListBody(): React.ReactElement {
 export default function StoriesPage(): React.ReactElement {
   const t = useTranslations('navigation');
   const { stories } = useStoryStore();
+  const teamLabel = useDefaultTeamLabel(t('inbox.team_breadcrumb'));
 
   return (
     <AppShell
       viewTitle={t('stories.title')}
-      breadcrumbs={[t('inbox.team_breadcrumb'), t('stories.title')]}
+      breadcrumbs={[teamLabel, t('stories.title')]}
     >
       <StoriesViewProvider stories={stories} layout="list">
         <StoriesListBody />

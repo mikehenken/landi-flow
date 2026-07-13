@@ -1,9 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Button, cn, useTerminology, useTranslations } from '@landi-flow/ui';
 import { ChevronDown, Layers, Plus, UserPlus, Users } from 'lucide-react';
 import { LayoutList } from 'lucide-react';
+import {
+  getCreateMenuFixedStyle,
+} from '@/lib/create-resource-menu-position';
 
 export interface CreateResourceDropdownProps {
   onCreateStory: () => void;
@@ -24,7 +28,7 @@ interface CreateMenuItem {
 
 function useDismissOnOutside(
   open: boolean,
-  containerRef: React.RefObject<HTMLElement | null>,
+  refs: Array<React.RefObject<HTMLElement | null>>,
   onClose: () => void,
 ): void {
   React.useEffect(() => {
@@ -32,7 +36,11 @@ function useDismissOnOutside(
       return;
     }
     function onPointerDown(event: MouseEvent): void {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedInside = refs.some(
+        (ref) => ref.current !== null && ref.current.contains(target),
+      );
+      if (!clickedInside) {
         onClose();
       }
     }
@@ -47,7 +55,7 @@ function useDismissOnOutside(
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open, containerRef, onClose]);
+  }, [open, refs, onClose]);
 }
 
 /** Unified header create dropdown — CAP-004 entry point for all resource types. */
@@ -62,10 +70,44 @@ export function CreateResourceDropdown({
   const tEntityLabels = useTranslations('entity');
   const { t: tEntity } = useTerminology();
   const [open, setOpen] = React.useState(false);
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = React.useState<React.CSSProperties>({});
+  const [portalReady, setPortalReady] = React.useState(false);
+  const triggerWrapRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
   const close = React.useCallback(() => setOpen(false), []);
+  const dismissRefs = React.useMemo(
+    () => [triggerWrapRef, menuRef],
+    [],
+  );
 
-  useDismissOnOutside(open, containerRef, close);
+  useDismissOnOutside(open, dismissRefs, close);
+
+  React.useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function updatePosition(): void {
+      const trigger = triggerRef.current;
+      if (!trigger) {
+        return;
+      }
+      setMenuStyle(getCreateMenuFixedStyle(trigger.getBoundingClientRect()));
+    }
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open]);
 
   const items: CreateMenuItem[] = React.useMemo(
     () => [
@@ -119,9 +161,45 @@ export function CreateResourceDropdown({
     [close],
   );
 
+  const menu =
+    open && portalReady ? (
+      <div
+        ref={menuRef}
+        role="menu"
+        data-testid="create-resource-dropdown-menu"
+        style={menuStyle}
+        className={cn(
+          'overflow-hidden rounded-lg border border-border bg-surface-overlay p-1 shadow-xl',
+        )}
+      >
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="menuitem"
+            data-testid={item.testId}
+            onClick={() => handleSelect(item)}
+            className={cn(
+              'flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm',
+              'hover:bg-white/5 focus-visible:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+            )}
+          >
+            <span className="text-muted-foreground">{item.icon}</span>
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            {item.shortcutHint ? (
+              <kbd className="rounded-sm bg-black/20 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                {item.shortcutHint}
+              </kbd>
+            ) : null}
+          </button>
+        ))}
+      </div>
+    ) : null;
+
   return (
-    <div ref={containerRef} className="relative shrink-0">
+    <div ref={triggerWrapRef} className="relative shrink-0">
       <Button
+        ref={triggerRef}
         size="sm"
         className="shrink-0 gap-1"
         data-testid="create-resource-dropdown-trigger"
@@ -136,37 +214,9 @@ export function CreateResourceDropdown({
         <ChevronDown className="hidden h-3.5 w-3.5 opacity-70 sm:inline" aria-hidden />
       </Button>
 
-      {open ? (
-        <div
-          role="menu"
-          data-testid="create-resource-dropdown-menu"
-          className={cn(
-            'absolute end-0 top-full z-50 mt-1 min-w-[220px] overflow-hidden rounded-lg border border-border bg-surface-overlay p-1 shadow-xl',
-          )}
-        >
-          {items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="menuitem"
-              data-testid={item.testId}
-              onClick={() => handleSelect(item)}
-              className={cn(
-                'flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm',
-                'hover:bg-white/5 focus-visible:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-              )}
-            >
-              <span className="text-muted-foreground">{item.icon}</span>
-              <span className="min-w-0 flex-1 truncate">{item.label}</span>
-              {item.shortcutHint ? (
-                <kbd className="rounded-sm bg-black/20 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                  {item.shortcutHint}
-                </kbd>
-              ) : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      {menu && typeof document !== 'undefined'
+        ? createPortal(menu, document.body)
+        : null}
     </div>
   );
 }

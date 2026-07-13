@@ -76,11 +76,11 @@ export default function WorkspaceAgentsPage(): React.ReactElement {
       kind: 'Landi Flow',
       initials: 'LF',
       model: 'gemini-2.5-flash',
-      presence: 'idle',
+      presence: 'offline',
       focus: null,
       runtime: 'native',
       vendor: 'Landi Flow',
-      connection_state: 'connected',
+      connection_state: 'never_connected',
       is_builtin: true,
       capabilities: [],
     };

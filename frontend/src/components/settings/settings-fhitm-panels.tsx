@@ -166,55 +166,70 @@ export function TeamWorkflowStatesPanel({
 }
 
 export function PulseSchedulesSettingsPanel(): React.ReactElement {
+  const { workspace } = useWorkspace();
+  const mock = isMockAuthEnabled();
   const [schedules, setSchedules] = React.useState<PulseSchedule[]>([]);
 
   const reload = React.useCallback((): void => {
-    setSchedules(listPulseSchedules());
-  }, []);
+    setSchedules(mock ? listPulseSchedules(workspace.id) : []);
+  }, [mock, workspace.id]);
 
   React.useEffect(() => {
     reload();
   }, [reload]);
 
   return (
-    <section className="rounded-lg border border-border bg-card p-6" data-testid="pulse-schedules-settings" data-cap="CAP-065">
+    <section
+      className="rounded-lg border border-border bg-card p-6"
+      data-testid="pulse-schedules-settings"
+    >
       <h2 className="mb-4 text-lg font-medium">Pulse schedules</h2>
-      <ul className="mb-3 space-y-2">
-        {schedules.map((schedule) => (
-          <li
-            key={schedule.id}
-            className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
-            data-testid="pulse-schedule-row"
-          >
-            <span>
-              {schedule.label} · {schedule.cadence}
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              data-testid="pulse-schedule-run"
-              onClick={() => {
-                runPulseSchedule(schedule.id);
-                reload();
-              }}
+      {schedules.length === 0 ? (
+        <p className="mb-3 text-sm text-muted-foreground" data-testid="pulse-schedules-empty">
+          {mock
+            ? 'No schedules yet.'
+            : 'Pulse schedules are not available in live mode yet.'}
+        </p>
+      ) : (
+        <ul className="mb-3 space-y-2">
+          {schedules.map((schedule) => (
+            <li
+              key={schedule.id}
+              className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
+              data-testid="pulse-schedule-row"
             >
-              Run
-            </Button>
-          </li>
-        ))}
-      </ul>
-      <Button
-        type="button"
-        size="sm"
-        data-testid="pulse-schedule-create"
-        onClick={() => {
-          createPulseSchedule('Weekly digest', 'weekly');
-          reload();
-        }}
-      >
-        Add schedule
-      </Button>
+              <span>
+                {schedule.label} · {schedule.cadence}
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                data-testid="pulse-schedule-run"
+                onClick={() => {
+                  runPulseSchedule(schedule.id);
+                  reload();
+                }}
+              >
+                Run
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {mock ? (
+        <Button
+          type="button"
+          size="sm"
+          data-testid="pulse-schedule-create"
+          onClick={() => {
+            createPulseSchedule('Weekly digest', 'weekly', workspace.id);
+            reload();
+          }}
+        >
+          Add schedule
+        </Button>
+      ) : null}
     </section>
   );
 }

@@ -1,9 +1,11 @@
 import type { Initiative, InitiativeSettings } from '@landi-flow/core/types';
+import { isMockAuthEnabled } from '@/lib/api/config';
 import { DEMO_WORKSPACE_ID } from '@/lib/seed-data';
 
 export const INITIATIVES_STORAGE_KEY = 'landi-flow:initiatives';
 export const INITIATIVE_SETTINGS_STORAGE_KEY = 'landi-flow:initiative-settings';
 
+/** Demo seed — MOCK_AUTH only. Never surface in live UUID workspaces. */
 export const SEED_INITIATIVES: Initiative[] = [
   {
     id: 'initiative-q3',
@@ -40,7 +42,20 @@ const DEFAULT_SETTINGS: InitiativeSettings = {
   updated_at: '2026-07-01T10:00:00.000Z',
 };
 
+function emptySettings(workspaceId: string): InitiativeSettings {
+  return {
+    workspace_id: workspaceId,
+    enabled: true,
+    schedule_cadence: 'weekly',
+    updated_at: new Date().toISOString(),
+  };
+}
+
 function readInitiatives(): Initiative[] {
+  // Live mode must never invent demo portfolio rows — use `/api/initiatives`.
+  if (!isMockAuthEnabled()) {
+    return [];
+  }
   if (typeof window === 'undefined') {
     return SEED_INITIATIVES;
   }
@@ -57,7 +72,7 @@ function readInitiatives(): Initiative[] {
 }
 
 function writeInitiatives(rows: Initiative[]): void {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || !isMockAuthEnabled()) {
     return;
   }
   try {
@@ -68,16 +83,25 @@ function writeInitiatives(rows: Initiative[]): void {
 }
 
 export function listInitiatives(workspaceId: string = DEMO_WORKSPACE_ID): Initiative[] {
+  if (!isMockAuthEnabled()) {
+    return [];
+  }
   return readInitiatives().filter((row) => row.workspace_id === workspaceId);
 }
 
 export function getInitiativeById(initiativeId: string): Initiative | undefined {
+  if (!isMockAuthEnabled()) {
+    return undefined;
+  }
   return readInitiatives().find((row) => row.id === initiativeId);
 }
 
 export function readInitiativeSettings(
   workspaceId: string = DEMO_WORKSPACE_ID,
 ): InitiativeSettings {
+  if (!isMockAuthEnabled()) {
+    return emptySettings(workspaceId);
+  }
   if (typeof window === 'undefined') {
     return { ...DEFAULT_SETTINGS, workspace_id: workspaceId };
   }
@@ -103,7 +127,7 @@ export function readInitiativeSettings(
 }
 
 export function writeInitiativeSettings(settings: InitiativeSettings): void {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || !isMockAuthEnabled()) {
     return;
   }
   try {
@@ -114,6 +138,9 @@ export function writeInitiativeSettings(settings: InitiativeSettings): void {
 }
 
 export function attachEpicToInitiative(initiativeId: string, epicId: string): Initiative | null {
+  if (!isMockAuthEnabled()) {
+    return null;
+  }
   const rows = readInitiatives();
   const index = rows.findIndex((row) => row.id === initiativeId);
   if (index < 0) {
@@ -152,6 +179,8 @@ export function createInitiative(
     created_at: now,
     updated_at: now,
   };
-  writeInitiatives([...readInitiatives(), initiative]);
+  if (isMockAuthEnabled()) {
+    writeInitiatives([...readInitiatives(), initiative]);
+  }
   return initiative;
 }

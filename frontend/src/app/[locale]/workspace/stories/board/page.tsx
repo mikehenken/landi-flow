@@ -4,13 +4,14 @@ import * as React from 'react';
 import { AppShell } from '@/components/app-shell';
 import { BoardToolbar } from '@/components/board-toolbar';
 import { CollaborativeBoardLazy } from '@/components/collaboration/lazy-collaborative-board';
-import { StoryDetailSidebarPanel } from '@/components/story-detail-panel';
+import { StoryDetailSurface } from '@/components/story-detail-panel';
 import {
   StoriesViewProvider,
   useStoriesViewContext,
 } from '@/components/stories-view-provider';
 import { BoardColumnControls } from '@/components/views/board-column-controls';
 import { useBoardGroupByPreference } from '@/hooks/use-board-group-by-preference';
+import { useDefaultTeamLabel } from '@/hooks/use-default-team-label';
 import { useEpicStore } from '@/hooks/use-epic-store';
 import { useStoryStore } from '@/hooks/use-story-store';
 import { useTeamCycles } from '@/hooks/use-team-cycles';
@@ -20,7 +21,12 @@ import { storyStore } from '@/stores/story-store';
 import { useWorkspace } from '@/lib/workspace';
 import { createStory as persistCreateStory } from '@/controllers/story-controller';
 import { readHiddenColumnIds } from '@/lib/views/board-column-preferences';
-import { DEMO_TEAM_ID, DEMO_WORKFLOW_STATE_ROWS } from '@/lib/seed-data';
+import {
+  resolveBoardTeamId,
+  resolveBoardWorkflowStates,
+} from '@/lib/board/resolve-board-workflow-states';
+import { useStoryDeepLink } from '@/lib/story/use-story-deep-link';
+import { getWorkflowStatesForTeam } from '@/lib/api/workspace-context';
 
 function StoriesBoardBody(): React.ReactElement {
   const { workspace } = useWorkspace();
@@ -29,14 +35,26 @@ function StoriesBoardBody(): React.ReactElement {
   const { visibleStories } = useStoriesViewContext();
   const { groupBy, setGroupBy } = useBoardGroupByPreference();
   const { defaultTeamId } = useWorkspaceTeams(workspace.id);
-  const teamId = defaultTeamId ?? DEMO_TEAM_ID;
+  const teamId = resolveBoardTeamId(visibleStories, defaultTeamId);
   const { workflowStates } = useTeamWorkflowStates(workspace.id, teamId);
   const { cycles } = useTeamCycles(workspace.id, teamId);
-  const resolvedWorkflowStates =
-    workflowStates.length > 0 ? workflowStates : DEMO_WORKFLOW_STATE_ROWS;
+  const cachedStates = getWorkflowStatesForTeam();
+  const rosterStates = workflowStates.length > 0 ? workflowStates : cachedStates;
+  const resolvedWorkflowStates = resolveBoardWorkflowStates(visibleStories, rosterStates);
   const [hiddenColumnIds, setHiddenColumnIds] = React.useState<Set<string>>(() =>
-    readHiddenColumnIds(teamId),
+    teamId ? readHiddenColumnIds(teamId) : new Set<string>(),
   );
+
+  React.useEffect(() => {
+    if (!teamId) {
+      setHiddenColumnIds(new Set());
+      return;
+    }
+    setHiddenColumnIds(readHiddenColumnIds(teamId));
+  }, [teamId]);
+
+  useStoryDeepLink();
+
   const selectedStory =
     visibleStories.find((story) => story.id === selectedStoryId) ??
     storyStore.getServerSnapshot().stories.find((story) => story.id === selectedStoryId) ??
@@ -56,6 +74,9 @@ function StoriesBoardBody(): React.ReactElement {
 
   const handleQuickAdd = React.useCallback(
     (workflowStateId: string) => {
+      if (!teamId) {
+        return;
+      }
       void persistCreateStory({
         title: 'New Story',
         workspaceId: workspace.id,
@@ -74,7 +95,7 @@ function StoriesBoardBody(): React.ReactElement {
           onGroupByChange={setGroupBy}
           storyCount={visibleStories.length}
         />
-        {groupBy === 'none' ? (
+        {groupBy === 'none' && teamId && resolvedWorkflowStates.length > 0 ? (
           <BoardColumnControls
             teamId={teamId}
             workflowStates={resolvedWorkflowStates}
@@ -83,45 +104,50 @@ function StoriesBoardBody(): React.ReactElement {
           />
         ) : null}
         <div className="min-h-0 flex-1 overflow-hidden">
-          <CollaborativeBoardLazy
-            workspaceId={workspace.id}
-            teamId={teamId}
-            stories={visibleStories}
-            workflowStates={resolvedWorkflowStates}
-            storyTitles={storyTitles}
-            selectedStoryId={selectedStoryId}
-            onCardSelect={handleCardSelect}
-            groupBy={groupBy}
-            epics={epics}
-            cycles={cycles}
-            className="h-full"
-            hiddenColumnIds={hiddenColumnIds}
-            onQuickAdd={handleQuickAdd}
-          />
+          {teamId && resolvedWorkflowStates.length > 0 ? (
+            <CollaborativeBoardLazy
+              workspaceId={workspace.id}
+              teamId={teamId}
+              stories={visibleStories}
+              workflowStates={resolvedWorkflowStates}
+              storyTitles={storyTitles}
+              selectedStoryId={selectedStoryId}
+              onCardSelect={handleCardSelect}
+              groupBy={groupBy}
+              epics={epics}
+              cycles={cycles}
+              className="h-full"
+              hiddenColumnIds={hiddenColumnIds}
+              onQuickAdd={handleQuickAdd}
+            />
+          ) : (
+            <div
+              className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground"
+              data-testid="story-board-empty-roster"
+            >
+              {visibleStories.length === 0
+                ? 'No stories to show on the board.'
+                : resolvedWorkflowStates.length === 0
+                  ? 'Stories are missing workflow status.'
+                  : 'Loading workflow columns…'}
+            </div>
+          )}
         </div>
       </div>
-      {selectedStory ? (
-        <StoryDetailSidebarPanel
-          story={selectedStory}
-          onClose={() => storyStore.selectStory(null)}
-        />
-      ) : (
-        <aside
-          data-testid="story-detail-sidebar"
-          className="flex h-full w-full flex-col items-center justify-center border-t border-border p-6 text-center lg:w-[360px] lg:border-s lg:border-t-0"
-        >
-          <p className="text-sm text-muted-foreground">Select a Story to view properties</p>
-        </aside>
-      )}
+      <StoryDetailSurface
+        story={selectedStory}
+        onClose={() => storyStore.selectStory(null)}
+      />
     </div>
   );
 }
 
 export default function StoriesBoardPage(): React.ReactElement {
   const { stories } = useStoryStore();
+  const teamLabel = useDefaultTeamLabel();
 
   return (
-    <AppShell viewTitle="Story Board" breadcrumbs={['Team Design', 'Board']}>
+    <AppShell viewTitle="Story Board" breadcrumbs={[teamLabel, 'Board']}>
       <StoriesViewProvider stories={stories} layout="board">
         <StoriesBoardBody />
       </StoriesViewProvider>

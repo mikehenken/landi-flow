@@ -122,7 +122,6 @@ function LoadMoreButton({
 
 /** MCP-IDE-003: engineering signals attached via MCP or assignment flow. */
 export function StorySignalsPanel({
-  story: _story,
   className,
   highlightedSignalId = null,
   activity,
@@ -214,7 +213,7 @@ export function StorySignalsPanel({
         </p>
       ) : signals.length === 0 ? (
         <p className="text-sm text-muted-foreground" data-testid="story-signals-empty">
-          No engineering signals yet — attach via MCP <code className="text-xs">signal.attach</code> or agent assignment.
+          No engineering signals yet. Signals appear when agents attach progress updates or when you assign an agent to this story.
         </p>
       ) : (
         <div className="space-y-2">

@@ -1,6 +1,7 @@
 import type { ActivityEvent, InboxNotification } from '@landi-flow/core/types';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { apiList } from '@/lib/api/client';
+import { dedupeActivityEvents } from '@/lib/inbox/dedupe-activity-events';
 import { deriveSeedActivity, deriveSeedNotifications } from '@/lib/inbox/derive-inbox-seed';
 import { storyStore } from '@/stores/story-store';
 import { inboxStore } from '@/stores/inbox-store';
@@ -15,10 +16,11 @@ export async function loadInboxNotifications(workspaceId: string): Promise<Inbox
 
 export async function loadInboxActivity(workspaceId: string): Promise<ActivityEvent[]> {
   if (isMockAuthEnabled()) {
-    return deriveSeedActivity(storyStore.getServerSnapshot().stories);
+    return dedupeActivityEvents(deriveSeedActivity(storyStore.getServerSnapshot().stories));
   }
 
-  return apiList<ActivityEvent>(`workspaces/${workspaceId}/inbox/activity`);
+  const events = await apiList<ActivityEvent>(`workspaces/${workspaceId}/inbox/activity`);
+  return dedupeActivityEvents(events);
 }
 
 export async function hydrateInbox(workspaceId: string): Promise<void> {

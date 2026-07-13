@@ -9,6 +9,6 @@ const UUID_PATTERN =
  * store hydration) must wait for a resolved id before firing, otherwise
  * Supabase rejects the request with `invalid input syntax for type uuid`.
  */
-export function isWorkspaceUuid(value: string | null | undefined): boolean {
+export function isWorkspaceUuid(value: string | null | undefined): value is string {
   return typeof value === 'string' && UUID_PATTERN.test(value);
 }

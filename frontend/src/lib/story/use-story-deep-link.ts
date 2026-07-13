@@ -1,0 +1,78 @@
+'use client';
+
+import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from '@/i18n/navigation';
+import {
+  buildStoryModalQueryString,
+  openStoryModal,
+  resolveStoryIdFromQuery,
+  type OpenStoryModalOptions,
+} from '@/lib/story/open-story-modal';
+import { isStoryDetailSectionId } from '@/lib/story/story-detail-sections';
+import { useStoryStore } from '@/hooks/use-story-store';
+import { storyStore } from '@/stores/story-store';
+
+/**
+ * Opens story detail from `?story=` (identifier or id) and keeps the URL in sync
+ * when selection clears. Shared by inbox, stories list, and board.
+ */
+export function useStoryDeepLink(): void {
+  const { selectedStoryId, stories } = useStoryStore();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  React.useEffect(() => {
+    const storyParam = searchParams.get('story');
+    if (!storyParam || stories.length === 0) {
+      return;
+    }
+
+    const storyId = resolveStoryIdFromQuery(storyParam, stories);
+    if (!storyId) {
+      return;
+    }
+
+    const sectionParam = searchParams.get('section');
+    const signalParam = searchParams.get('signal');
+    const section =
+      sectionParam && isStoryDetailSectionId(sectionParam) ? sectionParam : undefined;
+
+    const focus = storyStore.getServerSnapshot().detailFocus;
+    if (
+      selectedStoryId === storyId &&
+      focus.section === (section ?? null) &&
+      focus.highlightedSignalId === (signalParam ?? null)
+    ) {
+      return;
+    }
+
+    openStoryModal(storyId, {
+      section,
+      highlightedSignalId: signalParam,
+    });
+  }, [searchParams, selectedStoryId, stories]);
+
+  React.useEffect(() => {
+    if (selectedStoryId !== null) {
+      return;
+    }
+    if (!searchParams.get('story')) {
+      return;
+    }
+    router.replace(pathname, { scroll: false });
+  }, [pathname, router, searchParams, selectedStoryId]);
+}
+
+export function syncStoryModalUrl(
+  pathname: string,
+  story: { id: string; identifier: string } | undefined,
+  options?: OpenStoryModalOptions,
+): string {
+  if (!story) {
+    return pathname;
+  }
+  const query = buildStoryModalQueryString(story, options);
+  return query.length > 0 ? `${pathname}?${query}` : pathname;
+}

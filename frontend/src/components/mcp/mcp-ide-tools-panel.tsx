@@ -47,7 +47,7 @@ export function McpIdeToolsPanel(): React.ReactElement {
       <header>
         <h1 className="text-lg font-semibold">IDE MCP tools</h1>
         <p className="text-sm text-muted-foreground">
-          Tools available to Cursor, Claude Code, Antigravity, and OpenCode via MCP (MCP-IDE-001).
+          Tools available to Cursor, Claude Code, Antigravity, and OpenCode via the IDE integration.
         </p>
         {live !== null ? (
           <p className="text-xs text-muted-foreground mt-1" data-testid="mcp-tools-live-flag">

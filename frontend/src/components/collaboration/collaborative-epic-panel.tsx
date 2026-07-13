@@ -15,6 +15,7 @@ import { Input, EpicBadge, cn } from '@landi-flow/ui';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 import { getEpicStatusCategory } from '@/lib/epic-status';
+import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 import { CollaborativeRoom } from './collaboration-provider';
 import { CursorOverlay, PresenceAvatars } from './presence-cursors';
 import { CollaborativeComments } from './collaborative-comments';
@@ -33,7 +34,10 @@ export function CollaborativeEpicPanel({
   children,
   className,
 }: CollaborativeEpicPanelProps): React.ReactElement {
-  const liveblocksReady = isLiveblocksConfigured() && !isMockAuthEnabled();
+  const liveblocksReady =
+    isLiveblocksConfigured() &&
+    !isMockAuthEnabled() &&
+    isWorkspaceUuid(epic.workspace_id);
   const storyOrder = React.useMemo(
     () => epicStories.map((story) => story.id),
     [epicStories],

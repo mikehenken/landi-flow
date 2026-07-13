@@ -23,10 +23,9 @@ const DEFAULT_PAGE_META: WorkspacePageMeta = {
 
 /** Routes that render their own full-page chrome (no PM shell). */
 function isStandaloneWorkspaceRoute(pathname: string): boolean {
+  // Account overview uses AppShell; only nested account segments stay standalone until migrated.
   return (
-    pathname === '/workspace/account' ||
-    pathname.startsWith('/workspace/account/') ||
-    pathname.startsWith('/workspace/dev/')
+    pathname.startsWith('/workspace/account/') || pathname.startsWith('/workspace/dev/')
   );
 }
 

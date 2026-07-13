@@ -12,26 +12,11 @@ import {
 } from '@/components/story-detail-layout-context';
 import { StoryDetailLayoutToggle } from '@/components/story-detail-layout-toggle';
 import { useStoryStore } from '@/hooks/use-story-store';
+import {
+  isStoryModalRoute,
+  preservesStorySelection,
+} from '@/lib/story/story-detail-routes';
 import { storyStore } from '@/stores/story-store';
-
-const STORY_DETAIL_ROUTES = ['/workspace/stories', '/workspace/stories/board'] as const;
-const STORY_MODAL_ROUTES = [...STORY_DETAIL_ROUTES, '/workspace/inbox'] as const;
-const STORY_SELECTION_PRESERVE_ROUTES = [
-  ...STORY_DETAIL_ROUTES,
-  '/workspace/inbox',
-] as const;
-
-function isStoryModalRoute(pathname: string): boolean {
-  return STORY_MODAL_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
-}
-
-function preservesStorySelection(pathname: string): boolean {
-  return STORY_SELECTION_PRESERVE_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
-}
 
 export interface StoryDetailLayoutRootProps {
   children: React.ReactNode;
@@ -56,6 +41,8 @@ function StoryDetailModalHost(): React.ReactElement | null {
   const selectedStory = stories.find((story) => story.id === selectedStoryId) ?? null;
 
   const dialogRef = React.useRef<HTMLDialogElement>(null);
+  /** Ignore native `close` fired by programmatic `dialog.close()` / unmount. */
+  const ignoreNativeCloseRef = React.useRef(false);
   const onStoryModalRoute = isStoryModalRoute(pathname);
   const showModal =
     isModal && selectedStory !== null && (onStoryModalRoute || isPinned);
@@ -77,16 +64,28 @@ function StoryDetailModalHost(): React.ReactElement | null {
 
     if (showModal) {
       if (!dialog.open) {
-        dialog.showModal();
+        try {
+          dialog.showModal();
+        } catch {
+          // Already open or not in document — ignore.
+        }
       }
       return;
     }
 
     if (dialog.open) {
+      ignoreNativeCloseRef.current = true;
       dialog.close();
+      ignoreNativeCloseRef.current = false;
     }
     setExpanded(false);
-  }, [showModal, setExpanded]);
+  }, [showModal, setExpanded, selectedStoryId]);
+
+  React.useEffect(() => {
+    return () => {
+      ignoreNativeCloseRef.current = true;
+    };
+  }, []);
 
   const handleCloseModal = React.useCallback((): void => {
     setPinned(false);
@@ -95,7 +94,16 @@ function StoryDetailModalHost(): React.ReactElement | null {
     storyStore.selectStory(null);
   }, [setExpanded, setPinned]);
 
-  if (!showModal || !selectedStory) {
+  const handleNativeClose = React.useCallback((): void => {
+    if (ignoreNativeCloseRef.current) {
+      return;
+    }
+    handleCloseModal();
+  }, [handleCloseModal]);
+
+  // Keep the dialog node mounted whenever modal layout is active so `showModal()`
+  // can run against a stable ref (unmounting on hide races with native close).
+  if (!isModal) {
     return null;
   }
 
@@ -105,7 +113,9 @@ function StoryDetailModalHost(): React.ReactElement | null {
       story={selectedStory}
       isExpanded={isExpanded}
       isPinned={isPinned}
+      visible={showModal}
       onClose={handleCloseModal}
+      onNativeClose={handleNativeClose}
       onTogglePin={() => setPinned((prev) => !prev)}
       onToggleExpand={() => setExpanded((prev) => !prev)}
     />
@@ -114,10 +124,12 @@ function StoryDetailModalHost(): React.ReactElement | null {
 
 interface StoryDetailModalProps {
   dialogRef: React.RefObject<HTMLDialogElement | null>;
-  story: Story;
+  story: Story | null;
   isExpanded: boolean;
   isPinned: boolean;
+  visible: boolean;
   onClose: () => void;
+  onNativeClose: () => void;
   onTogglePin: () => void;
   onToggleExpand: () => void;
 }
@@ -127,11 +139,13 @@ function StoryDetailModal({
   story,
   isExpanded,
   isPinned,
+  visible,
   onClose,
+  onNativeClose,
   onTogglePin,
   onToggleExpand,
 }: StoryDetailModalProps): React.ReactElement {
-  const headerActions = (
+  const headerActions = story ? (
     <StoryDetailModalControls
       isPinned={isPinned}
       isExpanded={isExpanded}
@@ -139,13 +153,14 @@ function StoryDetailModal({
       onTogglePin={onTogglePin}
       onToggleExpand={onToggleExpand}
     />
-  );
+  ) : null;
 
   return (
     <dialog
       ref={dialogRef}
       data-testid="story-detail-modal"
       aria-labelledby="story-detail-modal-title"
+      aria-hidden={visible ? undefined : true}
       className={cn(
         'fixed inset-0 z-50 m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-0',
         'backdrop:bg-black/50 backdrop:backdrop-blur-sm',
@@ -154,34 +169,36 @@ function StoryDetailModal({
         event.preventDefault();
         onClose();
       }}
-      onClose={onClose}
+      onClose={onNativeClose}
     >
-      <div
-        className={cn(
-          'flex min-h-full',
-          isExpanded ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-[5vh_5vw]',
-        )}
-        onClick={(event) => {
-          if (event.target === event.currentTarget && !isPinned) {
-            onClose();
-          }
-        }}
-      >
+      {story && visible ? (
         <div
           className={cn(
-            'relative flex min-h-0 w-full flex-col overflow-hidden border border-border/80 shadow-2xl',
-            'bg-[#0b0e14]',
-            isExpanded
-              ? 'h-full max-h-full rounded-none'
-              : 'h-[min(90vh,960px)] max-h-[90vh] w-[min(90vw,1400px)] max-w-[90vw] rounded-[10px]',
+            'flex min-h-full',
+            isExpanded ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-[5vh_5vw]',
           )}
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !isPinned) {
+              onClose();
+            }
+          }}
         >
-          <span id="story-detail-modal-title" className="sr-only">
-            {story.identifier} — {story.title}
-          </span>
-          <StoryDetailBody story={story} headerActions={headerActions} />
+          <div
+            className={cn(
+              'relative flex min-h-0 w-full flex-col overflow-hidden border border-border/80 shadow-2xl',
+              'bg-[#0b0e14]',
+              isExpanded
+                ? 'h-full max-h-full rounded-none'
+                : 'h-[min(90vh,960px)] max-h-[90vh] w-[min(90vw,1400px)] max-w-[90vw] rounded-[10px]',
+            )}
+          >
+            <span id="story-detail-modal-title" className="sr-only">
+              {story.identifier} — {story.title}
+            </span>
+            <StoryDetailBody story={story} headerActions={headerActions} />
+          </div>
         </div>
-      </div>
+      ) : null}
     </dialog>
   );
 }

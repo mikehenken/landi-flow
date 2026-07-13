@@ -378,6 +378,11 @@ export class McpProjectService {
     epic_id?: string | null;
     signal: Record<string, unknown>;
   }): Promise<MutationResult> {
+    const existing = await this.findExistingSignalAttachment(input);
+    if (existing) {
+      return existing;
+    }
+
     return this.execAgentMutation(
       'attach_signal',
       'signal.attached',
@@ -389,6 +394,85 @@ export class McpProjectService {
       },
       { targetType: 'signal', mutationType: 'attach_signal', autoApply: true }
     );
+  }
+
+  /**
+   * Idempotent attach: reuse an existing signal.attached row when correlation_id
+   * or kind+status+source(+trace) fingerprint already matches for the same story.
+   */
+  private async findExistingSignalAttachment(input: {
+    story_id?: string | null;
+    epic_id?: string | null;
+    signal: Record<string, unknown>;
+  }): Promise<MutationResult | null> {
+    const storyId = input.story_id ?? null;
+    if (!storyId || !isUuid(storyId)) {
+      return null;
+    }
+
+    const signal = input.signal;
+    const correlationFromSignal =
+      typeof signal.correlation_id === 'string' && signal.correlation_id.length > 0
+        ? signal.correlation_id
+        : null;
+    const correlationId = correlationFromSignal ?? this.correlationId;
+    const kind = typeof signal.kind === 'string' ? signal.kind : null;
+    const status = typeof signal.status === 'string' ? signal.status : null;
+    const source = typeof signal.source === 'string' ? signal.source : null;
+    const traceId = typeof signal.trace_id === 'string' ? signal.trace_id : null;
+
+    const { data, error } = await this.db
+      .from('activity_events')
+      .select('id, payload, correlation_id')
+      .eq('workspace_id', this.workspaceId)
+      .eq('story_id', storyId)
+      .eq('event_type', 'signal.attached')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error || !data) {
+      return null;
+    }
+
+    for (const row of data as Array<{
+      id: string;
+      payload: Record<string, unknown> | null;
+      correlation_id: string | null;
+    }>) {
+      const payload = row.payload ?? {};
+      const rowCorrelation =
+        (typeof payload.correlation_id === 'string' ? payload.correlation_id : null) ??
+        row.correlation_id;
+      if (correlationId && rowCorrelation === correlationId) {
+        return {
+          entity: { id: row.id, ...(row.payload ?? {}) },
+          status: 'applied',
+          action_id: row.id,
+          outbox_event_id: null,
+        };
+      }
+
+      const rowKind = typeof payload.kind === 'string' ? payload.kind : null;
+      const rowStatus = typeof payload.status === 'string' ? payload.status : null;
+      const rowSource = typeof payload.source === 'string' ? payload.source : null;
+      const rowTrace = typeof payload.trace_id === 'string' ? payload.trace_id : null;
+      if (
+        kind &&
+        rowKind === kind &&
+        rowStatus === status &&
+        rowSource === source &&
+        rowTrace === traceId
+      ) {
+        return {
+          entity: { id: row.id, ...(row.payload ?? {}) },
+          status: 'applied',
+          action_id: row.id,
+          outbox_event_id: null,
+        };
+      }
+    }
+
+    return null;
   }
 }
 

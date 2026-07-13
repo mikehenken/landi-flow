@@ -14,6 +14,7 @@ import {
 import { Input, cn } from '@landi-flow/ui';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
+import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 import { CollaborativeRoom } from './collaboration-provider';
 import { CursorOverlay, PresenceAvatars } from './presence-cursors';
 import { CollaborativeComments } from './collaborative-comments';
@@ -28,7 +29,10 @@ export function CollaborativeStoryPanel({
   story,
   className,
 }: CollaborativeStoryPanelProps): React.ReactElement {
-  const liveblocksReady = isLiveblocksConfigured() && !isMockAuthEnabled();
+  const liveblocksReady =
+    isLiveblocksConfigured() &&
+    !isMockAuthEnabled() &&
+    isWorkspaceUuid(story.workspace_id);
   const hydrated = React.useMemo(
     () => (liveblocksReady ? hydrateStoryRoom(story) : null),
     [liveblocksReady, story],

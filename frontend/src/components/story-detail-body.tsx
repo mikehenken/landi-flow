@@ -19,6 +19,7 @@ import {
 } from '@/components/collaboration';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
+import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 
 export interface StoryDetailBodyProps {
   story: Story;
@@ -40,7 +41,10 @@ export function StoryDetailBody({
   className,
   headerActions,
 }: StoryDetailBodyProps): React.ReactElement {
-  const liveblocksReady = isLiveblocksConfigured() && !isMockAuthEnabled();
+  const liveblocksReady =
+    isLiveblocksConfigured() &&
+    !isMockAuthEnabled() &&
+    isWorkspaceUuid(story.workspace_id);
   const hydrated = React.useMemo(
     () => (liveblocksReady ? hydrateStoryRoom(story) : null),
     [liveblocksReady, story],

@@ -116,7 +116,12 @@ export function AgentRosterPanel({
 
       <RosterSection title={tAgents('roster.agents')}>
 
-        {chatAgents.map((agent) => (
+        {chatAgents.length === 0 ? (
+          <p className="px-2 py-2 text-xs text-muted-foreground" data-testid="agents-roster-empty">
+            No agents connected yet.
+          </p>
+        ) : (
+          chatAgents.map((agent) => (
 
           <button
 
@@ -176,7 +181,8 @@ export function AgentRosterPanel({
 
           </button>
 
-        ))}
+        ))
+        )}
 
       </RosterSection>
 

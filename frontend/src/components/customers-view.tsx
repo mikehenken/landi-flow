@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Button, Input, cn, useTranslations } from '@landi-flow/ui';
-import { LayoutGrid, ListFilter, Plus, Search, Users } from 'lucide-react';
+import { Plus, Search, Users } from 'lucide-react';
 import type { CustomerRecord } from '@/lib/seed-data';
 
 const CUSTOMER_DOCS_URL =
@@ -75,26 +75,6 @@ export function CustomersView({
               data-testid="customers-create-button"
             >
               <Plus className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Filter"
-              title="Filter"
-              disabled
-            >
-              <ListFilter className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Display"
-              title="Display"
-              disabled
-            >
-              <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
         </div>
