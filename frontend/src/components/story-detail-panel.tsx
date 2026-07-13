@@ -395,16 +395,25 @@ export function StoryDetailSidebarPanel({
 }
 
 export interface StoryDetailSurfaceProps {
-  story: Story | null;
+  story?: Story | null;
   onClose: () => void;
 }
 
 /** Sidebar panel when layout is sidebar; modal is rendered by StoryDetailModalHost. */
 export function StoryDetailSurface({
-  story,
+  story: storyProp,
   onClose,
 }: StoryDetailSurfaceProps): React.ReactElement | null {
   const { isSidebar } = useStoryDetailLayout();
+  const selectedStoryId = useSelectedStoryId();
+  const { stories } = useStoryStore();
+  const story =
+    storyProp ??
+    (selectedStoryId
+      ? stories.find((row) => row.id === selectedStoryId) ??
+        storyStore.getServerSnapshot().stories.find((row) => row.id === selectedStoryId) ??
+        null
+      : null);
 
   if (!story || !isSidebar) {
     return null;

@@ -23,10 +23,6 @@ function StoriesListBody(): React.ReactElement {
   const { visibleStories, displayProperties } = useStoriesViewContext();
   useStoryDeepLink();
   const handleStorySelect = useStoryModalSelect();
-  const selectedStory =
-    visibleStories.find((story) => story.id === selectedStoryId) ??
-    storyStore.getServerSnapshot().stories.find((story) => story.id === selectedStoryId) ??
-    null;
 
   return (
     <div className="flex h-full flex-col lg:flex-row">
@@ -42,10 +38,7 @@ function StoriesListBody(): React.ReactElement {
           />
         </div>
       </div>
-      <StoryDetailSurface
-        story={selectedStory}
-        onClose={() => storyStore.selectStory(null)}
-      />
+      <StoryDetailSurface onClose={() => storyStore.selectStory(null)} />
     </div>
   );
 }
