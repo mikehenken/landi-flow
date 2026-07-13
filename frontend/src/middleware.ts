@@ -5,7 +5,7 @@ import { routing } from '@/i18n/routing';
 import { resolveWorkspaceIdFromHost } from '@/lib/workspace/registry';
 import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 
-const PROTECTED_PREFIXES = ['/workspace', '/settings', '/onboarding'] as const;
+const PROTECTED_PREFIXES = ['/workspace', '/settings', '/onboarding', '/oauth'] as const;
 const AUTH_PAGES = ['/auth/login', '/auth/signup'] as const;
 
 const handleI18nRouting = createIntlMiddleware(routing);
@@ -64,10 +64,15 @@ function resolveAuthenticatedAuthRedirect(
   if (!redirectParam) {
     return localeAwarePath(locale, '/workspace/inbox');
   }
-  const normalized = redirectParam.startsWith('/') ? redirectParam : `/${redirectParam}`;
+  const questionIndex = redirectParam.indexOf('?');
+  const pathPart =
+    questionIndex === -1 ? redirectParam : redirectParam.slice(0, questionIndex);
+  const queryPart = questionIndex === -1 ? '' : redirectParam.slice(questionIndex);
+  const normalized = pathPart.startsWith('/') ? pathPart : `/${pathPart}`;
   const bare = stripLocalePrefix(normalized);
-  if (isProtectedPath(normalized) || bare.startsWith('/workspace/')) {
-    return localeAwarePath(locale, bare);
+  const destination = `${bare}${queryPart}`;
+  if (isProtectedPath(normalized) || bare.startsWith('/workspace/') || bare.startsWith('/oauth/')) {
+    return localeAwarePath(locale, destination);
   }
   return localeAwarePath(locale, '/workspace/inbox');
 }
@@ -107,7 +112,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     console.error('[middleware] Supabase session update failed:', error);
     if (isProtectedPath(pathname)) {
       const loginUrl = new URL(localeAwarePath(locale, '/auth/login'), request.url);
-      loginUrl.searchParams.set('redirect', stripLocalePrefix(pathname));
+      const barePath = stripLocalePrefix(pathname);
+      const redirectTarget = request.nextUrl.search
+        ? `${barePath}${request.nextUrl.search}`
+        : barePath;
+      loginUrl.searchParams.set('redirect', redirectTarget);
       return NextResponse.redirect(loginUrl);
     }
     return intlResponse;
@@ -118,7 +127,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   if (isProtectedPath(pathname) && !user) {
     const loginUrl = new URL(localeAwarePath(locale, '/auth/login'), request.url);
-    loginUrl.searchParams.set('redirect', stripLocalePrefix(pathname));
+    const barePath = stripLocalePrefix(pathname);
+    const redirectTarget = request.nextUrl.search
+      ? `${barePath}${request.nextUrl.search}`
+      : barePath;
+    loginUrl.searchParams.set('redirect', redirectTarget);
     return NextResponse.redirect(loginUrl);
   }
 

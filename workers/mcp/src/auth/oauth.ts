@@ -18,7 +18,12 @@ import {
   randomToken,
   verifyPkceS256,
 } from '../lib/crypto.js';
-import { resolveIssuer, resolveResourceUri, type McpWorkerEnv } from '../env.js';
+import { resolveIssuer, resolveOAuthConsentPageUrl, resolveResourceUri, type McpWorkerEnv } from '../env.js';
+import {
+  bearerPresentOnRequest,
+  buildConsentRedirectResponse,
+  shouldRedirectToOAuthConsent,
+} from './oauth-consent.js';
 import {
   generateClientSecret,
   verifyClientSecret,
@@ -90,9 +95,10 @@ export class OAuthService {
   }
 
   authorizationServerMetadata(): Response {
+    const consentPageUrl = resolveOAuthConsentPageUrl(this.env);
     return jsonResponse({
       issuer: this.issuer,
-      authorization_endpoint: `${this.issuer}/authorize`,
+      authorization_endpoint: consentPageUrl ?? `${this.issuer}/authorize`,
       token_endpoint: `${this.issuer}/token`,
       registration_endpoint: `${this.issuer}/register`,
       revocation_endpoint: `${this.issuer}/revoke`,
@@ -211,9 +217,6 @@ export class OAuthService {
     if (resource && resource !== this.resourceUri) {
       return errorResponse('invalid_target', 'resource does not match this MCP server', 400);
     }
-    if (!workspaceId) {
-      return errorResponse('invalid_request', 'workspace_id is required for consent', 400);
-    }
 
     const client = await this.loadClient(clientId);
     if (!client) {
@@ -221,6 +224,21 @@ export class OAuthService {
     }
     if (redirectUri && client.redirect_uris.length > 0 && !client.redirect_uris.includes(redirectUri)) {
       return errorResponse('invalid_request', 'redirect_uri not registered for client', 400);
+    }
+
+    const consentPageUrl = resolveOAuthConsentPageUrl(this.env);
+    if (
+      shouldRedirectToOAuthConsent({
+        bearerPresent: bearerPresentOnRequest(request),
+        workspaceId,
+        consentPageUrl,
+      })
+    ) {
+      return buildConsentRedirectResponse(consentPageUrl!, params);
+    }
+
+    if (!workspaceId) {
+      return errorResponse('invalid_request', 'workspace_id is required for consent', 400);
     }
 
     // Establish consenting user identity from the Supabase session.

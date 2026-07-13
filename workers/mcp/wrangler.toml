@@ -18,6 +18,7 @@ local_protocol = "http"
 #   SUPABASE_SERVICE_ROLE_KEY
 #   MCP_OAUTH_ISSUER            # e.g. https://mcp.flow.landi.build
 #   MCP_RESOURCE_URI            # e.g. https://mcp.flow.landi.build/mcp  (RFC 8707 audience)
+#   MCP_OAUTH_CONSENT_BASE_URL  # e.g. https://flow.landi.build (browser consent UI)
 #   MCP_CREDENTIAL_PEPPER       # server-side HMAC pepper for credential hashing
 #   CLOUDFLARE_ACCOUNT_ID
 #   CLOUDFLARE_AI_GATEWAY_ENDPOINT

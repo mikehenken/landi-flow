@@ -11,6 +11,8 @@ export interface McpWorkerEnv {
   // MCP / OAuth
   MCP_OAUTH_ISSUER?: string;
   MCP_RESOURCE_URI?: string;
+  /** Web app origin for browser OAuth consent (e.g. https://flow.landi.build). */
+  MCP_OAUTH_CONSENT_BASE_URL?: string;
   /** Optional server-side pepper for HMAC-SHA256 credential hashing (defense in depth). */
   MCP_CREDENTIAL_PEPPER?: string;
 
@@ -39,6 +41,7 @@ export const MCP_ENV_KEY_NAMES = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'MCP_OAUTH_ISSUER',
   'MCP_RESOURCE_URI',
+  'MCP_OAUTH_CONSENT_BASE_URL',
   'MCP_CREDENTIAL_PEPPER',
   'CLOUDFLARE_ACCOUNT_ID',
   'CLOUDFLARE_AI_GATEWAY_ENDPOINT',
@@ -71,4 +74,20 @@ export function resolveResourceUri(env: McpWorkerEnv, requestUrl: URL): string {
 
 export function resolveIssuer(env: McpWorkerEnv, requestUrl: URL): string {
   return (env.MCP_OAUTH_ISSUER ?? `${requestUrl.protocol}//${requestUrl.host}`).replace(/\/$/, '');
+}
+
+/** Default locale segment for consent page paths (matches @landi-flow/ui DEFAULT_LOCALE). */
+export const MCP_OAUTH_CONSENT_DEFAULT_LOCALE = 'en';
+
+/**
+ * Browser consent page URL for MCP OAuth (`/{locale}/oauth/mcp/consent`).
+ * Returns null when MCP_OAUTH_CONSENT_BASE_URL is unset.
+ */
+export function resolveOAuthConsentPageUrl(env: McpWorkerEnv): string | null {
+  const base = env.MCP_OAUTH_CONSENT_BASE_URL?.trim();
+  if (!base) {
+    return null;
+  }
+  const origin = base.replace(/\/$/, '');
+  return `${origin}/${MCP_OAUTH_CONSENT_DEFAULT_LOCALE}/oauth/mcp/consent`;
 }

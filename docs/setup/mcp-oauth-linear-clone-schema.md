@@ -11,8 +11,9 @@ Landi Flow stores **all application data** in the Postgres schema `linear_clone`
 | `SUPABASE_SERVICE_ROLE_KEY` | Workers (API + MCP) | Service-role DB access (server-only) |
 | `MCP_OAUTH_ISSUER` | MCP Worker | OAuth authorization server issuer URL |
 | `MCP_RESOURCE_URI` | MCP Worker | RFC 8707 resource identifier for tokens |
+| `MCP_OAUTH_CONSENT_BASE_URL` | MCP Worker | Web app origin for browser OAuth consent UI |
 | `MCP_CREDENTIAL_PEPPER` | MCP Worker | HMAC pepper for API keys / opaque tokens |
-| `MCP_WORKER_URL` | Next.js (optional) | Agent Action Bus target |
+| `MCP_WORKER_URL` | Next.js | Authorize proxy + management API target |
 | `MCP_WORKER_TOKEN` | Next.js (optional) | Server-to-server MCP management |
 
 Never commit values. Production secrets belong in Cloudflare Workers secrets / GCP Secret Manager — not in repo files.
@@ -37,6 +38,10 @@ Inbound credentials (`workers/mcp/src/auth/authenticate.ts`):
 DB client: `createServiceDbClient()` → `LINEAR_CLONE_SCHEMA` only (`workers/mcp/src/lib/db.ts`).
 
 OAuth surfaces: `/.well-known/oauth-*`, `/authorize`, `/token`, `/revoke`, `/register`, `/mcp`.
+
+Browser clients without a Bearer token are redirected to  
+`{MCP_OAUTH_CONSENT_BASE_URL}/en/oauth/mcp/consent` (Next.js). After login + workspace selection,
+`GET /api/oauth/mcp/authorize` forwards the Supabase session JWT to the worker `/authorize` endpoint.
 
 ### 3. API Worker (`workers/api`)
 
