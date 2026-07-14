@@ -68,6 +68,12 @@ class CustomerStore extends BaseDomainStore<CustomerStoreState> {
     this.state = { ...this.state, error, loading: false };
     this.notify();
   }
+
+  /** Clear customers — used on soft workspace switch. */
+  reset(): void {
+    this.state = emptyState();
+    this.notify();
+  }
 }
 
 export const customerStore = CustomerStore.getInstance();

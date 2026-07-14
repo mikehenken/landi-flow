@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { AssignableMembersProvider } from '@/hooks/use-assignable-members';
+import { QueryProvider } from '@/components/query-provider';
 import { CollaborationProvider } from '@/components/collaboration';
 import { SupabaseSessionProvider } from '@/lib/supabase/session-provider';
 import { ActiveWorkspaceProvider } from '@/lib/workspace/active-workspace-provider';
@@ -81,16 +82,16 @@ export default async function LocaleLayout({
         <LiveblocksVendorBadgeGate />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <SupabaseSessionProvider>
-            <ActiveWorkspaceProvider
-              initialWorkspace={workspace}
-              serverAuthenticated={Boolean(serverUser)}
-            >
-              <CollaborationProvider>
-                <AssignableMembersProvider>
-                  {children}
-                </AssignableMembersProvider>
-              </CollaborationProvider>
-            </ActiveWorkspaceProvider>
+            <QueryProvider>
+              <ActiveWorkspaceProvider
+                initialWorkspace={workspace}
+                serverAuthenticated={Boolean(serverUser)}
+              >
+                <CollaborationProvider>
+                  <AssignableMembersProvider>{children}</AssignableMembersProvider>
+                </CollaborationProvider>
+              </ActiveWorkspaceProvider>
+            </QueryProvider>
           </SupabaseSessionProvider>
         </NextIntlClientProvider>
       </body>

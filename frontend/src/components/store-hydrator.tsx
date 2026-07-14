@@ -67,6 +67,19 @@ function resetHydrationForWorkspaceChange(nextWorkspaceId: string): void {
 }
 
 /**
+ * Full reset for soft workspace switches (no full page reload).
+ * Clears hydration flags so StoreHydrator re-runs for the next workspace.
+ */
+export function resetStoreHydrationState(): void {
+  setHydrationPromise(null);
+  setStoresHydrated(false);
+  setHydratedWorkspaceId(null);
+  if (typeof document !== 'undefined') {
+    document.documentElement.removeAttribute('data-app-hydrated');
+  }
+}
+
+/**
  * Skip refetch only when the shared singleton actually holds stories.
  * Prevents "hydrated" flags on one chunk from masking an empty global store.
  */
@@ -81,7 +94,11 @@ function isStoryStoreHydratedForWorkspace(workspaceId: string): boolean {
   );
 }
 
-async function hydrateFromApi(workspaceId: string): Promise<void> {
+/**
+ * Priority path: runtime context + stories + epics (route-needed).
+ * Customers/members hydrate in the background after first paint.
+ */
+async function hydratePriorityFromApi(workspaceId: string): Promise<void> {
   const hasExistingData =
     storyStore.getServerSnapshot().stories.length > 0 ||
     epicStore.getServerSnapshot().epics.length > 0;
@@ -89,31 +106,35 @@ async function hydrateFromApi(workspaceId: string): Promise<void> {
   if (!hasExistingData) {
     epicStore.setLoading(true);
     storyStore.setLoading(true);
-    customerStore.setLoading(true);
-    memberStore.setLoading(true);
   }
 
-  try {
-    await loadWorkspaceRuntimeContext(workspaceId);
+  await loadWorkspaceRuntimeContext(workspaceId);
 
-    const [epics, stories, customers, members] = await Promise.all([
-      loadEpics(workspaceId),
-      loadStories(workspaceId),
+  const [epics, stories] = await Promise.all([
+    loadEpics(workspaceId),
+    loadStories(workspaceId),
+  ]);
+
+  epicStore.hydrate(epics);
+  storyStore.hydrate(stories);
+}
+
+async function hydrateDeferredFromApi(workspaceId: string): Promise<void> {
+  customerStore.setLoading(true);
+  memberStore.setLoading(true);
+
+  try {
+    const [customers, members] = await Promise.all([
       loadCustomers(workspaceId),
       loadWorkspaceMembers(workspaceId),
     ]);
-
-    epicStore.hydrate(epics);
-    storyStore.hydrate(stories);
     customerStore.hydrate(customers);
     memberStore.hydrate(members);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to hydrate stores from API';
-    epicStore.setError(message);
-    storyStore.setError(message);
+    const message =
+      error instanceof Error ? error.message : 'Failed to hydrate deferred workspace data';
     customerStore.setError(message);
     memberStore.setError(message);
-    throw error;
   }
 }
 
@@ -199,9 +220,12 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
     const promise = (async () => {
       try {
-        await hydrateFromApi(workspace.id);
+        await hydratePriorityFromApi(workspace.id);
         markAppHydrated(workspace.id);
         setHydrationError(null);
+        setReady(true);
+        // Defer customers/members so board/inbox/epics can paint sooner.
+        void hydrateDeferredFromApi(workspace.id);
       } catch (error) {
         setHydrationPromise(null);
         setHydratedWorkspaceId(null);
@@ -214,6 +238,8 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
         const message =
           error instanceof Error ? error.message : 'Failed to hydrate stores from API';
+        epicStore.setError(message);
+        storyStore.setError(message);
         setHydrationError(message);
       }
     })();

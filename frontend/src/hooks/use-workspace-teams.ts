@@ -1,11 +1,13 @@
 'use client';
 
-import * as React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Team } from '@landi-flow/core/types';
 import { loadTeams } from '@/controllers/settings-completion-controller';
 import { getDefaultTeamId } from '@/lib/api/workspace-context';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { DEMO_TEAM_ID } from '@/lib/seed-data';
+import { queryKeys } from '@/lib/query/query-keys';
+import { WORKSPACE_QUERY_STALE_MS } from '@/lib/query/query-client';
 
 export interface UseWorkspaceTeamsResult {
   teams: Team[];
@@ -16,33 +18,26 @@ export interface UseWorkspaceTeamsResult {
 }
 
 export function useWorkspaceTeams(workspaceId: string): UseWorkspaceTeamsResult {
-  const [teams, setTeams] = React.useState<Team[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: queryKeys.teams.list(workspaceId),
+    queryFn: () => loadTeams(workspaceId),
+    enabled: Boolean(workspaceId),
+    staleTime: WORKSPACE_QUERY_STALE_MS,
+  });
 
-  const refresh = React.useCallback(() => {
-    setLoading(true);
-    setError(null);
-    void loadTeams(workspaceId)
-      .then((rows) => {
-        setTeams(rows);
-      })
-      .catch((err: unknown) => {
-        setTeams([]);
-        setError(err instanceof Error ? err.message : 'Failed to load teams');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [workspaceId]);
-
-  React.useEffect(() => {
-    refresh();
-  }, [refresh]);
-
+  const teams = query.data ?? [];
   const defaultTeamId = isMockAuthEnabled()
     ? DEMO_TEAM_ID
     : getDefaultTeamId() ?? teams[0]?.id ?? null;
 
-  return { teams, loading, error, refresh, defaultTeamId };
+  return {
+    teams,
+    loading: query.isLoading && !query.data,
+    error: query.error instanceof Error ? query.error.message : query.error ? String(query.error) : null,
+    refresh: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.teams.list(workspaceId) });
+    },
+    defaultTeamId,
+  };
 }

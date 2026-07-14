@@ -171,6 +171,12 @@ class EpicStore extends BaseDomainStore<EpicStoreState> {
     this.state = { ...this.state, error, loading: false };
     this.notify();
   }
+
+  /** Clear all epics — used on soft workspace switch. */
+  reset(): void {
+    this.state = emptyState();
+    this.notify();
+  }
 }
 
 export const epicStore = EpicStore.getInstance();

@@ -64,20 +64,18 @@ export async function loadWorkspaceRuntimeContext(
     default_epic_status_id: string | null;
   }>(`workspaces/${workspaceId}/context/defaults`, { method: 'GET' });
 
-  let workflowStates: WorkflowState[] = [];
-  if (defaults.team_id) {
-    const statesPayload = await apiFetch<{ data: WorkflowState[] }>(
-      `workspaces/${workspaceId}/workflow-states?team_id=${encodeURIComponent(defaults.team_id)}`,
-      { method: 'GET' },
-    );
-    workflowStates = statesPayload.data ?? [];
-  }
-
-  const epicStatusesPayload = await apiFetch<{ data: EpicStatusRow[] }>(
-    `workspaces/${workspaceId}/epic-statuses`,
-    { method: 'GET' },
-  );
-  const epicStatuses = epicStatusesPayload.data ?? [];
+  // Parallelize independent follow-ups (workflow states need team_id; epic statuses do not).
+  const [workflowStates, epicStatuses] = await Promise.all([
+    defaults.team_id
+      ? apiFetch<{ data: WorkflowState[] }>(
+          `workspaces/${workspaceId}/workflow-states?team_id=${encodeURIComponent(defaults.team_id)}`,
+          { method: 'GET' },
+        ).then((payload) => payload.data ?? [])
+      : Promise.resolve([] as WorkflowState[]),
+    apiFetch<{ data: EpicStatusRow[] }>(`workspaces/${workspaceId}/epic-statuses`, {
+      method: 'GET',
+    }).then((payload) => payload.data ?? []),
+  ]);
 
   cachedWorkspaceId = workspaceId;
   cachedContext = {

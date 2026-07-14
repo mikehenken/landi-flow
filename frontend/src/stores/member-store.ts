@@ -69,6 +69,12 @@ class MemberStore extends BaseDomainStore<MemberStoreState> {
     this.state = { ...this.state, error, loading: false };
     this.notify();
   }
+
+  /** Clear members — used on soft workspace switch. */
+  reset(): void {
+    this.state = emptyState();
+    this.notify();
+  }
 }
 
 export const memberStore = MemberStore.getInstance();

@@ -55,23 +55,8 @@ import { storyStore } from '@/stores/story-store';
 
 import { brandAssets } from '@/lib/correlation';
 
-import {
-
-  EpicInspector,
-
-  StoryInspector,
-
-} from '@/components/story-inspector';
-
 import { ObsErrorBoundary } from '@/components/obs-error-boundary';
-
-import {
-  CreateStoryModal,
-  CreateModalsProvider,
-} from '@/components/create-story-modal';
-import { CreateEpicModal } from '@/components/create-epic-modal';
-import { CreateCustomerModal } from '@/components/create-customer-modal';
-import { CreateMemberModal } from '@/components/create-member-modal';
+import { CreateModalsProvider, type OpenCreateStoryOptions } from '@/components/create-modals-context';
 import { CreateResourceDropdown } from '@/components/create-resource-dropdown';
 
 import { getEpicById, getStoriesForEpic } from '@/lib/seed-data';
@@ -87,6 +72,8 @@ import { InspectorPaneShell } from '@/components/inspector-pane-shell';
 
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { useWorkspace, getWorkspaceLogoUrl, getWorkspaceTheme } from '@/lib/workspace';
+import { resetWorkspaceClientState } from '@/lib/workspace/reset-workspace-client-state';
+import { useQueryClient } from '@tanstack/react-query';
 import { LocaleSwitcher } from '@/components/locale-switcher';
 import { StoryDetailLayoutRoot } from '@/components/story-detail-panel';
 import { WorkspaceSwitcher } from '@/components/navigation/workspace-switcher';
@@ -97,7 +84,6 @@ import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import type { ResolvedWorkspace } from '@/lib/workspace/registry';
 import { useWorkspacePageMeta, useWorkspaceShellContext } from '@/components/workspace-shell-provider';
 import { useWorkspaceTeams } from '@/hooks/use-workspace-teams';
-import type { OpenCreateStoryOptions } from '@/components/create-modals-context';
 import {
   resolveTriageTeamId,
   triageHrefForTeam,
@@ -115,6 +101,54 @@ const KeyboardShortcutsOverlay = dynamic(
   () =>
     import('@/components/navigation/keyboard-shortcuts-overlay').then((module) => ({
       default: module.KeyboardShortcutsOverlay,
+    })),
+  { ssr: false },
+);
+
+const CreateStoryModal = dynamic(
+  () =>
+    import('@/components/create-story-modal').then((module) => ({
+      default: module.CreateStoryModal,
+    })),
+  { ssr: false },
+);
+
+const CreateEpicModal = dynamic(
+  () =>
+    import('@/components/create-epic-modal').then((module) => ({
+      default: module.CreateEpicModal,
+    })),
+  { ssr: false },
+);
+
+const CreateCustomerModal = dynamic(
+  () =>
+    import('@/components/create-customer-modal').then((module) => ({
+      default: module.CreateCustomerModal,
+    })),
+  { ssr: false },
+);
+
+const CreateMemberModal = dynamic(
+  () =>
+    import('@/components/create-member-modal').then((module) => ({
+      default: module.CreateMemberModal,
+    })),
+  { ssr: false },
+);
+
+const StoryInspector = dynamic(
+  () =>
+    import('@/components/story-inspector').then((module) => ({
+      default: module.StoryInspector,
+    })),
+  { ssr: false },
+);
+
+const EpicInspector = dynamic(
+  () =>
+    import('@/components/story-inspector').then((module) => ({
+      default: module.EpicInspector,
     })),
   { ssr: false },
 );
@@ -159,7 +193,8 @@ export function AppShellFrame({
 
   const pathname = usePathname();
 
-  const { workspace } = useWorkspace();
+  const { workspace, switchWorkspace } = useWorkspace();
+  const queryClient = useQueryClient();
   const { workspaces: membershipWorkspaces, loading: membershipsLoading } = useWorkspaceMemberships();
   const { defaultTeamId, teams } = useWorkspaceTeams(workspace.id);
   const triageTeamId = React.useMemo(
@@ -648,12 +683,25 @@ export function AppShellFrame({
     };
   }, []);
 
-  const handleWorkspaceSwitch = React.useCallback((next: ResolvedWorkspace): void => {
-    if (typeof document !== 'undefined') {
-      document.cookie = `workspace-id=${encodeURIComponent(next.id)}; path=/; samesite=lax`;
-      window.location.reload();
-    }
-  }, []);
+  const handleWorkspaceSwitch = React.useCallback(
+    (next: ResolvedWorkspace): void => {
+      if (next.id === workspace.id) {
+        return;
+      }
+      // Soft switch: reset client caches + remount via workspace id, no full reload.
+      resetWorkspaceClientState();
+      queryClient.clear();
+      if (switchWorkspace) {
+        switchWorkspace(next);
+      } else if (typeof document !== 'undefined') {
+        document.cookie = `workspace-id=${encodeURIComponent(next.id)}; path=/; samesite=lax`;
+      }
+      startNavigationTransition(() => {
+        router.refresh();
+      });
+    },
+    [queryClient, router, switchWorkspace, workspace.id],
+  );
 
 
 
@@ -679,6 +727,8 @@ export function AppShellFrame({
 
           shortcutHint: gKeyHintsVisible ? 'I' : undefined,
 
+          prefetch: true,
+
         },
 
         {
@@ -694,6 +744,8 @@ export function AppShellFrame({
           active: pathname === '/workspace/stories',
 
           shortcutHint: gKeyHintsVisible ? 'S' : undefined,
+
+          prefetch: true,
 
         },
 
@@ -736,6 +788,8 @@ export function AppShellFrame({
           icon: <LayoutList className="h-4 w-4" />,
 
           active: pathname.startsWith('/workspace/stories/board'),
+
+          prefetch: true,
 
         },
 
@@ -836,6 +890,8 @@ export function AppShellFrame({
           active: pathname === '/workspace/epics',
 
           shortcutHint: gKeyHintsVisible ? 'E' : undefined,
+
+          prefetch: true,
 
         },
 
@@ -1031,6 +1087,7 @@ export function AppShellFrame({
                   >
                     <Link
                       href="/workspace/account"
+                      prefetch
                       className={cn(
                         'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground',
                         'hover:bg-white/5 hover:text-foreground',
@@ -1042,6 +1099,7 @@ export function AppShellFrame({
                     </Link>
                     <Link
                       href="/workspace/settings/general"
+                      prefetch
                       className={cn(
                         'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground',
                         'hover:bg-white/5 hover:text-foreground',
@@ -1202,14 +1260,22 @@ export function AppShellFrame({
 
       </SidebarLayout>
 
-      <CreateStoryModal
-        open={createStoryOpen}
-        onOpenChange={handleCreateStoryOpenChange}
-        defaultEpicId={createStoryEpicId}
-      />
-      <CreateEpicModal open={createEpicOpen} onOpenChange={setCreateEpicOpen} />
-      <CreateCustomerModal open={createCustomerOpen} onOpenChange={setCreateCustomerOpen} />
-      <CreateMemberModal open={createMemberOpen} onOpenChange={setCreateMemberOpen} />
+      {createStoryOpen ? (
+        <CreateStoryModal
+          open={createStoryOpen}
+          onOpenChange={handleCreateStoryOpenChange}
+          defaultEpicId={createStoryEpicId}
+        />
+      ) : null}
+      {createEpicOpen ? (
+        <CreateEpicModal open={createEpicOpen} onOpenChange={setCreateEpicOpen} />
+      ) : null}
+      {createCustomerOpen ? (
+        <CreateCustomerModal open={createCustomerOpen} onOpenChange={setCreateCustomerOpen} />
+      ) : null}
+      {createMemberOpen ? (
+        <CreateMemberModal open={createMemberOpen} onOpenChange={setCreateMemberOpen} />
+      ) : null}
 
       <CommandPalette
 

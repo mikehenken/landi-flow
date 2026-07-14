@@ -23,3 +23,4 @@ export {
   type ActiveWorkspaceProviderProps,
 } from './active-workspace-provider';
 export { isWorkspaceUuid } from './is-workspace-uuid';
+export { resetWorkspaceClientState } from './reset-workspace-client-state';

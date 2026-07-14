@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import {
   getDefaultEpicStatusId,
@@ -10,6 +10,8 @@ import {
 } from '@/lib/api/workspace-context';
 import { EPIC_STATUS_IDS } from '@/lib/epic-status';
 import { getTaxonomySettings } from '@/lib/taxonomy/taxonomy-store';
+import { queryKeys } from '@/lib/query/query-keys';
+import { WORKSPACE_QUERY_STALE_MS } from '@/lib/query/query-client';
 
 export interface UseWorkspaceEpicStatusesResult {
   epicStatuses: EpicStatusRow[];
@@ -17,6 +19,11 @@ export interface UseWorkspaceEpicStatusesResult {
   loading: boolean;
   error: string | null;
   refresh: () => void;
+}
+
+interface EpicStatusesQueryData {
+  epicStatuses: EpicStatusRow[];
+  defaultStatusId: string | null;
 }
 
 function getMockEpicStatuses(): EpicStatusRow[] {
@@ -39,50 +46,72 @@ function resolveDefaultStatusId(statuses: EpicStatusRow[]): string | null {
   );
 }
 
+async function fetchEpicStatuses(workspaceId: string): Promise<EpicStatusesQueryData> {
+  if (isMockAuthEnabled()) {
+    return {
+      epicStatuses: getMockEpicStatuses(),
+      defaultStatusId: EPIC_STATUS_IDS.backlog,
+    };
+  }
+  // Reuse hydrated runtime context when present — no extra round-trip.
+  const existing = getEpicStatuses();
+  if (existing.length > 0) {
+    return {
+      epicStatuses: existing,
+      defaultStatusId: resolveDefaultStatusId(existing),
+    };
+  }
+  const ctx = await loadWorkspaceRuntimeContext(workspaceId);
+  return {
+    epicStatuses: ctx.epicStatuses,
+    defaultStatusId:
+      ctx.defaultEpicStatusId ??
+      ctx.epicStatuses.find((status) => status.category === 'backlog')?.id ??
+      ctx.epicStatuses[0]?.id ??
+      null,
+  };
+}
+
 export function useWorkspaceEpicStatuses(workspaceId: string): UseWorkspaceEpicStatusesResult {
-  const [epicStatuses, setEpicStatuses] = React.useState<EpicStatusRow[]>([]);
-  const [defaultStatusId, setDefaultStatusId] = React.useState<string | null>(
-    isMockAuthEnabled() ? EPIC_STATUS_IDS.backlog : null,
-  );
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const cachedStatuses = isMockAuthEnabled() ? getMockEpicStatuses() : getEpicStatuses();
+  const placeholder: EpicStatusesQueryData | undefined =
+    cachedStatuses.length > 0
+      ? {
+          epicStatuses: cachedStatuses,
+          defaultStatusId: isMockAuthEnabled()
+            ? EPIC_STATUS_IDS.backlog
+            : resolveDefaultStatusId(cachedStatuses),
+        }
+      : undefined;
 
-  const refresh = React.useCallback(() => {
-    if (isMockAuthEnabled()) {
-      const mockStatuses = getMockEpicStatuses();
-      setEpicStatuses(mockStatuses);
-      setDefaultStatusId(EPIC_STATUS_IDS.backlog);
-      setLoading(false);
-      setError(null);
-      return;
-    }
+  const query = useQuery<EpicStatusesQueryData>({
+    queryKey: queryKeys.epicStatuses.workspace(workspaceId),
+    queryFn: () => fetchEpicStatuses(workspaceId),
+    enabled: Boolean(workspaceId),
+    staleTime: WORKSPACE_QUERY_STALE_MS,
+    placeholderData: placeholder,
+  });
 
-    setLoading(true);
-    setError(null);
-    void loadWorkspaceRuntimeContext(workspaceId)
-      .then((ctx) => {
-        setEpicStatuses(ctx.epicStatuses);
-        setDefaultStatusId(
-          ctx.defaultEpicStatusId ??
-            ctx.epicStatuses.find((status) => status.category === 'backlog')?.id ??
-            ctx.epicStatuses[0]?.id ??
-            null,
-        );
-      })
-      .catch((err: unknown) => {
-        const cached = getEpicStatuses();
-        setEpicStatuses(cached);
-        setDefaultStatusId(resolveDefaultStatusId(cached));
-        setError(err instanceof Error ? err.message : 'Failed to load epic statuses');
-      })
-      .finally(() => {
-        setLoading(false);
+  const epicStatuses = query.data?.epicStatuses ?? cachedStatuses;
+  const defaultStatusId =
+    query.data?.defaultStatusId ??
+    (isMockAuthEnabled() ? EPIC_STATUS_IDS.backlog : resolveDefaultStatusId(cachedStatuses));
+
+  return {
+    epicStatuses,
+    defaultStatusId,
+    loading: Boolean(workspaceId) && query.isPending && epicStatuses.length === 0,
+    error:
+      query.error instanceof Error
+        ? query.error.message
+        : query.error
+          ? String(query.error)
+          : null,
+    refresh: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.epicStatuses.workspace(workspaceId),
       });
-  }, [workspaceId]);
-
-  React.useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { epicStatuses, defaultStatusId, loading, error, refresh };
+    },
+  };
 }

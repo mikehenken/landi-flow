@@ -376,6 +376,13 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
     this.state = { ...this.state, error, loading: false };
     this.notify();
   }
+
+  /** Clear all stories — used on soft workspace switch. */
+  reset(): void {
+    this.state = emptyState();
+    this.pinGlobalSingleton();
+    this.notify();
+  }
 }
 
 /**

@@ -12,6 +12,7 @@ import { toResolvedWorkspace } from '@/lib/workspace/to-resolved-workspace';
 import { usePathname } from '@/i18n/navigation';
 import { WorkspaceProvider } from '@/lib/workspace/workspace-provider';
 import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
+import { WorkspaceBootstrapSkeleton } from '@/components/workspace-bootstrap-skeleton';
 
 const WORKSPACE_RESOLVE_TIMEOUT_MS = 15_000;
 
@@ -84,6 +85,9 @@ export interface ActiveWorkspaceProviderProps {
 /**
  * Resolves the authenticated user's real workspace (UUID) from the Workers API.
  * Mock auth keeps the demo registry workspace unchanged.
+ *
+ * Shell-first: while the session is resolving, render children with the
+ * initial workspace + a lightweight bootstrap hint instead of blanking the tree.
  */
 export function ActiveWorkspaceProvider({
   initialWorkspace,
@@ -113,6 +117,9 @@ export function ActiveWorkspaceProvider({
   const [error, setError] = React.useState<string | null>(null);
   const [resolveAttempt, setResolveAttempt] = React.useState(0);
   const [redirectingToLogin, setRedirectingToLogin] = React.useState(false);
+  const [sessionPending, setSessionPending] = React.useState(
+    () => !isMockAuthEnabled() && !sessionReady && serverAuthenticated,
+  );
 
   const handlePatchWorkspace = React.useCallback(
     (patch: Partial<Pick<ResolvedWorkspace, 'name' | 'icon_url'>>) => {
@@ -125,14 +132,33 @@ export function ActiveWorkspaceProvider({
     [],
   );
 
+  const handleSwitchWorkspace = React.useCallback(
+    (next: ResolvedWorkspace): void => {
+      persistWorkspaceCookie(next.id);
+      resolvedWorkspaceIdRef.current = next.id;
+      if (userId) {
+        resolvedUserIdRef.current = userId;
+      }
+      lastResolveAttemptRef.current = resolveAttempt;
+      setError(null);
+      setWorkspace(next);
+    },
+    [resolveAttempt, userId],
+  );
+
   React.useEffect(() => {
     if (isMockAuthEnabled() || onAuthPage) {
+      setSessionPending(false);
       return;
     }
 
     if (!sessionReady) {
+      // Shell-first only when SSR already verified a session.
+      setSessionPending(serverAuthenticated);
       return;
     }
+
+    setSessionPending(false);
 
     if (userId) {
       setRedirectingToLogin(false);
@@ -192,8 +218,16 @@ export function ActiveWorkspaceProvider({
 
             const memberships = await listWorkspaces();
 
-            if (isWorkspaceUuid(initialWorkspace.id)) {
-              const match = memberships.find((entry) => entry.id === initialWorkspace.id);
+            // Prefer an already soft-switched / cookie-selected workspace when still a membership.
+            const preferredId =
+              resolvedWorkspaceIdRef.current && isWorkspaceUuid(resolvedWorkspaceIdRef.current)
+                ? resolvedWorkspaceIdRef.current
+                : isWorkspaceUuid(initialWorkspace.id)
+                  ? initialWorkspace.id
+                  : null;
+
+            if (preferredId) {
+              const match = memberships.find((entry) => entry.id === preferredId);
               if (match) {
                 if (!cancelled) {
                   setWorkspace(toResolvedWorkspace(match));
@@ -259,43 +293,65 @@ export function ActiveWorkspaceProvider({
 
   if (redirectingToLogin && !isMockAuthEnabled()) {
     return (
-      <div className="flex h-full min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
-        Redirecting to sign in.
-      </div>
+      <WorkspaceProvider workspace={workspace} onPatchWorkspace={handlePatchWorkspace}>
+        <div className="flex h-full min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
+          Redirecting to sign in.
+        </div>
+      </WorkspaceProvider>
     );
   }
 
-  if (!sessionReady && !isMockAuthEnabled()) {
+  // Unauthenticated cold start — keep a compact status until session resolves or redirects.
+  if (!sessionReady && !serverAuthenticated && !isMockAuthEnabled()) {
     return (
-      <div className="flex h-full min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
-        Loading workspace.
-      </div>
+      <WorkspaceProvider workspace={workspace} onPatchWorkspace={handlePatchWorkspace}>
+        <div className="flex h-full min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
+          Loading workspace.
+        </div>
+      </WorkspaceProvider>
     );
   }
 
   if (error) {
     return (
-      <div
-        className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 px-6 text-center"
-        role="alert"
+      <WorkspaceProvider
+        workspace={workspace}
+        onPatchWorkspace={handlePatchWorkspace}
+        onSwitchWorkspace={handleSwitchWorkspace}
       >
-        <p className="text-sm font-medium text-destructive">Failed to load workspace</p>
-        <p className="max-w-md text-sm text-muted-foreground">{error}</p>
-        <button
-          type="button"
-          className="rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted"
-          onClick={() => setResolveAttempt((attempt) => attempt + 1)}
+        <div
+          className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 px-6 text-center"
+          role="alert"
         >
-          Retry
-        </button>
-      </div>
+          <p className="text-sm font-medium text-destructive">Failed to load workspace</p>
+          <p className="max-w-md text-sm text-muted-foreground">{error}</p>
+          <button
+            type="button"
+            className="rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted"
+            onClick={() => setResolveAttempt((attempt) => attempt + 1)}
+          >
+            Retry
+          </button>
+        </div>
+      </WorkspaceProvider>
     );
   }
 
   return (
-    <WorkspaceProvider workspace={workspace} onPatchWorkspace={handlePatchWorkspace}>
+    <WorkspaceProvider
+      workspace={workspace}
+      onPatchWorkspace={handlePatchWorkspace}
+      onSwitchWorkspace={handleSwitchWorkspace}
+    >
       <TerminologyProvider terminology={workspace.parsedSettings.terminology}>
-        {children}
+        {sessionPending ? (
+          <>
+            <WorkspaceBootstrapSkeleton />
+            {children}
+          </>
+        ) : (
+          children
+        )}
       </TerminologyProvider>
     </WorkspaceProvider>
   );
