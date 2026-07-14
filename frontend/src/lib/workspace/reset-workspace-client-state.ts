@@ -1,4 +1,5 @@
 import { resetWorkspaceRuntimeContext } from '@/lib/api/workspace-context';
+import { resetWorkspaceBootstrapCache } from '@/lib/api/workspace-bootstrap';
 import { resetStoreHydrationState } from '@/components/store-hydrator';
 import { customerStore } from '@/stores/customer-store';
 import { epicStore } from '@/stores/epic-store';
@@ -12,6 +13,7 @@ import { storyStore } from '@/stores/story-store';
  */
 export function resetWorkspaceClientState(): void {
   resetWorkspaceRuntimeContext();
+  resetWorkspaceBootstrapCache();
   resetStoreHydrationState();
   storyStore.reset();
   epicStore.reset();

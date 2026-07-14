@@ -51,6 +51,28 @@ export function getEpicStatuses(): EpicStatusRow[] {
   return cachedContext?.epicStatuses ?? [];
 }
 
+/**
+ * Seed the runtime-context cache from an aggregate bootstrap payload (PERF-03).
+ * Callers that already fetched `/api/workspace/bootstrap` should use this to
+ * avoid a second serial defaults → states/statuses chain.
+ */
+export function applyWorkspaceRuntimeContext(
+  workspaceId: string,
+  context: WorkspaceRuntimeContext,
+): void {
+  cachedWorkspaceId = workspaceId;
+  cachedContext = {
+    teamId: context.teamId,
+    defaultWorkflowStateId: resolveDefaultWorkflowStateId(
+      context.defaultWorkflowStateId,
+      context.workflowStates,
+    ),
+    defaultEpicStatusId: context.defaultEpicStatusId,
+    workflowStates: context.workflowStates,
+    epicStatuses: context.epicStatuses,
+  };
+}
+
 export async function loadWorkspaceRuntimeContext(
   workspaceId: string,
 ): Promise<WorkspaceRuntimeContext> {
@@ -77,19 +99,15 @@ export async function loadWorkspaceRuntimeContext(
     }).then((payload) => payload.data ?? []),
   ]);
 
-  cachedWorkspaceId = workspaceId;
-  cachedContext = {
+  applyWorkspaceRuntimeContext(workspaceId, {
     teamId: defaults.team_id,
-    defaultWorkflowStateId: resolveDefaultWorkflowStateId(
-      defaults.default_workflow_state_id,
-      workflowStates,
-    ),
+    defaultWorkflowStateId: defaults.default_workflow_state_id,
     defaultEpicStatusId: defaults.default_epic_status_id,
     workflowStates,
     epicStatuses,
-  };
+  });
 
-  return cachedContext;
+  return cachedContext ?? emptyContext();
 }
 
 export function resetWorkspaceRuntimeContext(): void {

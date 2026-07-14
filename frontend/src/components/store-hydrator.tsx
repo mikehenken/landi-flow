@@ -3,6 +3,11 @@
 import * as React from 'react';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { useSupabaseSession } from '@/lib/supabase/session-provider';
+import {
+  applyBootstrapRuntimeContext,
+  loadWorkspaceBootstrap,
+  type WorkspaceBootstrapPayload,
+} from '@/lib/api/workspace-bootstrap';
 import { loadWorkspaceRuntimeContext } from '@/lib/api/workspace-context';
 import { loadCustomers } from '@/controllers/customer-controller';
 import { loadEpics } from '@/controllers/epic-controller';
@@ -20,6 +25,7 @@ import { epicStore } from '@/stores/epic-store';
 import { memberStore } from '@/stores/member-store';
 import { storyStore } from '@/stores/story-store';
 import { WorkspaceContentSkeleton } from '@/components/workspace-content-skeleton';
+import { ApiRequestError } from '@/lib/api/client';
 
 type StoreHydrationGlobal = typeof globalThis & {
   __landiFlowStoresHydrated?: boolean;
@@ -96,9 +102,12 @@ function isStoryStoreHydratedForWorkspace(workspaceId: string): boolean {
 
 /**
  * Priority path: runtime context + stories + epics (route-needed).
- * Customers/members hydrate in the background after first paint.
+ * Prefers PERF-03 bootstrap aggregate (one proxy hop); falls back to legacy serial path.
+ * Customers/members hydrate from the same payload when present, else in the background.
  */
-async function hydratePriorityFromApi(workspaceId: string): Promise<void> {
+async function hydratePriorityFromApi(
+  workspaceId: string,
+): Promise<WorkspaceBootstrapPayload | null> {
   const hasExistingData =
     storyStore.getServerSnapshot().stories.length > 0 ||
     epicStore.getServerSnapshot().epics.length > 0;
@@ -108,15 +117,41 @@ async function hydratePriorityFromApi(workspaceId: string): Promise<void> {
     storyStore.setLoading(true);
   }
 
-  await loadWorkspaceRuntimeContext(workspaceId);
+  try {
+    // Full aggregate = one client hop for context + domain lists (PERF-03).
+    // StoreHydrator still marks ready before applying deferred fields (PERF-02).
+    const bootstrap = await loadWorkspaceBootstrap(workspaceId, { phase: 'full' });
+    applyBootstrapRuntimeContext(bootstrap);
+    epicStore.hydrate(bootstrap.epics);
+    storyStore.hydrate(bootstrap.stories);
+    return bootstrap;
+  } catch (error) {
+    // Auth must still surface so StoreHydrator can recover/redirect.
+    if (
+      error instanceof ApiRequestError &&
+      (error.status === 401 || error.status === 403)
+    ) {
+      throw error;
+    }
+    // Aggregate unavailable or partial outage — keep shell hydrate working via legacy hops.
+    await loadWorkspaceRuntimeContext(workspaceId);
+    const [epics, stories] = await Promise.all([
+      loadEpics(workspaceId),
+      loadStories(workspaceId),
+    ]);
+    epicStore.hydrate(epics);
+    storyStore.hydrate(stories);
+    return null;
+  }
+}
 
-  const [epics, stories] = await Promise.all([
-    loadEpics(workspaceId),
-    loadStories(workspaceId),
-  ]);
-
-  epicStore.hydrate(epics);
-  storyStore.hydrate(stories);
+function hydrateDeferredFromBootstrap(payload: WorkspaceBootstrapPayload): boolean {
+  if (payload.customers === null || payload.members === null) {
+    return false;
+  }
+  customerStore.hydrate(payload.customers);
+  memberStore.hydrate(payload.members);
+  return true;
 }
 
 async function hydrateDeferredFromApi(workspaceId: string): Promise<void> {
@@ -220,12 +255,14 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
 
     const promise = (async () => {
       try {
-        await hydratePriorityFromApi(workspace.id);
+        const bootstrap = await hydratePriorityFromApi(workspace.id);
         markAppHydrated(workspace.id);
         setHydrationError(null);
         setReady(true);
-        // Defer customers/members so board/inbox/epics can paint sooner.
-        void hydrateDeferredFromApi(workspace.id);
+        // Deferred customers/members: prefer same aggregate payload, else background GETs.
+        if (!bootstrap || !hydrateDeferredFromBootstrap(bootstrap)) {
+          void hydrateDeferredFromApi(workspace.id);
+        }
       } catch (error) {
         setHydrationPromise(null);
         setHydratedWorkspaceId(null);

@@ -13,6 +13,7 @@ import { usePathname } from '@/i18n/navigation';
 import { WorkspaceProvider } from '@/lib/workspace/workspace-provider';
 import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
 import { WorkspaceBootstrapSkeleton } from '@/components/workspace-bootstrap-skeleton';
+import { prefetchWorkspaceBootstrap } from '@/lib/api/workspace-bootstrap';
 
 const WORKSPACE_RESOLVE_TIMEOUT_MS = 15_000;
 
@@ -142,6 +143,10 @@ export function ActiveWorkspaceProvider({
       lastResolveAttemptRef.current = resolveAttempt;
       setError(null);
       setWorkspace(next);
+      // PERF-03: warm aggregate while StoreHydrator remounts for the new workspace.
+      if (!isMockAuthEnabled() && isWorkspaceUuid(next.id)) {
+        prefetchWorkspaceBootstrap(next.id);
+      }
     },
     [resolveAttempt, userId],
   );
@@ -234,6 +239,8 @@ export function ActiveWorkspaceProvider({
                   persistWorkspaceCookie(match.id);
                   resolvedUserIdRef.current = userId;
                   resolvedWorkspaceIdRef.current = match.id;
+                  // PERF-03: overlap bootstrap aggregate with StoreHydrator mount.
+                  prefetchWorkspaceBootstrap(match.id);
                 }
                 return;
               }
@@ -246,6 +253,7 @@ export function ActiveWorkspaceProvider({
                 persistWorkspaceCookie(existingMembership.id);
                 resolvedUserIdRef.current = userId;
                 resolvedWorkspaceIdRef.current = existingMembership.id;
+                prefetchWorkspaceBootstrap(existingMembership.id);
               }
               return;
             }
@@ -258,6 +266,9 @@ export function ActiveWorkspaceProvider({
             persistWorkspaceCookie(resolved.id);
             resolvedUserIdRef.current = userId;
             resolvedWorkspaceIdRef.current = resolved.id;
+            if (isWorkspaceUuid(resolved.id)) {
+              prefetchWorkspaceBootstrap(resolved.id);
+            }
           })(),
           WORKSPACE_RESOLVE_TIMEOUT_MS,
           'Workspace resolve',

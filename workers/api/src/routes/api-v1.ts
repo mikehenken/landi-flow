@@ -226,6 +226,51 @@ export async function handleApiRequest(
         return jsonResponse({ ...defaults, correlation_id: correlationId }, 200, correlationId);
       }
 
+      // GET /workspaces/{wid}/bootstrap — PERF-03 aggregate for shell hydrate (priority + optional deferred)
+      if (rest[0] === 'bootstrap' && rest.length === 1 && request.method === 'GET') {
+        const phase = url.searchParams.get('phase') === 'priority' ? 'priority' : 'full';
+        const teamController = controller(TeamController);
+        const workflowController = controller(WorkflowStateController);
+        const epicController = controller(EpicController);
+        const storyController = controller(StoryController);
+        const customerController = controller(CustomerController);
+        const memberController = controller(MemberController);
+
+        const defaults = await teamController.ensureWorkspaceDefaults(workspaceId, correlation);
+        const teamId = defaults.team_id;
+
+        const [workflowStates, epicStatuses, epics, stories, customers, members] = await Promise.all([
+          teamId
+            ? workflowController.list(workspaceId, teamId)
+            : Promise.resolve([]),
+          teamController.listEpicStatuses(workspaceId),
+          epicController.list(workspaceId),
+          teamId ? storyController.list(workspaceId, teamId) : Promise.resolve([]),
+          phase === 'full'
+            ? customerController.list(workspaceId)
+            : Promise.resolve(null),
+          phase === 'full' ? memberController.list(workspaceId) : Promise.resolve(null),
+        ]);
+
+        return jsonResponse(
+          {
+            workspace_id: workspaceId,
+            phase,
+            defaults,
+            workflow_states: workflowStates,
+            epic_statuses: epicStatuses,
+            epics,
+            stories,
+            ...(phase === 'full'
+              ? { customers: customers ?? [], members: members ?? [] }
+              : {}),
+            correlation_id: correlationId,
+          },
+          200,
+          correlationId,
+        );
+      }
+
       // /workspaces/{wid}/customer-requests
       if (rest[0] === 'customer-requests') {
         const requestController = controller(CustomerRequestController);

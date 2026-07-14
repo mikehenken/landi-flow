@@ -42,6 +42,51 @@ describe('production hydration API paths (G-09m-07)', () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
 
+      if (url.includes('/api/workspace/bootstrap')) {
+        return Promise.resolve(
+          jsonResponse({
+            workspace_id: WORKSPACE_ID,
+            phase: 'priority',
+            defaults: {
+              team_id: 'team-1',
+              default_workflow_state_id: 'state-todo',
+              default_epic_status_id: 'status-active',
+            },
+            workflow_states: [{ id: 'state-todo', name: 'Todo', category: 'unstarted', position: 0, color: null, is_default: true, team_id: 'team-1' }],
+            epic_statuses: [{ id: 'status-active', name: 'Active', category: 'backlog' }],
+            epics: [],
+            stories: [
+              {
+                id: 'story-persist-1',
+                workspace_id: WORKSPACE_ID,
+                team_id: 'team-1',
+                number: 42,
+                identifier: 'LAN-42',
+                title: 'Hydrated from API',
+                description_json: null,
+                description_md: null,
+                workflow_state_id: 'state-todo',
+                priority: 'none',
+                assignee_id: null,
+                delegate_agent_id: null,
+                epic_id: null,
+                milestone_id: null,
+                cycle_id: null,
+                estimate: null,
+                due_date: null,
+                sort_order: 1000,
+                is_draft: false,
+                archived_at: null,
+                correlation_id: null,
+                created_by: 'user-1',
+                created_at: '2026-07-06T00:00:00.000Z',
+                updated_at: '2026-07-06T00:00:00.000Z',
+              },
+            ],
+          }),
+        );
+      }
+
       if (url.includes('/api/v1/workspaces/ws-e2e-persist/context/defaults')) {
         return Promise.resolve(
           jsonResponse({
@@ -114,35 +159,24 @@ describe('production hydration API paths (G-09m-07)', () => {
       return Promise.resolve(jsonResponse({ error: 'unexpected', url }, 404));
     });
 
-    const { loadWorkspaceRuntimeContext } = await import('./workspace-context');
-    const { loadStories } = await import('../../controllers/story-controller');
-    const { loadEpics } = await import('../../controllers/epic-controller');
-    const { loadCustomers } = await import('../../controllers/customer-controller');
-    const { loadWorkspaceMembers } = await import('../../controllers/member-controller');
+    const { loadWorkspaceBootstrap, applyBootstrapRuntimeContext, resetWorkspaceBootstrapCache } =
+      await import('./workspace-bootstrap');
+    resetWorkspaceBootstrapCache();
 
-    await loadWorkspaceRuntimeContext(WORKSPACE_ID);
-    const [stories, epics, customers, members] = await Promise.all([
-      loadStories(WORKSPACE_ID),
-      loadEpics(WORKSPACE_ID),
-      loadCustomers(WORKSPACE_ID),
-      loadWorkspaceMembers(WORKSPACE_ID),
-    ]);
+    const bootstrap = await loadWorkspaceBootstrap(WORKSPACE_ID, { phase: 'priority' });
+    applyBootstrapRuntimeContext(bootstrap);
 
-    expect(stories).toHaveLength(1);
-    expect(stories[0]?.title).toBe('Hydrated from API');
-    expect(epics).toEqual([]);
-    expect(customers).toEqual([]);
-    expect(members).toEqual([]);
+    expect(bootstrap.stories).toHaveLength(1);
+    expect(bootstrap.stories[0]?.title).toBe('Hydrated from API');
+    expect(bootstrap.epics).toEqual([]);
+    expect(bootstrap.customers).toBeNull();
+    expect(bootstrap.members).toBeNull();
 
     const requestedUrls = fetchMock.mock.calls.map(([input]) =>
       typeof input === 'string' ? input : input.toString(),
     );
 
-    expect(requestedUrls.some((url) => url.includes('/context/defaults'))).toBe(true);
-    expect(requestedUrls.some((url) => url.includes('/epic-statuses'))).toBe(true);
-    expect(requestedUrls.some((url) => url.includes('/teams/team-1/stories'))).toBe(true);
-    expect(requestedUrls.some((url) => url.includes('/epics'))).toBe(true);
-    expect(requestedUrls.some((url) => url.includes('/customers'))).toBe(true);
-    expect(requestedUrls.some((url) => url.includes('/members'))).toBe(true);
+    expect(requestedUrls.some((url) => url.includes('/api/workspace/bootstrap'))).toBe(true);
+    expect(requestedUrls.filter((url) => url.includes('/context/defaults')).length).toBe(0);
   }, 15_000);
 });
