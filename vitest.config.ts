@@ -42,6 +42,7 @@ export default defineConfig({
       'tests/integration/**/*.test.ts',
       'frontend/src/**/*.integration.test.ts',
       'frontend/src/stores/**/*.test.ts',
+      'frontend/src/hooks/**/*.test.ts',
       'frontend/src/lib/**/*.test.ts',
       'frontend/src/components/**/*.test.ts',
       'workers/**/src/**/*.test.ts',
