@@ -23,12 +23,17 @@ export abstract class BaseDomainStore<TState> {
     }
   }
 
-  /**
-   * Subscribe for useSyncExternalStore — notify-only.
-   * Do not call the listener synchronously during subscribe (React contract).
+  /** Subscribe for useSyncExternalStore — notify-only after mutations.
+   * Call the listener once after subscribe so late subscribers pick up current state
+   * without violating the "no sync notify during subscribe" tear guidance: schedule microtask.
    */
   subscribe(listener: DomainStoreListener): () => void {
     this.listeners.add(listener);
+    queueMicrotask(() => {
+      if (this.listeners.has(listener)) {
+        listener();
+      }
+    });
     return () => {
       this.listeners.delete(listener);
     };

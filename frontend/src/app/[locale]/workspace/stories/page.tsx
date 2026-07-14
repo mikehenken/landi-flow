@@ -18,11 +18,22 @@ import { storyStore } from '@/stores/story-store';
 
 function StoriesListBody(): React.ReactElement {
   const openCreateStory = useOpenCreateStoryModal();
-  const { loading } = useStoryStore();
+  const { loading, stories } = useStoryStore();
   const selectedStoryId = useSelectedStoryId();
   const { visibleStories, displayProperties } = useStoriesViewContext();
   useStoryDeepLink();
   const handleStorySelect = useStoryModalSelect();
+
+  const selectedStory =
+    (selectedStoryId
+      ? visibleStories.find(
+          (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+        ) ??
+        stories.find(
+          (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+        ) ??
+        null
+      : null);
 
   return (
     <div className="flex h-full flex-col lg:flex-row">
@@ -38,7 +49,7 @@ function StoriesListBody(): React.ReactElement {
           />
         </div>
       </div>
-      <StoryDetailSurface onClose={() => storyStore.selectStory(null)} />
+      <StoryDetailSurface story={selectedStory} onClose={() => storyStore.selectStory(null)} />
     </div>
   );
 }

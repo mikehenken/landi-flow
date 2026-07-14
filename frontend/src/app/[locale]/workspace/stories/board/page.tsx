@@ -56,6 +56,18 @@ function StoriesBoardBody(): React.ReactElement {
 
   useStoryDeepLink();
   const handleStorySelect = useStoryModalSelect();
+  const { stories } = useStoryStore();
+
+  const selectedStory =
+    (selectedStoryId
+      ? visibleStories.find(
+          (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+        ) ??
+        stories.find(
+          (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+        ) ??
+        null
+      : null);
 
   const storyTitles = React.useMemo(() => {
     const map: Record<string, string> = {};
@@ -127,7 +139,10 @@ function StoriesBoardBody(): React.ReactElement {
           )}
         </div>
       </div>
-      <StoryDetailSurface onClose={() => storyStore.selectStory(null)} />
+      <StoryDetailSurface
+        story={selectedStory}
+        onClose={() => storyStore.selectStory(null)}
+      />
     </div>
   );
 }

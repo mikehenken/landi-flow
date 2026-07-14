@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import {
-  DEFAULT_STORY_DETAIL_LAYOUT,
   readStoryDetailLayoutPreference,
   writeStoryDetailLayoutPreference,
   type StoryDetailLayoutMode,
@@ -17,13 +16,15 @@ export interface UseStoryDetailLayoutPreferenceResult {
 
 /** Reads/writes `landi-flow:story-detail-layout` from localStorage (CR-09r-006). */
 export function useStoryDetailLayoutPreference(): UseStoryDetailLayoutPreferenceResult {
-  // SSR defaults to modal; sync real preference before paint so sidebar users see detail.
-  const [layout, setLayoutState] = React.useState<StoryDetailLayoutMode>(
-    DEFAULT_STORY_DETAIL_LAYOUT,
+  // Prefer stored preference on first client render to avoid a modal→sidebar flash
+  // that unmounts StoryDetailSurface before the deep link can paint.
+  const [layout, setLayoutState] = React.useState<StoryDetailLayoutMode>(() =>
+    readStoryDetailLayoutPreference(),
   );
 
   React.useLayoutEffect(() => {
-    setLayoutState(readStoryDetailLayoutPreference());
+    const stored = readStoryDetailLayoutPreference();
+    setLayoutState((current) => (current === stored ? current : stored));
   }, []);
 
   const setLayout = React.useCallback((mode: StoryDetailLayoutMode): void => {

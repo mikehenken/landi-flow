@@ -18,7 +18,15 @@ export const STORY_SELECTION_PRESERVE_ROUTES = [
 ] as const;
 
 export function pathMatchesRoute(pathname: string, route: string): boolean {
-  return pathname === route || pathname.startsWith(`${route}/`) || pathname.includes(route);
+  if (!pathname || pathname === '/') {
+    return false;
+  }
+  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  return (
+    normalizedPath === route ||
+    normalizedPath.startsWith(`${route}/`) ||
+    normalizedPath.includes(route)
+  );
 }
 
 export function isStoryModalRoute(pathname: string): boolean {
@@ -26,5 +34,9 @@ export function isStoryModalRoute(pathname: string): boolean {
 }
 
 export function preservesStorySelection(pathname: string): boolean {
+  // Avoid clearing selection during transient empty pathnames while the router settles.
+  if (!pathname || pathname === '/') {
+    return true;
+  }
   return STORY_SELECTION_PRESERVE_ROUTES.some((route) => pathMatchesRoute(pathname, route));
 }

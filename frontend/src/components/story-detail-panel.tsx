@@ -55,8 +55,12 @@ function StoryDetailModalHost(): React.ReactElement | null {
   /** Ignore native `close` fired by programmatic `dialog.close()` / unmount. */
   const ignoreNativeCloseRef = React.useRef(false);
   const onStoryModalRoute = isStoryModalRoute(pathname);
+  // Once a story is resolved, show the modal on story-capable routes (or when pinned).
+  // Route gating previously raced with next-intl pathname settling and left the dialog mounted but closed.
   const showModal =
-    isModal && selectedStory !== null && (onStoryModalRoute || isPinned);
+    isModal &&
+    selectedStory !== null &&
+    (onStoryModalRoute || isPinned || preservesStorySelection(pathname));
 
   React.useEffect(() => {
     if (!isModal || isPinned) {

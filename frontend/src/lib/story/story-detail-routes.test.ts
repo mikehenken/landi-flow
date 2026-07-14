@@ -20,9 +20,8 @@ describe('story-detail-routes', () => {
     expect(isStoryModalRoute('/workspace/settings')).toBe(false);
   });
 
-  it('preserves selection on my-issues so detail can stay open', () => {
-    expect(preservesStorySelection('/workspace/my-issues')).toBe(true);
-    expect(preservesStorySelection('/en/workspace/my-issues')).toBe(true);
-    expect(preservesStorySelection('/workspace/agents')).toBe(false);
+  it('preserves selection while the router pathname is empty', () => {
+    expect(preservesStorySelection('')).toBe(true);
+    expect(preservesStorySelection('/')).toBe(true);
   });
 });

@@ -17,8 +17,12 @@ export default function MyIssuesPage(): React.ReactElement {
   const selectedStoryId = useSelectedStoryId();
   useStoryDeepLink();
   const selectedStory =
-    stories.find((story) => story.id === selectedStoryId) ??
-    storyStore.getServerSnapshot().stories.find((story) => story.id === selectedStoryId) ??
+    stories.find((story) => story.id === selectedStoryId || story.identifier === selectedStoryId) ??
+    storyStore
+      .getServerSnapshot()
+      .stories.find(
+        (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+      ) ??
     null;
 
   return (

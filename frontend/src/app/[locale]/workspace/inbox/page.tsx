@@ -35,8 +35,12 @@ function InboxPageBody(): React.ReactElement {
 
   const unreadCount = notifications.filter((row) => !row.read).length;
   const selectedStory =
-    stories.find((story) => story.id === selectedStoryId) ??
-    storyStore.getServerSnapshot().stories.find((story) => story.id === selectedStoryId) ??
+    stories.find((story) => story.id === selectedStoryId || story.identifier === selectedStoryId) ??
+    storyStore
+      .getServerSnapshot()
+      .stories.find(
+        (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+      ) ??
     null;
 
   return (
