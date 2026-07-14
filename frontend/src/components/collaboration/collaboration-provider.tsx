@@ -8,7 +8,6 @@ import {
   ClientSideSuspense,
 } from '@liveblocks/react/suspense';
 import { fetchLiveblocksAuthToken } from '@/lib/liveblocks/auth-endpoint';
-import { getLiveblocksClient } from '@/lib/liveblocks/client';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { useSupabaseSession } from '@/lib/supabase/session-provider';
@@ -54,17 +53,11 @@ export function CollaborationProvider({
     return <CollaborationInactiveShell>{children}</CollaborationInactiveShell>;
   }
 
-  const liveblocksClient = getLiveblocksClient();
-
   return (
     <LiveblocksActiveContext.Provider value={true}>
-      {liveblocksClient ? (
-        <BaseLiveblocksProvider client={liveblocksClient}>{children}</BaseLiveblocksProvider>
-      ) : (
-        <BaseLiveblocksProvider authEndpoint={fetchLiveblocksAuthToken}>
-          {children}
-        </BaseLiveblocksProvider>
-      )}
+      <BaseLiveblocksProvider authEndpoint={fetchLiveblocksAuthToken}>
+        {children}
+      </BaseLiveblocksProvider>
     </LiveblocksActiveContext.Provider>
   );
 }
