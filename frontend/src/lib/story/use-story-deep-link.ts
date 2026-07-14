@@ -12,7 +12,7 @@ import {
 import { isStoryDetailSectionId } from '@/lib/story/story-detail-sections';
 import { useStoryStore } from '@/hooks/use-story-store';
 import { useSelectedStoryId } from '@/hooks/use-selected-story-id';
-import { storyStore } from '@/stores/story-store';
+import { getStoryStore, storyStore } from '@/stores/story-store';
 
 /**
  * Opens story detail from `?story=` (identifier or id) and keeps the URL in sync
@@ -27,14 +27,15 @@ export function useStoryDeepLink(): void {
 
   React.useEffect(() => {
     const storyParam = searchParams.get('story');
-    const stories = storyStore.getServerSnapshot().stories;
-    if (!storyParam || stories.length === 0) {
+    const store = getStoryStore();
+    const storeStories = store.getServerSnapshot().stories;
+    if (!storyParam || storeStories.length === 0) {
       return;
     }
 
-    const storyId = resolveStoryIdFromQuery(storyParam, stories);
+    const storyId = resolveStoryIdFromQuery(storyParam, storeStories);
     if (!storyId) {
-      const byIdentifier = stories.find(
+      const byIdentifier = storeStories.find(
         (story) => story.identifier.toLowerCase() === storyParam.toLowerCase(),
       );
       if (byIdentifier) {
@@ -48,7 +49,7 @@ export function useStoryDeepLink(): void {
     const section =
       sectionParam && isStoryDetailSectionId(sectionParam) ? sectionParam : undefined;
 
-    const focus = storyStore.getServerSnapshot().detailFocus;
+    const focus = store.getServerSnapshot().detailFocus;
     if (
       selectedStoryId === storyId &&
       focus.section === (section ?? null) &&

@@ -59,9 +59,14 @@ const emptyState = (): StoryStoreState => ({
 /**
  * Story domain store — optimistic writes reconcile against server truth.
  * Mutations: compute next state → persist via controller → notify.
+ *
+ * Singleton is pinned on `globalThis` so webpack/OpenNext chunk duplicates
+ * cannot hydrate one instance while list/detail subscribe to another.
  */
+export const STORY_STORE_GLOBAL_KEY = '__landiFlowStoryStore' as const;
+
 type StoryStoreGlobal = typeof globalThis & {
-  __landiFlowStoryStore?: StoryStore;
+  [STORY_STORE_GLOBAL_KEY]?: StoryStore;
 };
 
 class StoryStore extends BaseDomainStore<StoryStoreState> {
@@ -73,10 +78,18 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
 
   static getInstance(): StoryStore {
     const globalStore = globalThis as StoryStoreGlobal;
-    if (!globalStore.__landiFlowStoryStore) {
-      globalStore.__landiFlowStoryStore = new StoryStore();
+    const existing = globalStore[STORY_STORE_GLOBAL_KEY];
+    if (existing) {
+      return existing;
     }
-    return globalStore.__landiFlowStoryStore;
+    const created = new StoryStore();
+    globalStore[STORY_STORE_GLOBAL_KEY] = created;
+    return created;
+  }
+
+  /** Re-assert this instance as the process-wide singleton after hydrate. */
+  private pinGlobalSingleton(): void {
+    (globalThis as StoryStoreGlobal)[STORY_STORE_GLOBAL_KEY] = this;
   }
 
   protected getSnapshot(): StoryStoreState {
@@ -96,6 +109,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
       loading: false,
       error: null,
     };
+    this.pinGlobalSingleton();
     this.notify();
   }
 
@@ -364,5 +378,26 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
   }
 }
 
-export const storyStore = StoryStore.getInstance();
+/**
+ * Always resolves `StoryStore.getInstance()` so module-level exports cannot
+ * diverge from `globalThis.__landiFlowStoryStore` across chunk boundaries.
+ */
+function createStoryStoreAccessor(): StoryStore {
+  return new Proxy({} as StoryStore, {
+    get(_target, prop): unknown {
+      const instance = StoryStore.getInstance();
+      const value = Reflect.get(instance as object, prop, instance);
+      if (typeof value === 'function') {
+        return (value as (...args: unknown[]) => unknown).bind(instance);
+      }
+      return value;
+    },
+  });
+}
+
+export function getStoryStore(): StoryStore {
+  return StoryStore.getInstance();
+}
+
+export const storyStore: StoryStore = createStoryStoreAccessor();
 export type { StoryStore };

@@ -17,7 +17,7 @@ import {
   isStoryModalRoute,
   preservesStorySelection,
 } from '@/lib/story/story-detail-routes';
-import { storyStore } from '@/stores/story-store';
+import { getStoryStore, storyStore } from '@/stores/story-store';
 
 export interface StoryDetailLayoutRootProps {
   children: React.ReactNode;
@@ -40,12 +40,13 @@ function StoryDetailModalHost(): React.ReactElement | null {
   const { isModal, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
   const { stories } = useStoryStore();
   const selectedStoryId = useSelectedStoryId();
+  const storeStories = getStoryStore().getServerSnapshot().stories;
   const selectedStory =
     stories.find(
       (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
     ) ??
     (selectedStoryId
-      ? storyStore.getServerSnapshot().stories.find(
+      ? storeStories.find(
           (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
         ) ?? null
       : null);
@@ -410,13 +411,14 @@ export function StoryDetailSurface({
   const { isSidebar } = useStoryDetailLayout();
   const selectedStoryId = useSelectedStoryId();
   const { stories } = useStoryStore();
+  const storeStories = getStoryStore().getServerSnapshot().stories;
   const story =
     storyProp ??
     (selectedStoryId
       ? stories.find(
           (row) => row.id === selectedStoryId || row.identifier === selectedStoryId,
         ) ??
-        storyStore.getServerSnapshot().stories.find(
+        storeStories.find(
           (row) => row.id === selectedStoryId || row.identifier === selectedStoryId,
         ) ??
         null

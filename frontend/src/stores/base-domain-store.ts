@@ -23,15 +23,14 @@ export abstract class BaseDomainStore<TState> {
     }
   }
 
-  /** Subscribe with immediate hydration; returns unsubscribe closure. */
+  /**
+   * Subscribe for useSyncExternalStore — notify-only.
+   * Do not call the listener synchronously during subscribe (React contract).
+   */
   subscribe(listener: DomainStoreListener): () => void {
-    const wrappedListener = (): void => {
-      listener();
-    };
-    this.listeners.add(wrappedListener);
-    listener();
+    this.listeners.add(listener);
     return () => {
-      this.listeners.delete(wrappedListener);
+      this.listeners.delete(listener);
     };
   }
 
