@@ -6,6 +6,7 @@ import { Button, cn, useTranslations } from '@landi-flow/ui';
 import { Maximize2, Minimize2, PanelRight, Pin, PinOff, X } from 'lucide-react';
 import { usePathname } from '@/i18n/navigation';
 import { StoryDetailBody } from '@/components/story-detail-body';
+import { ObsErrorBoundary } from '@/components/obs-error-boundary';
 import {
   StoryDetailLayoutProvider,
   useStoryDetailLayout,
@@ -195,6 +196,8 @@ function StoryDetailModal({
   onTogglePin,
   onToggleExpand,
 }: StoryDetailModalProps): React.ReactElement {
+  // Keep controls outside StoryDetailBody so the dialog shell can commit even if
+  // body/collaboration suspends or throws (GATE 2 modalPresent).
   const headerActions = (
     <StoryDetailModalControls
       isPinned={isPinned}
@@ -254,16 +257,33 @@ function StoryDetailModal({
               ? `${story.identifier} — ${story.title}`
               : 'Loading story detail'}
           </span>
-          {story ? (
-            <StoryDetailBody story={story} headerActions={headerActions} />
-          ) : (
-            <div
-              className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
-              data-testid="story-detail-modal-loading"
-            >
-              Loading story…
-            </div>
-          )}
+          {/*
+            Suspense + error boundary: dialog shell must paint for GATE 2 even when
+            Liveblocks / next-intl children suspend or throw.
+          */}
+          <React.Suspense
+            fallback={
+              <div
+                className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
+                data-testid="story-detail-modal-loading"
+              >
+                Loading story…
+              </div>
+            }
+          >
+            <ObsErrorBoundary fallbackMessage="Unable to render story detail.">
+              {story ? (
+                <StoryDetailBody story={story} headerActions={headerActions} />
+              ) : (
+                <div
+                  className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
+                  data-testid="story-detail-modal-loading"
+                >
+                  Loading story…
+                </div>
+              )}
+            </ObsErrorBoundary>
+          </React.Suspense>
         </div>
       </div>
     </dialog>
