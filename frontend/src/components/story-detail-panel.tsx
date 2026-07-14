@@ -71,7 +71,10 @@ function StoryDetailModalHost(): React.ReactElement | null {
     }
   }, [isModal, isPinned, pathname, selectedStoryId]);
 
-  React.useEffect(() => {
+  // useLayoutEffect: open the native dialog before paint so React-committed
+  // children are visible. useEffect raced with dialog UA `display:none` and left
+  // fiber children without DOM nodes on OpenNext/Cloudflare production builds.
+  React.useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) {
       return;
@@ -172,12 +175,15 @@ function StoryDetailModal({
     />
   ) : null;
 
+  // Always keep a stable child wrapper mounted (create-* modals do this).
+  // Conditional-only children on <dialog> left OpenNext builds with fiber nodes
+  // but childElementCount === 0 after showModal().
   return (
     <dialog
       ref={dialogRef}
       data-testid="story-detail-modal"
+      data-story-detail-visible={visible ? 'true' : 'false'}
       aria-labelledby="story-detail-modal-title"
-      aria-hidden={visible ? undefined : true}
       className={cn(
         'fixed inset-0 z-50 m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-0',
         'backdrop:bg-black/50 backdrop:backdrop-blur-sm',
@@ -188,34 +194,36 @@ function StoryDetailModal({
       }}
       onClose={onNativeClose}
     >
-      {story && visible ? (
-        <div
-          className={cn(
-            'flex min-h-full',
-            isExpanded ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-[5vh_5vw]',
-          )}
-          onClick={(event) => {
-            if (event.target === event.currentTarget && !isPinned) {
-              onClose();
-            }
-          }}
-        >
+      <div data-story-detail-root className="contents">
+        {story ? (
           <div
             className={cn(
-              'relative flex min-h-0 w-full flex-col overflow-hidden border border-border/80 shadow-2xl',
-              'bg-[#0b0e14]',
-              isExpanded
-                ? 'h-full max-h-full rounded-none'
-                : 'h-[min(90vh,960px)] max-h-[90vh] w-[min(90vw,1400px)] max-w-[90vw] rounded-[10px]',
+              'flex min-h-full',
+              isExpanded ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-[5vh_5vw]',
             )}
+            onClick={(event) => {
+              if (event.target === event.currentTarget && !isPinned) {
+                onClose();
+              }
+            }}
           >
-            <span id="story-detail-modal-title" className="sr-only">
-              {story.identifier} — {story.title}
-            </span>
-            <StoryDetailBody story={story} headerActions={headerActions} />
+            <div
+              className={cn(
+                'relative flex min-h-0 w-full flex-col overflow-hidden border border-border/80 shadow-2xl',
+                'bg-[#0b0e14]',
+                isExpanded
+                  ? 'h-full max-h-full rounded-none'
+                  : 'h-[min(90vh,960px)] max-h-[90vh] w-[min(90vw,1400px)] max-w-[90vw] rounded-[10px]',
+              )}
+            >
+              <span id="story-detail-modal-title" className="sr-only">
+                {story.identifier} — {story.title}
+              </span>
+              <StoryDetailBody story={story} headerActions={headerActions} />
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </dialog>
   );
 }
