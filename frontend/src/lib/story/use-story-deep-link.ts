@@ -103,6 +103,37 @@ export function syncStoryModalUrl(
 }
 
 /**
+ * Hard-writes `?story=` onto the current location so a hard reload restores
+ * selection (Next soft `router.replace` can drop the query under OpenNext).
+ */
+export function replaceStoryQueryInHistory(
+  story: { id: string; identifier: string },
+  options?: OpenStoryModalOptions,
+): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.set('story', story.identifier);
+  if (options?.section) {
+    url.searchParams.set('section', options.section);
+  } else {
+    url.searchParams.delete('section');
+  }
+  if (options?.highlightedSignalId) {
+    url.searchParams.set('signal', options.highlightedSignalId);
+  } else {
+    url.searchParams.delete('signal');
+  }
+  const next = `${url.pathname}?${url.searchParams.toString()}`;
+  const current = `${window.location.pathname}${window.location.search}`;
+  if (current === next) {
+    return;
+  }
+  window.history.replaceState(window.history.state, '', next);
+}
+
+/**
  * Opens story detail and writes `?story=` (and optional section/signal) to the URL.
  * Use for list/board/inbox clicks so GATE 2 reload restores the open story.
  */
@@ -122,6 +153,11 @@ export function useStoryModalSelect(): (
         snap.stories.find(
           (row) => row.identifier.toLowerCase() === storyId.toLowerCase(),
         );
+      if (!story) {
+        return;
+      }
+      // Immediate history write first — survives hard reload even if soft nav races.
+      replaceStoryQueryInHistory(story, options);
       router.replace(syncStoryModalUrl(pathname, story, options), { scroll: false });
     },
     [pathname, router],

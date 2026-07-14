@@ -1,0 +1,25 @@
+# Gap status — P0-1 iteration 5 (pre-matrix)
+
+base_sha: d5f029a
+fix_sha: pending
+gate: GATE 2 P0-1
+status: code_fix_shipped_pending_deploy_matrix
+
+## d5f029a remaining gaps (inputs)
+
+- list/board: showPortal=true WIRED but modalPresent=false; persist FAIL (no ?story=)
+- UX-05: epic_id null / "No Epic"
+- P0-1-epic: no stories on epic / open path weak
+- P0-2: board-column testid missing
+
+## Iteration 5 heal claims
+
+1. Native <dialog showModal()> for story-detail-modal when showPortal && !isSidebar
+2. history.replaceState ?story= on list/board selectStory path
+3. epic-create-story CTA + pathname epic inherit for Create
+4. data-testid=board-column on board sections
+
+## Verification
+
+- unit: 18/18 pass (deep-link + host visibility + epic association)
+- live matrix: pending after deploy

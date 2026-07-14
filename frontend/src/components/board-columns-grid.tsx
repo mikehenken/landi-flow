@@ -254,6 +254,7 @@ export function BoardColumnsGrid({
         return (
           <section
             key={column.statusId}
+            data-testid="board-column"
             className={cn(
               'flex shrink-0 flex-col rounded-lg bg-surface-elevated/50',
               compact ? 'w-[220px]' : 'w-[240px] sm:min-w-[280px] sm:w-auto sm:flex-1',
@@ -263,7 +264,9 @@ export function BoardColumnsGrid({
             onDrop={(event) => handleDrop(event, columnIndex, cards.length)}
           >
             <header className="flex items-center justify-between border-b border-border px-3 py-2">
-              <h3 className="text-sm font-medium">{statusName}</h3>
+              <h3 data-testid="board-column-title" className="text-sm font-medium">
+                {statusName}
+              </h3>
               <div className="flex items-center gap-1">
                 {onQuickAdd ? (
                   <button

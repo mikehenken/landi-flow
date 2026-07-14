@@ -10,6 +10,8 @@ export interface EmptyStateProps {
   description: string;
   ctaLabel: string;
   onCtaClick?: () => void;
+  /** Optional test id for the empty-state CTA (e.g. epic-create-story). */
+  ctaTestId?: string;
   imageSrc?: string;
   imageAlt?: string;
   className?: string;
@@ -21,6 +23,7 @@ export function EmptyState({
   description,
   ctaLabel,
   onCtaClick,
+  ctaTestId,
   imageSrc,
   imageAlt = '',
   className,
@@ -46,7 +49,7 @@ export function EmptyState({
       <h2 className="text-lg font-semibold text-foreground">{heading}</h2>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">{description}</p>
       {onCtaClick ? (
-        <Button className="mt-6" onClick={onCtaClick}>
+        <Button className="mt-6" onClick={onCtaClick} data-testid={ctaTestId}>
           {ctaLabel}
         </Button>
       ) : null}

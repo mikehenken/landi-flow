@@ -93,6 +93,16 @@ function EpicStoriesTab({
       onTeamChange={setActiveTeamId}
     >
       <div data-testid="epic-stories-tab" data-cap="CAP-044" className="pt-1">
+        <div className="flex items-center justify-end px-4 pb-2 sm:px-6">
+          <Button
+            type="button"
+            size="sm"
+            data-testid="epic-create-story"
+            onClick={() => openCreateStory({ epicId: epic.id })}
+          >
+            Create story
+          </Button>
+        </div>
         <StoryListView
           stories={filteredStories}
           selectedStoryId={selectedStoryId}

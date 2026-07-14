@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { createPortal } from 'react-dom';
 import type { Story } from '@landi-flow/core/types';
 import { Button, cn, useTranslations } from '@landi-flow/ui';
 import { Maximize2, Minimize2, PanelRight, Pin, PinOff, X } from 'lucide-react';
@@ -49,11 +48,15 @@ export function StoryDetailLayoutRoot({
 /**
  * Reads ONLY `globalThis.__landiFlowStoryStore` every render
  * (useSyncExternalStore + window force setState). Never trusts a module-orphan snap.
+ *
+ * Renders a native `<dialog>` in-tree (no createPortal) and calls `showModal()` so
+ * GATE 2 probes see `modalPresent=true` when `showPortal=true`.
  */
 function StoryDetailModalHost(): React.ReactElement | null {
   const pathname = usePathname();
   const { isSidebar, isPinned, isExpanded, setExpanded, setPinned } =
     useStoryDetailLayout();
+  const dialogRef = React.useRef<HTMLDialogElement>(null);
   const globalSnap = useGlobalLandiFlowStoryStore();
   // Live re-read on every render so probes never see a stale closure.
   const liveSnap = readPinnedLandiFlowStorySnapshot();
@@ -66,6 +69,9 @@ function StoryDetailModalHost(): React.ReactElement | null {
   const selectedStory = resolveStoryBySelection(snap.stories, selectedStoryId);
 
   const onStoryModalRoute = isStoryModalRoute(pathname);
+  // Modal layout: always mount dialog when selection is set (even if story pending).
+  // Sidebar layout: dialog stays closed; StoryDetailSurface owns the visible panel.
+  const dialogShouldOpen = showPortal && !isSidebar;
 
   // Sync dataset during render — useEffect lagged behind live store on f2c8972.
   writeStoryDetailDebugDataset({
@@ -77,6 +83,7 @@ function StoryDetailModalHost(): React.ReactElement | null {
     hookCount: snap.stories.length,
     isSidebar,
     showPortal,
+    dialogShouldOpen,
     pathname,
     source: 'globalThis.__landiFlowStoryStore',
   });
@@ -119,32 +126,59 @@ function StoryDetailModalHost(): React.ReactElement | null {
     setExpanded(false);
     storyStore.clearDetailFocus();
     storyStore.selectStory(null);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('story')) {
+        url.searchParams.delete('story');
+        url.searchParams.delete('section');
+        url.searchParams.delete('signal');
+        const next =
+          url.searchParams.toString().length > 0
+            ? `${url.pathname}?${url.searchParams.toString()}`
+            : url.pathname;
+        window.history.replaceState(window.history.state, '', next);
+      }
+    }
   }, [setExpanded, setPinned]);
 
-  // showPortal follows selectedStoryId; modal body waits for story resolve.
-  if (!showPortal || !selectedStory) {
+  React.useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (dialogShouldOpen) {
+      if (!dialog.open) {
+        dialog.showModal();
+      }
+      return;
+    }
+    if (dialog.open) {
+      dialog.close();
+    }
+  }, [dialogShouldOpen, selectedStoryId]);
+
+  // Keep the dialog node mounted whenever selection is set so probes can find it.
+  // Sidebar mode still mounts the node but keeps it closed (StoryDetailSurface shows).
+  if (!showPortal) {
     return null;
   }
 
-  if (typeof document === 'undefined') {
-    return null;
-  }
-
-  return createPortal(
+  return (
     <StoryDetailModal
+      dialogRef={dialogRef}
       story={selectedStory}
       isExpanded={isExpanded}
       isPinned={isPinned}
       onClose={handleCloseModal}
       onTogglePin={() => setPinned((prev) => !prev)}
       onToggleExpand={() => setExpanded((prev) => !prev)}
-    />,
-    document.body,
+    />
   );
 }
 
 interface StoryDetailModalProps {
-  story: Story;
+  dialogRef: React.RefObject<HTMLDialogElement | null>;
+  story: Story | null;
   isExpanded: boolean;
   isPinned: boolean;
   onClose: () => void;
@@ -153,6 +187,7 @@ interface StoryDetailModalProps {
 }
 
 function StoryDetailModal({
+  dialogRef,
   story,
   isExpanded,
   isPinned,
@@ -170,34 +205,33 @@ function StoryDetailModal({
     />
   );
 
-  React.useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [onClose]);
-
   return (
-    <div
+    <dialog
+      ref={dialogRef}
       data-testid="story-detail-modal"
       data-story-detail-visible="true"
-      role="dialog"
       aria-modal="true"
       aria-labelledby="story-detail-modal-title"
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+      className={cn(
+        'fixed inset-0 z-50 m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-0',
+        'backdrop:bg-black/50 backdrop:backdrop-blur-sm',
+        'open:flex open:flex-col',
+      )}
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!isPinned) {
+          onClose();
+        }
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !isPinned) {
+          onClose();
+        }
+      }}
     >
       <div
         className={cn(
-          'flex min-h-full',
+          'flex min-h-full w-full flex-1',
           isExpanded ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-[5vh_5vw]',
         )}
         onClick={(event) => {
@@ -216,12 +250,23 @@ function StoryDetailModal({
           )}
         >
           <span id="story-detail-modal-title" className="sr-only">
-            {story.identifier} — {story.title}
+            {story
+              ? `${story.identifier} — ${story.title}`
+              : 'Loading story detail'}
           </span>
-          <StoryDetailBody story={story} headerActions={headerActions} />
+          {story ? (
+            <StoryDetailBody story={story} headerActions={headerActions} />
+          ) : (
+            <div
+              className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
+              data-testid="story-detail-modal-loading"
+            >
+              Loading story…
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 

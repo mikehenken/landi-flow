@@ -29,6 +29,8 @@ export interface StoryListViewProps {
   selectedStoryId?: string | null;
   onStorySelect: (storyId: string) => void;
   onCreateStory?: () => void;
+  /** Forwarded to EmptyState CTA when the list is empty. */
+  createStoryTestId?: string;
   displayProperties?: StoryDisplayProperty[];
   enableDragReorder?: boolean;
   /** When false, hide checkboxes (no bulk action bar on this surface). */
@@ -42,6 +44,7 @@ export function StoryListView({
   selectedStoryId,
   onStorySelect,
   onCreateStory,
+  createStoryTestId,
   displayProperties = ['id', 'status', 'assignee', 'priority'],
   enableDragReorder = true,
   enableBulkSelect = true,
@@ -104,6 +107,7 @@ export function StoryListView({
         description={t('empty.description')}
         ctaLabel={t('empty.cta')}
         onCtaClick={onCreateStory}
+        ctaTestId={createStoryTestId}
         imageSrc={brandAssets.featureCollaboration}
         imageAlt={t('badge.label')}
       />

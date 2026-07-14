@@ -283,9 +283,18 @@ export function AppShellFrame({
 
 
   const openCreateStory = React.useCallback((options?: OpenCreateStoryOptions) => {
-    setCreateStoryEpicId(options?.epicId ?? null);
+    // UX-05: when Create is opened from an epic detail route without an explicit
+    // epicId (header Create / command palette), inherit the epic from the URL.
+    let epicId = options?.epicId ?? null;
+    if (!epicId) {
+      const fromPath = pathname.match(/\/workspace\/epics\/([0-9a-f-]{36})/i);
+      if (fromPath?.[1]) {
+        epicId = fromPath[1];
+      }
+    }
+    setCreateStoryEpicId(epicId);
     setCreateStoryOpen(true);
-  }, []);
+  }, [pathname]);
 
   const openCreateEpic = React.useCallback(() => {
     setCreateEpicOpen(true);
