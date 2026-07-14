@@ -1,0 +1,28 @@
+{
+  "create": {
+    "title": "إنشاء قصة",
+    "title_placeholder": "عنوان القصة",
+    "description_placeholder": "صف ما يجب إنجازه…",
+    "create_more": "إنشاء المزيد",
+    "cancel": "إلغاء",
+    "submit": "إنشاء",
+    "properties_label": "خصائص القصة"
+  },
+  "status": {
+    "todo": "للتنفيذ",
+    "in_progress": "قيد التنفيذ",
+    "done": "منجز",
+    "canceled": "ملغى"
+  },
+  "empty": {
+    "heading": "لا توجد قصص بعد",
+    "description": "القصص هي وحدة العمل الذرية في مساحة العمل.",
+    "cta": "أنشئ قصتك الأولى"
+  },
+  "badge": {
+    "label": "قصة"
+  },
+  "identifier": {
+    "format": "{team}-{number}"
+  }
+}

@@ -1,0 +1,123 @@
+/**
+ * Instant markdown editor — styled with Landi Flow design tokens.
+ * Import via `@landi-flow/ui/editor-styles` in app globals.
+ */
+
+.instant-md-editor {
+  @apply relative w-full text-sm leading-relaxed text-foreground;
+}
+
+.instant-md-editor .ProseMirror {
+  @apply min-h-[7rem] outline-none;
+}
+
+.instant-md-editor .ProseMirror.instant-md-empty:first-child::before {
+  @apply pointer-events-none float-left h-0 text-foreground-subtle;
+  content: attr(data-placeholder);
+}
+
+.instant-md-editor .ProseMirror > * + * {
+  @apply mt-3;
+}
+
+.instant-md-editor .ProseMirror h1 {
+  @apply text-xl font-semibold tracking-tight text-foreground;
+}
+
+.instant-md-editor .ProseMirror h2 {
+  @apply text-lg font-semibold tracking-tight text-foreground;
+}
+
+.instant-md-editor .ProseMirror h3 {
+  @apply text-base font-semibold text-foreground;
+}
+
+.instant-md-editor .ProseMirror p {
+  @apply text-sm text-foreground-muted;
+}
+
+.instant-md-editor .ProseMirror strong {
+  @apply font-semibold text-foreground;
+}
+
+.instant-md-editor .ProseMirror em {
+  @apply italic;
+}
+
+.instant-md-editor .ProseMirror s {
+  @apply line-through text-foreground-subtle;
+}
+
+.instant-md-editor .ProseMirror code {
+  @apply rounded-sm bg-surface-elevated px-1 py-0.5 font-mono text-xs text-foreground;
+}
+
+.instant-md-editor .ProseMirror pre {
+  @apply overflow-x-auto rounded-md border border-border bg-surface-elevated p-3 font-mono text-xs;
+}
+
+.instant-md-editor .ProseMirror pre code {
+  @apply bg-transparent p-0;
+}
+
+.instant-md-editor .ProseMirror blockquote {
+  @apply border-l-2 border-brand-primary pl-3 text-foreground-muted;
+}
+
+.instant-md-editor .ProseMirror ul,
+.instant-md-editor .ProseMirror ol {
+  @apply list-outside pl-5 text-foreground-muted;
+}
+
+.instant-md-editor .ProseMirror ul {
+  @apply list-disc;
+}
+
+.instant-md-editor .ProseMirror ol {
+  @apply list-decimal;
+}
+
+.instant-md-editor .ProseMirror ul[data-type='taskList'] {
+  @apply list-none pl-0;
+}
+
+.instant-md-editor .ProseMirror li[data-type='taskItem'] {
+  @apply flex items-start gap-2;
+}
+
+.instant-md-editor .ProseMirror li[data-type='taskItem'] > label {
+  @apply mt-0.5 flex shrink-0 items-center;
+}
+
+.instant-md-editor .ProseMirror li[data-type='taskItem'] > label input {
+  @apply h-3.5 w-3.5 rounded border-border accent-[hsl(var(--brand-primary))];
+}
+
+.instant-md-editor .ProseMirror hr {
+  @apply my-4 border-border;
+}
+
+.instant-md-editor .ProseMirror a.instant-md-link {
+  @apply text-[hsl(var(--brand-primary))] underline underline-offset-2;
+}
+
+.instant-md-editor--compact .ProseMirror {
+  @apply min-h-[4rem];
+}
+
+.instant-md-editor--readonly .ProseMirror {
+  @apply cursor-default;
+}
+
+/* Linear-style preview: formatted body without focus chrome until click */
+.instant-md-editor--preview {
+  @apply border-transparent bg-transparent;
+}
+
+.instant-md-editor--preview:focus-within {
+  @apply border-transparent bg-transparent;
+}
+
+.instant-md-editor--preview .ProseMirror {
+  @apply min-h-0;
+}

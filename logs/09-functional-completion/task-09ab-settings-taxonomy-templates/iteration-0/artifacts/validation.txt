@@ -1,0 +1,2 @@
+pnpm run lint — PASS
+pnpm --filter @landi-flow/frontend test:e2e -- settings-taxonomy-templates.spec.ts — 2/2 PASS

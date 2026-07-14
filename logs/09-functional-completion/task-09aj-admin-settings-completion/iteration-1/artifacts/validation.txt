@@ -1,0 +1,6 @@
+pnpm run lint: PASS (repo root)
+e2e: PASS 7/7 chromium-mock (admin-settings-completion.spec.ts)
+CAP-099 workspace save reflects in shell switcher
+CAP-100 team create persists after reload
+CAP-108 CSV import creates persisted story rows
+Screenshots: iteration-1/artifacts/09aj-*.png

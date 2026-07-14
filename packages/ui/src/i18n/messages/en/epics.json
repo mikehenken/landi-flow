@@ -1,0 +1,26 @@
+{
+  "create": {
+    "title": "Create Epic",
+    "title_placeholder": "Epic name",
+    "description_placeholder": "Describe the strategic goal of this Epic…",
+    "create_more": "Create more",
+    "cancel": "Cancel",
+    "submit": "Create",
+    "properties_label": "Epic properties"
+  },
+  "status": {
+    "backlog": "Backlog",
+    "planned": "Planned",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "empty": {
+    "heading": "No Epics yet",
+    "description": "Epics are strategic containers for your team's work.",
+    "cta": "Create your first Epic"
+  },
+  "badge": {
+    "label": "Epic"
+  }
+}

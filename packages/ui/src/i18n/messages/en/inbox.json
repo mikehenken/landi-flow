@@ -1,0 +1,27 @@
+{
+  "welcome": {
+    "loading": "Loading your inbox…"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "unread_count": "{count, plural, =0 {All caught up} one {# unread} other {# unread}}",
+    "empty": {
+      "heading": "You're all caught up",
+      "description": "New assignments, mentions, and Story updates will appear here.",
+      "cta": "Browse Stories"
+    }
+  },
+  "activity": {
+    "title": "Activity",
+    "subtitle": "Recent workspace events across Stories and agents.",
+    "system_actor": "System",
+    "empty": {
+      "heading": "No recent activity",
+      "description": "Story changes, agent signals, and comments will show up here chronologically."
+    }
+  },
+  "error": {
+    "title": "Couldn't load inbox",
+    "retry": "Try again"
+  }
+}

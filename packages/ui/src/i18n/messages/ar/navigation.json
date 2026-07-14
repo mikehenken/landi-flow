@@ -1,0 +1,79 @@
+{
+  "command_palette": {
+    "create_story": "إنشاء قصة",
+    "create_epic": "إنشاء ملحمة",
+    "goto_prefix": "الذهاب إلى",
+    "goto_inbox": "الذهاب إلى الوارد",
+    "goto_stories": "الذهاب إلى القصص",
+    "goto_epics": "الذهاب إلى الملاحم",
+    "open_agents": "فتح وحدة تحكم الوكلاء",
+    "suggested_actions": "إجراءات مقترحة",
+    "navigation_group": "التنقل",
+    "stories_group": "القصص",
+    "epics_group": "الملاحم",
+    "placeholder": "البحث في القصص أو الملاحم أو الإجراءات…",
+    "search_placeholder": "البحث في {stories} أو {epics} أو الإجراءات…",
+    "no_results": "لم يتم العثور على نتائج."
+  },
+  "views": {
+    "inbox": "صندوق الوارد",
+    "stories": "قصصي",
+    "stories_nav": "{stories}",
+    "story_board": "لوحة القصص",
+    "entity_board": "لوحة {entity}",
+    "agents": "الوكلاء",
+    "epic_board": "لوحة الملاحم",
+    "customers": "العملاء",
+    "epics_section": "الملاحم",
+    "views_section": "العروض",
+    "workspace": "مساحة العمل"
+  },
+  "inbox": {
+    "title": "صندوق الوارد",
+    "welcome": "مرحبًا بعودتك — {count} قصص نشطة في مساحة عملك.",
+    "team_breadcrumb": "الفريق"
+  },
+  "stories": {
+    "title": "القصص",
+    "board_title": "لوحة القصص"
+  },
+  "epics": {
+    "title": "لوحة الملاحم",
+    "detail_breadcrumb": "ملحمة"
+  },
+  "agents": {
+    "title": "الوكلاء",
+    "breadcrumb": "الوكلاء"
+  },
+  "account": {
+    "title": "الحساب"
+  },
+  "settings": {
+    "title": "إعدادات مساحة العمل",
+    "section": "الإعدادات",
+    "general": "عام",
+    "members": "الأعضاء",
+    "general_placeholder": "اسم مساحة العمل والمصطلحات وتفضيلات العرض ستكون هنا.",
+    "members_placeholder": "دعوة الزملاء وإدارة الأدوار — قريبًا.",
+    "account_hint": "إدارة إعدادات مساحة العمل الافتراضية وعضوية الفريق.",
+    "open_workspace": "فتح إعدادات مساحة العمل"
+  },
+  "story_detail": {
+    "layout_sidebar": "الشريط الجانبي",
+    "layout_modal": "نافذة منبثقة",
+    "layout_sidebar_active": "تفاصيل القصة في الشريط الجانبي",
+    "layout_modal_active": "تفاصيل القصة في نافذة منبثقة",
+    "layout_toggle": "التبديل إلى تخطيط {mode}",
+    "setting_title": "تخطيط تفاصيل القصة",
+    "setting_description": "اختر فتح التفاصيل في لوحة جانبية أو نافذة منبثقة (تثبيت وتوسيع).",
+    "pin": "تثبيت التفاصيل",
+    "unpin": "إلغاء تثبيت التفاصيل",
+    "expand": "توسيع التفاصيل",
+    "collapse": "طي التفاصيل",
+    "close": "إغلاق التفاصيل"
+  },
+  "locale_switcher": {
+    "label": "اللغة",
+    "current": "اللغة الحالية: {locale}"
+  }
+}

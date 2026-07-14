@@ -1,0 +1,4 @@
+pnpm run lint: PASS (2026-07-07, frontend-developer)
+E2E dedupe-view-copy.spec.ts: 1 passed (1.4m, CI=true chromium-mock)
+Screenshot: iteration-0/artifacts/09w-epic-overview-deduped.png
+E2E fix: domcontentloaded + html[data-app-hydrated] selector (load event hung on collab WS)

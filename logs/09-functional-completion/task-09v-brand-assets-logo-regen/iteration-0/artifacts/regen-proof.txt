@@ -1,0 +1,17 @@
+[regenerate-brand-logos] Model: gemini-3.1-flash-image-preview (workflow requests gemini-3.1-pro-image-preview)
+[regenerate-brand-logos] Generating logomark-primary.jpg via gemini-3.1-flash-image-preview...
+[regenerate-brand-logos] Wrote logomark-primary.jpg (462955 bytes)
+[regenerate-brand-logos] Generating logo-wordmark-horizontal.jpg via gemini-3.1-flash-image-preview...
+[regenerate-brand-logos] Wrote logo-wordmark-horizontal.jpg (261372 bytes)
+[regenerate-brand-logos] Updated image-manifest.json
+[regenerate-brand-logos] Done. Run optimize-brand-svgs.mjs and frontend prebuild.
+
+Prior Phase-07 checksums (replaced):
+  logomark-primary.jpg sha256=b41e94ea920645b84e64f8ab1be9935f548adc92ebf9e6d115d1ba72323ba1b3
+  logo-wordmark-horizontal.jpg sha256=f6442a6c34aaf661aa5c63472ce930d7b2433d7452786862fd075e4547a4180a
+
+New checksums:
+  logomark-primary.jpg sha256=aa2150ef36b047e0c4eb4f0fea077cadf6092e84ce00d4bdf9fb0e181c66ca3f
+  logo-wordmark-horizontal.jpg sha256=b7cc67c2f72e6490100039e27e67f6d5ca6874117a2279f24a7637bae8ced51f
+
+Model list API probe: gemini-3.1-pro-image-preview NOT_FOUND; gemini-3.1-flash-image-preview available.

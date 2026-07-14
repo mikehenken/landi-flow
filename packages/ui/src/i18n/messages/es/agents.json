@@ -1,0 +1,12 @@
+{
+  "console": {
+    "title": "Consola de Agentes",
+    "description": "Colabora con agentes de IA gobernados como miembros del espacio de trabajo.",
+    "select_agent": "Selecciona un agente para iniciar una conversación."
+  },
+  "roster": {
+    "title": "Colaboradores",
+    "agents": "Agentes",
+    "humans": "Humanos"
+  }
+}

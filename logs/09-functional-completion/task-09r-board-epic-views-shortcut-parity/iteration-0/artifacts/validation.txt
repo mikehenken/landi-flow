@@ -1,0 +1,10 @@
+task-09r-board-epic-views-shortcut-parity iteration-0 validation
+date: 2026-07-07
+
+lint: PASS (pnpm run lint — no warnings or errors)
+e2e: PASS (pnpm run test:e2e -- board-epic-views-shortcut-parity — 1/1)
+
+screenshots:
+- logs/09-functional-completion/task-09r-board-epic-views-shortcut-parity/iteration-0/artifacts/board-flat-cap-019.png
+- logs/09-functional-completion/task-09r-board-epic-views-shortcut-parity/iteration-0/artifacts/board-swimlanes-epic-cap-031.png
+- logs/09-functional-completion/task-09r-board-epic-views-shortcut-parity/iteration-0/artifacts/epic-detail-overview-cap-043-048-049.png

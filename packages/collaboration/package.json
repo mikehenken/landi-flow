@@ -1,0 +1,26 @@
+{
+  "name": "@landi-flow/collaboration",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./rooms": "./src/rooms.ts",
+    "./types": "./src/types.ts",
+    "./hydration": "./src/hydration.ts",
+    "./permissions": "./src/permissions.ts"
+  },
+  "dependencies": {
+    "@landi-flow/auth": "workspace:*",
+    "@landi-flow/core": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"lint placeholder\""
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

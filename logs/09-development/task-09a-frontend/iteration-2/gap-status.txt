@@ -1,0 +1,29 @@
+STUDY-013 task-09a-frontend — iteration 2 independent re-review
+Reviewer: architect-reviewer (independent)
+Frontend commit: 2156682 (tree HEAD 285f7a0; git diff 2156682..HEAD -- frontend = empty)
+Env: Node v24.3.0, pnpm 9.15.0
+Date: 2026-07-04
+
+VERDICT: PASS
+SCORE: 0.96 (gate >= 0.90)
+
+GAP STATUS
+----------
+GAP-01  BLOCKER  FIXED   sync-public-assets.mjs stripped of TS annotations; node run exit 0; canonical pnpm build exit 0 (prebuild hook + next build, 11 routes)
+GAP-02  MAJOR    FIXED   repo-root public/assets/** tracked in git (10 files); clean-tree test (deleted frontend/public) repopulated via prebuild; build succeeded with no pre-existing assets
+GAP-03  MINOR    FIXED   report + self-review + execution-log state canonical build (incl. prebuild) with iter-1 correction; correlation.ts comment fixed (copy via prebuild, not symlink)
+GAP-04  MINOR    FIXED   G-secondary only consumes i/s/e; other keys cancel G-mode without preventDefault; app-shell wires onCancelGSecondary; handleGKeyNavigation resets state
+GAP-05  MINOR    DEFERRED  legitimately out of scope (filter panel, create modals, next-intl, E2E, error toasts, role-based DOM trimming) — non-blocking
+
+VERIFICATION
+------------
+typecheck  PASS  (tsc --noEmit exit 0)
+lint       PASS  (No ESLint warnings or errors)
+build      PASS  (NEXT_PUBLIC_MOCK_AUTH=true pnpm --filter @landi-flow/frontend build; exit 0; 11 routes)
+sync       PASS  (node ./frontend/scripts/sync-public-assets.mjs exit 0)
+assets     PASS  (10 assets delivered to frontend/public on clean tree)
+
+NON-BLOCKING RESIDUALS
+----------------------
+1. No CI workflow runs the full pnpm build (lifecycle hooks) — recommended guard for GAP-01 regressions.
+2. GAP-04: non-matching key cancels G-mode via early return, so it does not fire its own action on that same press (cosmetic).

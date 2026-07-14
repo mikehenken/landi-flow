@@ -1,0 +1,6 @@
+pnpm run lint: PASS (repo root)
+e2e: PASS 5/5 chromium-mock (customer-asks-sla.spec.ts)
+CAP-073 webhook POST /api/webhooks/inbound/asks creates persisted request
+CAP-067 link-request persists after reload
+CAP-074 SLA rule create + story LAN-5 breach badge proof
+Screenshots: iteration-1/artifacts/09ag-*.png

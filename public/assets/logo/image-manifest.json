@@ -1,0 +1,131 @@
+{
+  "version": "2026-07-07",
+  "generator": "task-09v-brand-assets-logo-regen",
+  "approach": "Gemini 3.1 JPG regeneration completed; SVG canonical assets retained for UI scaling.",
+  "pipeline": {
+    "status": "production_ready",
+    "canonical_format": "svg",
+    "fallback_format": "jpg",
+    "regen_script": "scripts/regenerate-brand-logos.mjs",
+    "optimize_script": "scripts/optimize-brand-svgs.mjs",
+    "storybook_review": "Brand/BrandAssetsPreview",
+    "gemini_regen": {
+      "requested_model": "gemini-3.1-pro-image-preview",
+      "model": "gemini-3.1-flash-image-preview",
+      "status": "completed",
+      "completed_at": "2026-07-07T12:56:54.300Z",
+      "model_resolution": "gemini-3.1-pro-image-preview unavailable; resolved to gemini-3.1-flash-image-preview"
+    },
+    "svg_optimized_at": "2026-07-07T12:57:06.723Z",
+    "last_validated": "2026-07-07T12:57:06.723Z"
+  },
+  "chief_ux_criteria": {
+    "sidebar_mark_32px": {
+      "criterion": "Logomark readable at 32px sidebar width",
+      "status": "pass",
+      "evidence": "SVG canonical asset; Storybook SidebarMark32px story"
+    },
+    "footer_wordmark_opacity": {
+      "criterion": "Wordmark legible in footer at opacity-60",
+      "status": "pass",
+      "evidence": "SVG wordmark; Storybook FooterWordmark story"
+    },
+    "workspace_logo_override": {
+      "criterion": "Workspace white-label logo_url override takes precedence",
+      "status": "pass",
+      "evidence": "Storybook WorkspaceOverride story; app-shell getWorkspaceLogoUrl precedence"
+    }
+  },
+  "brand_tokens": {
+    "brand_primary": "#5e6ad2",
+    "brand_primary_hsl": "235 86% 65%",
+    "gradient_end": "#7c3aed"
+  },
+  "assets": [
+    {
+      "id": "logomark-primary",
+      "file": "logomark-primary.svg",
+      "path": "/assets/logo/logomark-primary.svg",
+      "format": "svg",
+      "role": "sidebar_mark",
+      "dimensions": "512x512",
+      "display_sizes": [
+        "32px",
+        "40px",
+        "48px"
+      ],
+      "source": "production_svg_pipeline",
+      "source_model": null,
+      "optimized": true,
+      "integrated_in": [
+        "frontend/src/lib/correlation.ts",
+        "frontend/src/components/app-shell.tsx",
+        "packages/ui/src/brand/brand-assets-preview.tsx"
+      ],
+      "bytes": 680,
+      "sha256": "ba7c1ec0c1394d740c8ae50ce9247b2a15552dea4ce1a09117780c244195b2d6",
+      "optimized_at": "2026-07-07T12:57:06.723Z"
+    },
+    {
+      "id": "logo-wordmark-horizontal",
+      "file": "logo-wordmark-horizontal.svg",
+      "path": "/assets/logo/logo-wordmark-horizontal.svg",
+      "format": "svg",
+      "role": "footer_wordmark",
+      "dimensions": "1200x400",
+      "display_sizes": [
+        "120x24",
+        "160x32"
+      ],
+      "source": "production_svg_pipeline",
+      "source_model": null,
+      "optimized": true,
+      "integrated_in": [
+        "frontend/src/lib/correlation.ts",
+        "frontend/src/components/app-shell.tsx",
+        "packages/ui/src/brand/brand-assets-preview.tsx"
+      ],
+      "bytes": 851,
+      "sha256": "9cd6aad22b0697ca3f36cf104cb8fe3645a19bc61f77e7a50d44ba13e1a02808",
+      "optimized_at": "2026-07-07T12:57:06.723Z"
+    },
+    {
+      "id": "logomark-primary-jpg",
+      "file": "logomark-primary.jpg",
+      "path": "/assets/logo/logomark-primary.jpg",
+      "format": "jpg",
+      "role": "og_fallback",
+      "dimensions": "512x512",
+      "source": "gemini_regen",
+      "source_model": "gemini-3.1-flash-image-preview",
+      "regen_status": "completed",
+      "integrated_in": [
+        "frontend/src/lib/correlation.ts"
+      ],
+      "bytes": 462955,
+      "sha256": "aa2150ef36b047e0c4eb4f0fea077cadf6092e84ce00d4bdf9fb0e181c66ca3f",
+      "validated_at": "2026-07-07T12:57:06.723Z",
+      "requested_model": "gemini-3.1-pro-image-preview",
+      "generated_at": "2026-07-07T12:56:54.300Z"
+    },
+    {
+      "id": "logo-wordmark-horizontal-jpg",
+      "file": "logo-wordmark-horizontal.jpg",
+      "path": "/assets/logo/logo-wordmark-horizontal.jpg",
+      "format": "jpg",
+      "role": "social_fallback",
+      "dimensions": "1200x400",
+      "source": "gemini_regen",
+      "source_model": "gemini-3.1-flash-image-preview",
+      "regen_status": "completed",
+      "integrated_in": [
+        "frontend/src/lib/correlation.ts"
+      ],
+      "bytes": 261372,
+      "sha256": "b7cc67c2f72e6490100039e27e67f6d5ca6874117a2279f24a7637bae8ced51f",
+      "validated_at": "2026-07-07T12:57:06.723Z",
+      "requested_model": "gemini-3.1-pro-image-preview",
+      "generated_at": "2026-07-07T12:56:54.300Z"
+    }
+  ]
+}

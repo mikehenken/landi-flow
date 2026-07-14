@@ -1,17 +1,28 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": false,
     "skipLibCheck": true,
+    "strict": true,
     "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
     "paths": {
-      "@landi-flow/core/*": ["../packages/core/src/*"]
+      "@/*": ["./src/*", "../packages/ui/src/*"],
+      "@landi-flow/core/*": ["../packages/core/src/*"],
+      "@landi-flow/collaboration": ["../packages/collaboration/src/index.ts"],
+      "@landi-flow/collaboration/*": ["../packages/collaboration/src/*"],
+      "@landi-flow/ui": ["../packages/ui/src/index.ts"],
+      "@landi-flow/ui/*": ["../packages/ui/src/*"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "**/*.stories.tsx"]
 }

@@ -1,0 +1,14 @@
+{
+  "title": "Clientes",
+  "search_placeholder": "Buscar por nombre o dominio…",
+  "empty": {
+    "heading": "Clientes",
+    "description": "Añade organizaciones que usan tu producto para rastrear sus solicitudes de funciones y usar atributos como ingresos y tamaño para priorizar el desarrollo.",
+    "cta": "Crear nuevo cliente",
+    "documentation": "Documentación",
+    "no_results": "Ningún cliente coincide con tu búsqueda."
+  },
+  "list": {
+    "aria_label": "Lista de clientes"
+  }
+}

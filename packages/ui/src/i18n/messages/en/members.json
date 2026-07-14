@@ -1,0 +1,19 @@
+{
+  "create": {
+    "title": "Invite member",
+    "email_label": "Email address",
+    "email_placeholder": "colleague@company.com",
+    "display_name_label": "Name (optional)",
+    "display_name_placeholder": "Jane Doe",
+    "properties_label": "Member properties",
+    "cancel": "Cancel",
+    "submit": "Invite",
+    "roles": {
+      "member": "Member",
+      "admin": "Admin",
+      "team_owner": "Team owner",
+      "guest": "Guest",
+      "owner": "Owner"
+    }
+  }
+}

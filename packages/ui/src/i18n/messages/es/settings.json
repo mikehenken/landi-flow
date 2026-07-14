@@ -1,0 +1,14 @@
+{
+  "title": "Configuración del espacio de trabajo",
+  "section": "Configuración",
+  "general": "General",
+  "members": "Miembros",
+  "general_placeholder": "El nombre del espacio de trabajo, la terminología y las preferencias de visualización estarán aquí.",
+  "members_placeholder": "Invita compañeros y gestiona roles — próximamente.",
+  "account_hint": "Administra los valores predeterminados del espacio de trabajo y la membresía del equipo.",
+  "open_workspace": "Abrir configuración del espacio de trabajo",
+  "cycles": "Ciclos",
+  "taxonomy": "Taxonomía",
+  "recurring_stories": "Historias recurrentes",
+  "mcp_tools": "Herramientas MCP"
+}

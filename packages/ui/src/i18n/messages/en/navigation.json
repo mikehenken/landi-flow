@@ -1,0 +1,80 @@
+{
+  "command_palette": {
+    "create_story": "Create Story",
+    "create_epic": "Create Epic",
+    "goto_prefix": "Go to",
+    "goto_inbox": "Go to Inbox",
+    "goto_stories": "Go to Stories",
+    "goto_epics": "Go to Epics",
+    "open_agents": "Open Agent Console",
+    "suggested_actions": "Suggested Actions",
+    "navigation_group": "Navigation",
+    "stories_group": "Stories",
+    "epics_group": "Epics",
+    "placeholder": "Search stories, epics, or actions…",
+    "search_placeholder": "Search {stories}, {epics}, or actions…",
+    "no_results": "No results found."
+  },
+  "views": {
+    "inbox": "Inbox",
+    "stories": "My Stories",
+    "stories_nav": "My {stories}",
+    "my_issues": "My Issues",
+    "story_board": "Story Board",
+    "entity_board": "{entity} Board",
+    "agents": "Agents",
+    "epic_board": "Epic Board",
+    "customers": "Customers",
+    "epics_section": "Epics",
+    "views_section": "Views",
+    "workspace": "Workspace"
+  },
+  "inbox": {
+    "title": "Inbox",
+    "welcome": "Welcome back — {count, plural, one {# notification} other {# notifications}}{unread, plural, =0 {} other { ({unread} unread)}}.",
+    "team_breadcrumb": "Team"
+  },
+  "stories": {
+    "title": "Stories",
+    "board_title": "Story Board"
+  },
+  "epics": {
+    "title": "Epic Board",
+    "detail_breadcrumb": "Epic"
+  },
+  "agents": {
+    "title": "Agents",
+    "breadcrumb": "Agents"
+  },
+  "account": {
+    "title": "Account"
+  },
+  "settings": {
+    "title": "Workspace settings",
+    "section": "Settings",
+    "general": "General",
+    "members": "Members",
+    "general_placeholder": "Workspace name, terminology, and display preferences will live here.",
+    "members_placeholder": "Invite teammates and manage roles — coming in a follow-up release.",
+    "account_hint": "Manage workspace-wide defaults and team membership.",
+    "open_workspace": "Open workspace settings"
+  },
+  "story_detail": {
+    "layout_sidebar": "Sidebar",
+    "layout_modal": "Modal",
+    "layout_sidebar_active": "Story detail opens in the sidebar",
+    "layout_modal_active": "Story detail opens in a modal overlay",
+    "layout_toggle": "Switch to {mode} layout",
+    "setting_title": "Story detail layout",
+    "setting_description": "Choose whether story details open in a side panel or a modal overlay (Shortcut-style pin and expand).",
+    "pin": "Pin story detail",
+    "unpin": "Unpin story detail",
+    "expand": "Expand story detail",
+    "collapse": "Collapse story detail",
+    "close": "Close story detail"
+  },
+  "locale_switcher": {
+    "label": "Language",
+    "current": "Current language: {locale}"
+  }
+}

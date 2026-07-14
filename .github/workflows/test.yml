@@ -1,0 +1,102 @@
+name: Test
+
+on:
+  push:
+    branches: [develop, master, 'feature/**']
+  pull_request:
+    branches: [develop, master]
+
+env:
+  # LocaleLayout requires Supabase env even when NEXT_PUBLIC_MOCK_AUTH=true.
+  NEXT_PUBLIC_SUPABASE_URL: https://e2e-mock.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: e2e-mock-anon-key
+
+jobs:
+  unit-and-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Unit and integration tests with coverage
+        run: pnpm run test:coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage
+          path: coverage/
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: unit-and-integration
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-chromium-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install chromium --with-deps
+        working-directory: frontend
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+        working-directory: frontend
+
+      - name: Sync public assets for E2E
+        run: node scripts/sync-public-assets.mjs
+        working-directory: frontend
+
+      - name: E2E tests (mock auth)
+        run: pnpm run test:e2e
+        working-directory: frontend
+        env:
+          CI: true
+          NEXT_PUBLIC_MOCK_AUTH: 'true'
+          NEXT_PUBLIC_SITE_URL: 'http://localhost:3000'
+          NEXT_PUBLIC_ROOT_DOMAIN: 'localhost'
+
+      - name: Upload E2E screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: |
+            frontend/test-results/e2e-screenshots/
+            frontend/test-results/playwright/
+

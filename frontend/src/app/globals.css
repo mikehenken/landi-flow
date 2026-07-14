@@ -1,0 +1,14 @@
+@import '@landi-flow/ui/styles';
+@import '@landi-flow/ui/editor-styles';
+
+html {
+  color-scheme: dark;
+}
+
+/* GATE 1 copy-hygiene: hide Liveblocks vendor badge on production surfaces. */
+html[data-liveblocks-vendor-badge='hidden'] a[href*='lblcks.io/badge'],
+html[data-liveblocks-vendor-badge='hidden'] a[href*='liveblocks.io/badge'] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

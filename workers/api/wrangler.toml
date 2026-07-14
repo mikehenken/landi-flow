@@ -1,16 +1,21 @@
 name = "landi-flow-api"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
+account_id = "dd84ae290b8a011725410e223c0ea928"
 
 [vars]
 ENABLE_OUTBOX_EMITTER = "true"
 
-# Secrets (wrangler secret put — never commit values):
-# SUPABASE_SERVICE_ROLE_KEY, CLOUDFLARE_AI_GATEWAY_TOKEN, etc.
+# Set via wrangler secret / dashboard — key NAMES only (never commit values):
+# NEXT_PUBLIC_SUPABASE_URL
+# NEXT_PUBLIC_SUPABASE_ANON_KEY
+# SUPABASE_SERVICE_ROLE_KEY
+# CLOUDFLARE_AI_GATEWAY_TOKEN
+# STRIPE_SECRET_KEY
+# STRIPE_WEBHOOK_SECRET
+# STRIPE_PRICE_PRO_MONTHLY
+# NEXT_PUBLIC_SITE_URL
 
-# [[queues.producers]]
-# binding = "OUTBOX_QUEUE"
-# queue = "landi-flow-outbox"
-
+# Cron disabled during wrangler 3.x schedule API mismatch — re-enable after wrangler 4 upgrade.
 # [[triggers.crons]]
-# crons = ["*/1 * * * *"]  # outbox poller — Phase 09b
+# crons = ["*/1 * * * *"]

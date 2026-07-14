@@ -1,0 +1,5 @@
+frontend lint: FAIL (pre-existing, unrelated to task-09v)
+  ./src/components/artifacts/artifact-panel.tsx:178:56 Error react/no-children-prop
+packages/ui lint (tsc --noEmit): PASS
+brand script (regenerate-brand-logos.mjs): node script, not ESLint-scoped
+Task-09v edited files: no new lint regressions introduced

@@ -9,8 +9,11 @@ node_modules/
 
 # Build outputs
 .next/
+.vercel/
+.open-next/
 out/
 dist/
+storybook-static/
 .wrangler/
 .dev.vars
 
@@ -25,6 +28,7 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+!.vscode/tasks.json
 
 # Testing
 coverage/
@@ -41,3 +45,6 @@ supabase/.temp/
 # Misc
 .turbo/
 .vercel/
+
+# Frontend synced copy of monorepo public/ (see frontend/scripts/sync-public-assets.mjs)
+frontend/public/

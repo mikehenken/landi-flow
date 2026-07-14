@@ -1,0 +1,28 @@
+{
+  "create": {
+    "title": "Story erstellen",
+    "title_placeholder": "Story-Titel",
+    "description_placeholder": "Beschreiben Sie, was erledigt werden muss…",
+    "create_more": "Weitere erstellen",
+    "cancel": "Abbrechen",
+    "submit": "Erstellen",
+    "properties_label": "Story-Eigenschaften"
+  },
+  "status": {
+    "todo": "Zu erledigen",
+    "in_progress": "In Bearbeitung",
+    "done": "Erledigt",
+    "canceled": "Abgebrochen"
+  },
+  "empty": {
+    "heading": "Noch keine Stories",
+    "description": "Stories sind die atomare Arbeitseinheit in Ihrem Workspace.",
+    "cta": "Erstellen Sie Ihre erste Story"
+  },
+  "badge": {
+    "label": "Story"
+  },
+  "identifier": {
+    "format": "{team}-{number}"
+  }
+}
