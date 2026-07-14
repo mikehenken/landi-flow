@@ -38,7 +38,7 @@ export function StoryDetailLayoutRoot({
 
 function StoryDetailModalHost(): React.ReactElement | null {
   const pathname = usePathname();
-  const { isModal, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
+  const { isSidebar, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
   const { stories } = useStoryStore();
   const selectedStoryId = useSelectedStoryId();
   // Resolve from the live singleton snapshot (not only the hook value) so a
@@ -56,13 +56,14 @@ function StoryDetailModalHost(): React.ReactElement | null {
       : null);
 
   const onStoryModalRoute = isStoryModalRoute(pathname);
-  // Open whenever modal layout has a resolved story. Route gating previously
-  // raced with next-intl pathname shapes on OpenNext and left selection set
-  // while the portal never mounted (deep link + list click both failed).
-  const showModal = isModal && selectedStory !== null;
+  // Prefer portal whenever a story is selected and layout is not sidebar.
+  // Do not require `isModal===true` — production builds were leaving preference
+  // at modal in localStorage while context isModal stayed false, so neither
+  // portal nor sidebar mounted despite a valid selection.
+  const showPortal = selectedStory !== null && !isSidebar;
 
   React.useEffect(() => {
-    if (!isModal || isPinned) {
+    if (isSidebar || isPinned) {
       return;
     }
     // Only clear when pathname is a settled non-story route.
@@ -75,13 +76,13 @@ function StoryDetailModalHost(): React.ReactElement | null {
     ) {
       storyStore.selectStory(null);
     }
-  }, [isModal, isPinned, onStoryModalRoute, pathname, selectedStoryId]);
+  }, [isSidebar, isPinned, onStoryModalRoute, pathname, selectedStoryId]);
 
   React.useEffect(() => {
-    if (!showModal) {
+    if (!showPortal) {
       setExpanded(false);
     }
-  }, [showModal, setExpanded]);
+  }, [showPortal, setExpanded]);
 
   const handleCloseModal = React.useCallback((): void => {
     setPinned(false);
@@ -93,7 +94,7 @@ function StoryDetailModalHost(): React.ReactElement | null {
   // Native <dialog>.showModal() left production builds with fiber props
   // (visible/story set) but an empty closed dialog node. Portal overlay is
   // deterministic under OpenNext/Cloudflare and matches create-* stacking.
-  if (!isModal || !showModal || !selectedStory) {
+  if (!showPortal || !selectedStory) {
     return null;
   }
 
