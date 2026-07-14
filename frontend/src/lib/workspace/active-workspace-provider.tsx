@@ -151,6 +151,18 @@ export function ActiveWorkspaceProvider({
     [resolveAttempt, userId],
   );
 
+  // PERF-03: when SSR/cookie already seeded a workspace UUID, warm the aggregate
+  // immediately so StoreHydrator can hit the shared cache (shell-first soft gate).
+  React.useEffect(() => {
+    if (isMockAuthEnabled() || onAuthPage) {
+      return;
+    }
+    if (!isWorkspaceUuid(workspace.id)) {
+      return;
+    }
+    prefetchWorkspaceBootstrap(workspace.id);
+  }, [onAuthPage, workspace.id]);
+
   React.useEffect(() => {
     if (isMockAuthEnabled() || onAuthPage) {
       setSessionPending(false);

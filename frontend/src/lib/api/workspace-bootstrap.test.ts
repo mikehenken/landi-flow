@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyBootstrapRuntimeContext,
+  loadWorkspaceBootstrap,
   parseWorkspaceBootstrapPayload,
   resetWorkspaceBootstrapCache,
   runtimeContextFromBootstrap,
@@ -16,6 +17,7 @@ describe('workspace-bootstrap (PERF-03)', () => {
   afterEach(() => {
     resetWorkspaceBootstrapCache();
     resetWorkspaceRuntimeContext();
+    vi.unstubAllGlobals();
   });
 
   it('parses a full aggregate payload into mapped domain rows', () => {
@@ -140,5 +142,75 @@ describe('workspace-bootstrap (PERF-03)', () => {
 
     expect(payload.customers).toBeNull();
     expect(payload.members).toBeNull();
+  });
+
+  it('dedupes concurrent loadWorkspaceBootstrap calls and reuses settled cache', async () => {
+    const workspaceId = '11111111-1111-4111-8111-111111111111';
+    let resolveFetch: ((value: Response) => void) | undefined;
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const first = loadWorkspaceBootstrap(workspaceId, { phase: 'priority' });
+    const second = loadWorkspaceBootstrap(workspaceId, { phase: 'priority' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    resolveFetch?.(
+      new Response(
+        JSON.stringify({
+          workspace_id: workspaceId,
+          phase: 'priority',
+          defaults: {
+            team_id: '22222222-2222-4222-8222-222222222222',
+            default_workflow_state_id: 'state-todo',
+            default_epic_status_id: null,
+          },
+          workflow_states: [],
+          epic_statuses: [],
+          epics: [],
+          stories: [
+            {
+              id: 'story-1',
+              workspace_id: workspaceId,
+              team_id: '22222222-2222-4222-8222-222222222222',
+              number: 1,
+              identifier: 'LAN-1',
+              title: 'Cached',
+              description_json: null,
+              description_md: null,
+              workflow_state_id: 'state-todo',
+              priority: 'none',
+              assignee_id: null,
+              delegate_agent_id: null,
+              epic_id: null,
+              milestone_id: null,
+              cycle_id: null,
+              estimate: null,
+              due_date: null,
+              sort_order: 1000,
+              is_draft: false,
+              archived_at: null,
+              correlation_id: null,
+              created_by: 'user-1',
+              created_at: '2026-07-13T00:00:00.000Z',
+              updated_at: '2026-07-13T00:00:00.000Z',
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const [a, b] = await Promise.all([first, second]);
+    expect(a.stories[0]?.title).toBe('Cached');
+    expect(b.stories[0]?.title).toBe('Cached');
+
+    const third = await loadWorkspaceBootstrap(workspaceId, { phase: 'priority' });
+    expect(third.stories[0]?.title).toBe('Cached');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
