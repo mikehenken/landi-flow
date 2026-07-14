@@ -41,33 +41,41 @@ function StoryDetailModalHost(): React.ReactElement | null {
   const { isModal, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
   const { stories } = useStoryStore();
   const selectedStoryId = useSelectedStoryId();
+  // Resolve from the live singleton snapshot (not only the hook value) so a
+  // stale subscriber cannot leave selectedStoryId set with story=null.
   const storeStories = getStoryStore().getServerSnapshot().stories;
   const selectedStory =
-    stories.find(
-      (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
-    ) ??
     (selectedStoryId
       ? storeStories.find(
           (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
-        ) ?? null
+        ) ??
+        stories.find(
+          (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+        ) ??
+        null
       : null);
 
   const onStoryModalRoute = isStoryModalRoute(pathname);
-  // Once a story is resolved, show the modal on story-capable routes (or when pinned).
-  // Route gating previously raced with next-intl pathname settling and left the dialog mounted but closed.
-  const showModal =
-    isModal &&
-    selectedStory !== null &&
-    (onStoryModalRoute || isPinned || preservesStorySelection(pathname));
+  // Open whenever modal layout has a resolved story. Route gating previously
+  // raced with next-intl pathname shapes on OpenNext and left selection set
+  // while the portal never mounted (deep link + list click both failed).
+  const showModal = isModal && selectedStory !== null;
 
   React.useEffect(() => {
     if (!isModal || isPinned) {
       return;
     }
-    if (!preservesStorySelection(pathname) && selectedStoryId) {
+    // Only clear when pathname is a settled non-story route.
+    if (
+      pathname &&
+      pathname !== '/' &&
+      !onStoryModalRoute &&
+      !preservesStorySelection(pathname) &&
+      selectedStoryId
+    ) {
       storyStore.selectStory(null);
     }
-  }, [isModal, isPinned, pathname, selectedStoryId]);
+  }, [isModal, isPinned, onStoryModalRoute, pathname, selectedStoryId]);
 
   React.useEffect(() => {
     if (!showModal) {
