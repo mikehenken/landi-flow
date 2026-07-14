@@ -143,16 +143,16 @@ export function ActiveWorkspaceProvider({
       lastResolveAttemptRef.current = resolveAttempt;
       setError(null);
       setWorkspace(next);
-      // PERF-03: warm aggregate while StoreHydrator remounts for the new workspace.
+      // PERF-03: warm full aggregate while StoreHydrator remounts (matches StoreHydrator phase).
       if (!isMockAuthEnabled() && isWorkspaceUuid(next.id)) {
-        prefetchWorkspaceBootstrap(next.id);
+        prefetchWorkspaceBootstrap(next.id, 'full');
       }
     },
     [resolveAttempt, userId],
   );
 
-  // PERF-03: when SSR/cookie already seeded a workspace UUID, warm the aggregate
-  // immediately so StoreHydrator can hit the shared cache (shell-first soft gate).
+  // PERF-03: when SSR/cookie already seeded a workspace UUID, warm the full
+  // aggregate immediately so StoreHydrator can hit the shared cache (shell-first).
   React.useEffect(() => {
     if (isMockAuthEnabled() || onAuthPage) {
       return;
@@ -160,7 +160,7 @@ export function ActiveWorkspaceProvider({
     if (!isWorkspaceUuid(workspace.id)) {
       return;
     }
-    prefetchWorkspaceBootstrap(workspace.id);
+    prefetchWorkspaceBootstrap(workspace.id, 'full');
   }, [onAuthPage, workspace.id]);
 
   React.useEffect(() => {
@@ -251,8 +251,8 @@ export function ActiveWorkspaceProvider({
                   persistWorkspaceCookie(match.id);
                   resolvedUserIdRef.current = userId;
                   resolvedWorkspaceIdRef.current = match.id;
-                  // PERF-03: overlap bootstrap aggregate with StoreHydrator mount.
-                  prefetchWorkspaceBootstrap(match.id);
+                  // PERF-03: overlap full bootstrap with StoreHydrator mount.
+                  prefetchWorkspaceBootstrap(match.id, 'full');
                 }
                 return;
               }
@@ -265,7 +265,7 @@ export function ActiveWorkspaceProvider({
                 persistWorkspaceCookie(existingMembership.id);
                 resolvedUserIdRef.current = userId;
                 resolvedWorkspaceIdRef.current = existingMembership.id;
-                prefetchWorkspaceBootstrap(existingMembership.id);
+                prefetchWorkspaceBootstrap(existingMembership.id, 'full');
               }
               return;
             }
@@ -279,7 +279,7 @@ export function ActiveWorkspaceProvider({
             resolvedUserIdRef.current = userId;
             resolvedWorkspaceIdRef.current = resolved.id;
             if (isWorkspaceUuid(resolved.id)) {
-              prefetchWorkspaceBootstrap(resolved.id);
+              prefetchWorkspaceBootstrap(resolved.id, 'full');
             }
           })(),
           WORKSPACE_RESOLVE_TIMEOUT_MS,

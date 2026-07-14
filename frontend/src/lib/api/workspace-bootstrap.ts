@@ -195,10 +195,12 @@ export async function loadWorkspaceBootstrap(
   return promise;
 }
 
-/** Fire-and-forget prefetch once a workspace UUID is known (ActiveWorkspaceProvider). */
+/** Fire-and-forget prefetch once a workspace UUID is known (ActiveWorkspaceProvider).
+ * Defaults to `full` so prefetch shares the same cache key StoreHydrator consumes.
+ */
 export function prefetchWorkspaceBootstrap(
   workspaceId: string,
-  phase: WorkspaceBootstrapPhase = 'priority',
+  phase: WorkspaceBootstrapPhase = 'full',
 ): void {
   void loadWorkspaceBootstrap(workspaceId, { phase }).catch(() => {
     // Prefetch is best-effort; StoreHydrator will retry / fall back.

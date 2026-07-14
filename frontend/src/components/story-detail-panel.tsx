@@ -13,12 +13,11 @@ import {
 } from '@/components/story-detail-layout-context';
 import { StoryDetailLayoutToggle } from '@/components/story-detail-layout-toggle';
 import { useStoryStore } from '@/hooks/use-story-store';
-import { useSelectedStoryId } from '@/hooks/use-selected-story-id';
 import {
   isStoryModalRoute,
   preservesStorySelection,
 } from '@/lib/story/story-detail-routes';
-import { getStoryStore, storyStore } from '@/stores/story-store';
+import { storyStore } from '@/stores/story-store';
 
 export interface StoryDetailLayoutRootProps {
   children: React.ReactNode;
@@ -39,28 +38,20 @@ export function StoryDetailLayoutRoot({
 function StoryDetailModalHost(): React.ReactElement | null {
   const pathname = usePathname();
   const { isSidebar, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
-  // Both hooks use subscribeStoryStore (window change bridge) so chunk duplicates
-  // cannot leave selection set on globalThis while this host never re-renders.
-  const { stories } = useStoryStore();
-  const selectedStoryId = useSelectedStoryId();
-  const storeSnap = getStoryStore().getServerSnapshot();
-  const storeStories = storeSnap.stories;
-  // Prefer hook value; fall back to live singleton if a stale subscriber tore.
-  const canonicalSelectedId = selectedStoryId ?? storeSnap.selectedStoryId;
+  // Single canonical snapshot via window-bridged subscribe — avoids chunk-orphan
+  // hosts seeing selectedStoryId=null while globalThis store already selected GEN-*.
+  const snap = useStoryStore();
+  const canonicalSelectedId = snap.selectedStoryId;
   const selectedStory =
-    (canonicalSelectedId
-      ? storeStories.find(
+    canonicalSelectedId
+      ? snap.stories.find(
           (story) => story.id === canonicalSelectedId || story.identifier === canonicalSelectedId,
-        ) ??
-        stories.find(
-          (story) => story.id === canonicalSelectedId || story.identifier === canonicalSelectedId,
-        ) ??
-        null
-      : null);
+        ) ?? null
+      : null;
 
   const onStoryModalRoute = isStoryModalRoute(pathname);
-  // Always portal when a story is selected. Layout preference only affects
-  // StoryDetailSurface (sidebar); production was stuck with context layout
+  // Always portal when a story is selected and resolved. Layout preference only
+  // affects StoryDetailSurface (sidebar); production was stuck with context layout
   // desynced from localStorage so neither surface mounted.
   const showPortal = selectedStory !== null;
 
@@ -68,8 +59,8 @@ function StoryDetailModalHost(): React.ReactElement | null {
     document.documentElement.dataset.storyDetailDebug = JSON.stringify({
       selectedStoryId: canonicalSelectedId,
       resolved: selectedStory?.identifier ?? null,
-      storeCount: storeStories.length,
-      hookCount: stories.length,
+      storeCount: snap.stories.length,
+      hookCount: snap.stories.length,
       isSidebar,
       showPortal,
       pathname,
@@ -77,8 +68,7 @@ function StoryDetailModalHost(): React.ReactElement | null {
   }, [
     canonicalSelectedId,
     selectedStory,
-    storeStories.length,
-    stories.length,
+    snap.stories.length,
     isSidebar,
     showPortal,
     pathname,
@@ -89,6 +79,10 @@ function StoryDetailModalHost(): React.ReactElement | null {
       return;
     }
     // Only clear when pathname is a settled non-story route.
+    // Keep selection while stories are still hydrating (param/selection set, list empty).
+    if (snap.stories.length === 0) {
+      return;
+    }
     if (
       pathname &&
       pathname !== '/' &&
@@ -98,7 +92,14 @@ function StoryDetailModalHost(): React.ReactElement | null {
     ) {
       storyStore.selectStory(null);
     }
-  }, [isSidebar, isPinned, onStoryModalRoute, pathname, canonicalSelectedId]);
+  }, [
+    isSidebar,
+    isPinned,
+    onStoryModalRoute,
+    pathname,
+    canonicalSelectedId,
+    snap.stories.length,
+  ]);
 
   React.useEffect(() => {
     if (!showPortal) {
@@ -412,19 +413,14 @@ export function StoryDetailSurface({
   onClose,
 }: StoryDetailSurfaceProps): React.ReactElement | null {
   const { isSidebar } = useStoryDetailLayout();
-  const selectedStoryId = useSelectedStoryId();
-  const { stories } = useStoryStore();
-  const storeStories = getStoryStore().getServerSnapshot().stories;
+  const snap = useStoryStore();
+  const selectedStoryId = snap.selectedStoryId;
   const story =
     storyProp ??
     (selectedStoryId
-      ? stories.find(
+      ? snap.stories.find(
           (row) => row.id === selectedStoryId || row.identifier === selectedStoryId,
-        ) ??
-        storeStories.find(
-          (row) => row.id === selectedStoryId || row.identifier === selectedStoryId,
-        ) ??
-        null
+        ) ?? null
       : null);
 
   if (!story || !isSidebar) {

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import type { Epic, Story } from '@landi-flow/core/types';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { useSupabaseSession } from '@/lib/supabase/session-provider';
 import {
@@ -31,6 +32,10 @@ type StoreHydrationGlobal = typeof globalThis & {
   __landiFlowStoresHydrated?: boolean;
   __landiFlowHydratedWorkspaceId?: string | null;
   __landiFlowHydrationPromise?: Promise<void> | null;
+  /** Workspace id the current in-flight hydrate promise targets (may differ from hydrated). */
+  __landiFlowHydrationInflightWorkspaceId?: string | null;
+  /** Bumped on soft-switch / reset so stale in-flight completions cannot apply. */
+  __landiFlowHydrationGeneration?: number;
 };
 
 function hydrationGlobal(): StoreHydrationGlobal {
@@ -61,28 +66,50 @@ function setHydrationPromise(value: Promise<void> | null): void {
   hydrationGlobal().__landiFlowHydrationPromise = value;
 }
 
+function getInflightWorkspaceId(): string | null {
+  return hydrationGlobal().__landiFlowHydrationInflightWorkspaceId ?? null;
+}
+
+function setInflightWorkspaceId(value: string | null): void {
+  hydrationGlobal().__landiFlowHydrationInflightWorkspaceId = value;
+}
+
+function getHydrationGeneration(): number {
+  return hydrationGlobal().__landiFlowHydrationGeneration ?? 0;
+}
+
+function bumpHydrationGeneration(): number {
+  const next = getHydrationGeneration() + 1;
+  hydrationGlobal().__landiFlowHydrationGeneration = next;
+  return next;
+}
+
+function clearHydrationFlags(): void {
+  setHydrationPromise(null);
+  setInflightWorkspaceId(null);
+  setStoresHydrated(false);
+  setHydratedWorkspaceId(null);
+  if (typeof document !== 'undefined') {
+    document.documentElement.removeAttribute('data-app-hydrated');
+  }
+}
+
 function resetHydrationForWorkspaceChange(nextWorkspaceId: string): void {
   if (getHydratedWorkspaceId() !== null && getHydratedWorkspaceId() !== nextWorkspaceId) {
-    setHydrationPromise(null);
-    setStoresHydrated(false);
-    setHydratedWorkspaceId(null);
-    if (typeof document !== 'undefined') {
-      document.documentElement.removeAttribute('data-app-hydrated');
-    }
+    bumpHydrationGeneration();
+    clearHydrationFlags();
   }
 }
 
 /**
  * Full reset for soft workspace switches (no full page reload).
  * Clears hydration flags so StoreHydrator re-runs for the next workspace.
+ * Bumps generation so any in-flight bootstrap from the previous workspace
+ * cannot mark hydrated / overwrite stores after the switch.
  */
 export function resetStoreHydrationState(): void {
-  setHydrationPromise(null);
-  setStoresHydrated(false);
-  setHydratedWorkspaceId(null);
-  if (typeof document !== 'undefined') {
-    document.documentElement.removeAttribute('data-app-hydrated');
-  }
+  bumpHydrationGeneration();
+  clearHydrationFlags();
 }
 
 /**
@@ -95,31 +122,21 @@ function isStoryStoreHydratedForWorkspace(workspaceId: string): boolean {
   return getStoresHydrated() && getHydratedWorkspaceId() === workspaceId;
 }
 
+type PriorityHydrateResult =
+  | { kind: 'bootstrap'; payload: WorkspaceBootstrapPayload }
+  | { kind: 'legacy'; epics: Epic[]; stories: Story[] };
+
 /**
- * Priority path: runtime context + stories + epics (route-needed).
- * Prefers PERF-03 bootstrap aggregate (one proxy hop); falls back to legacy serial path.
- * Customers/members hydrate from the same payload when present, else in the background.
+ * Fetch priority domain data without mutating stores.
+ * Caller applies only when the soft-switch generation is still current.
  */
-async function hydratePriorityFromApi(
+async function fetchPriorityHydrateData(
   workspaceId: string,
-): Promise<WorkspaceBootstrapPayload | null> {
-  const hasExistingData =
-    storyStore.getServerSnapshot().stories.length > 0 ||
-    epicStore.getServerSnapshot().epics.length > 0;
-
-  if (!hasExistingData) {
-    epicStore.setLoading(true);
-    storyStore.setLoading(true);
-  }
-
+): Promise<PriorityHydrateResult> {
   try {
     // Full aggregate = one client hop for context + domain lists (PERF-03).
-    // StoreHydrator still marks ready before applying deferred fields (PERF-02).
     const bootstrap = await loadWorkspaceBootstrap(workspaceId, { phase: 'full' });
-    applyBootstrapRuntimeContext(bootstrap);
-    epicStore.hydrate(bootstrap.epics);
-    storyStore.hydrate(bootstrap.stories);
-    return bootstrap;
+    return { kind: 'bootstrap', payload: bootstrap };
   } catch (error) {
     // Auth must still surface so StoreHydrator can recover/redirect.
     if (
@@ -134,10 +151,20 @@ async function hydratePriorityFromApi(
       loadEpics(workspaceId),
       loadStories(workspaceId),
     ]);
-    epicStore.hydrate(epics);
-    storyStore.hydrate(stories);
-    return null;
+    return { kind: 'legacy', epics, stories };
   }
+}
+
+function applyPriorityHydrateData(result: PriorityHydrateResult): WorkspaceBootstrapPayload | null {
+  if (result.kind === 'bootstrap') {
+    applyBootstrapRuntimeContext(result.payload);
+    epicStore.hydrate(result.payload.epics);
+    storyStore.hydrate(result.payload.stories);
+    return result.payload;
+  }
+  epicStore.hydrate(result.epics);
+  storyStore.hydrate(result.stories);
+  return null;
 }
 
 function hydrateDeferredFromBootstrap(payload: WorkspaceBootstrapPayload): boolean {
@@ -236,30 +263,69 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
       return;
     }
 
+    // Demo/host ids cannot hit uuid-typed APIs — wait for ActiveWorkspaceProvider.
+    // Do not mark ready; shell skeleton stays until a real workspace UUID arrives.
     if (!isWorkspaceUuid(workspace.id)) {
       return;
     }
 
     const existingPromise = getHydrationPromise();
-    if (existingPromise && getHydratedWorkspaceId() === workspace.id) {
+    const inflightForThisWorkspace =
+      existingPromise !== null && getInflightWorkspaceId() === workspace.id;
+    const settledForThisWorkspace =
+      existingPromise !== null && getHydratedWorkspaceId() === workspace.id;
+
+    if (inflightForThisWorkspace || settledForThisWorkspace) {
       void existingPromise.finally(() => {
-        setReady(true);
+        if (getHydratedWorkspaceId() === workspace.id || getStoresHydrated()) {
+          setReady(true);
+        }
       });
       return;
     }
 
+    // Stale promise for a different workspace — drop it (generation already bumped on soft switch).
+    if (existingPromise && getInflightWorkspaceId() !== workspace.id) {
+      bumpHydrationGeneration();
+      setHydrationPromise(null);
+      setInflightWorkspaceId(null);
+    }
+
+    const generationAtStart = getHydrationGeneration();
+    const targetWorkspaceId = workspace.id;
+
+    const hasExistingData =
+      storyStore.getServerSnapshot().stories.length > 0 ||
+      epicStore.getServerSnapshot().epics.length > 0;
+    if (!hasExistingData) {
+      epicStore.setLoading(true);
+      storyStore.setLoading(true);
+    }
+
     const promise = (async () => {
       try {
-        const bootstrap = await hydratePriorityFromApi(workspace.id);
-        markAppHydrated(workspace.id);
+        const fetched = await fetchPriorityHydrateData(targetWorkspaceId);
+
+        // Soft switch / reset happened while we were in flight — discard before apply.
+        if (getHydrationGeneration() !== generationAtStart) {
+          return;
+        }
+
+        const bootstrap = applyPriorityHydrateData(fetched);
+        markAppHydrated(targetWorkspaceId);
         setHydrationError(null);
         setReady(true);
         // Deferred customers/members: prefer same aggregate payload, else background GETs.
         if (!bootstrap || !hydrateDeferredFromBootstrap(bootstrap)) {
-          void hydrateDeferredFromApi(workspace.id);
+          void hydrateDeferredFromApi(targetWorkspaceId);
         }
       } catch (error) {
+        if (getHydrationGeneration() !== generationAtStart) {
+          return;
+        }
+
         setHydrationPromise(null);
+        setInflightWorkspaceId(null);
         setHydratedWorkspaceId(null);
         setStoresHydrated(false);
 
@@ -276,9 +342,16 @@ export function StoreHydrator({ children }: { children: React.ReactNode }): Reac
       }
     })();
 
+    setInflightWorkspaceId(targetWorkspaceId);
     setHydrationPromise(promise);
 
     void promise.finally(() => {
+      if (getHydrationGeneration() !== generationAtStart) {
+        return;
+      }
+      if (getInflightWorkspaceId() === targetWorkspaceId) {
+        setInflightWorkspaceId(null);
+      }
       setReady(true);
     });
   }, [workspace.id, sessionReady, redirectToLogin]);
