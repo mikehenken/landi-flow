@@ -13,9 +13,14 @@ import {
 } from '@/components/story-detail-layout-context';
 import { StoryDetailLayoutToggle } from '@/components/story-detail-layout-toggle';
 import {
-  readGlobalStorySnapshot,
-  useCanonicalStoryStore,
-} from '@/hooks/use-canonical-story-store';
+  readPinnedLandiFlowStorySnapshot,
+  useGlobalLandiFlowStoryStore,
+} from '@/hooks/use-global-landi-flow-story-store';
+import {
+  deriveStoryDetailHostVisibility,
+  resolveStoryBySelection,
+  writeStoryDetailDebugDataset,
+} from '@/lib/story/story-detail-host-visibility';
 import {
   isStoryModalRoute,
   preservesStorySelection,
@@ -26,99 +31,55 @@ export interface StoryDetailLayoutRootProps {
   children: React.ReactNode;
 }
 
-/** Provider + global modal overlay for modal layout mode (CR-09r-006). */
+/**
+ * Provider + global modal overlay (CR-09r-006).
+ * Mounted from AppShellFrame → covers /workspace/stories and board routes.
+ */
 export function StoryDetailLayoutRoot({
   children,
 }: StoryDetailLayoutRootProps): React.ReactElement {
   return (
     <StoryDetailLayoutProvider>
       {children}
-      <StoryDetailModalHostBridge />
+      <StoryDetailModalHost />
     </StoryDetailLayoutProvider>
   );
 }
 
 /**
- * Remount gate: when global selection changes, destroy/recreate the host so
- * OpenNext cannot keep a fiber stuck on selectedStoryId=null (GATE 2 P0-1).
- * Key prefers live global id — hook snap alone stayed null on fbe3091 while
- * window.__landiFlowStoryStore already held GEN-*.
+ * Reads ONLY `globalThis.__landiFlowStoryStore` every render
+ * (useSyncExternalStore + window force setState). Never trusts a module-orphan snap.
  */
-function StoryDetailModalHostBridge(): React.ReactElement {
-  const { snap, hostEpoch } = useCanonicalStoryStore();
-  const globalSelectedId = readGlobalStorySnapshot().selectedStoryId;
-  const remountId = globalSelectedId ?? snap.selectedStoryId ?? 'none';
-  return (
-    <StoryDetailModalHost
-      key={`story-detail-host-${remountId}-${hostEpoch}`}
-      snap={snap}
-    />
-  );
-}
-
-interface StoryDetailModalHostProps {
-  snap: ReturnType<typeof useCanonicalStoryStore>['snap'];
-}
-
-function resolveStoryBySelection(
-  stories: Story[],
-  selectedId: string | null,
-): Story | null {
-  if (!selectedId) {
-    return null;
-  }
-  return (
-    stories.find(
-      (story) => story.id === selectedId || story.identifier === selectedId,
-    ) ?? null
-  );
-}
-
-function StoryDetailModalHost({
-  snap,
-}: StoryDetailModalHostProps): React.ReactElement | null {
+function StoryDetailModalHost(): React.ReactElement | null {
   const pathname = usePathname();
-  const { isSidebar, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
-  // Live fbe3091: hook snap.selectedStoryId stayed null while
-  // globalThis.__landiFlowStoryStore.selectedStoryId matched GEN-*. Open portal
-  // when EITHER path is set; resolve story from the canonical global snapshot.
-  const globalSnap = readGlobalStorySnapshot();
-  const hookSelectedId = snap.selectedStoryId;
-  const globalSelectedId = globalSnap.selectedStoryId;
-  const effectiveSelectedId = globalSelectedId ?? hookSelectedId;
-  const storySource =
-    globalSnap.stories.length > 0 ? globalSnap.stories : snap.stories;
-  const selectedStory = resolveStoryBySelection(storySource, effectiveSelectedId);
+  const { isSidebar, isPinned, isExpanded, setExpanded, setPinned } =
+    useStoryDetailLayout();
+  const globalSnap = useGlobalLandiFlowStoryStore();
+  // Live re-read on every render so probes never see a stale closure.
+  const liveSnap = readPinnedLandiFlowStorySnapshot();
+  const snap =
+    liveSnap.selectedStoryId !== null || liveSnap.stories.length > 0
+      ? liveSnap
+      : globalSnap;
+  const visibility = deriveStoryDetailHostVisibility(snap);
+  const { selectedStoryId, showPortal } = visibility;
+  const selectedStory = resolveStoryBySelection(snap.stories, selectedStoryId);
 
   const onStoryModalRoute = isStoryModalRoute(pathname);
-  // Always portal when a story is selected and resolved. Layout preference only
-  // affects StoryDetailSurface (sidebar); production was stuck with context layout
-  // desynced from localStorage so neither surface mounted.
-  const showPortal = selectedStory !== null;
 
-  React.useEffect(() => {
-    document.documentElement.dataset.storyDetailDebug = JSON.stringify({
-      selectedStoryId: hookSelectedId,
-      globalSelectedStoryId: globalSelectedId,
-      effectiveSelectedId,
-      resolved: selectedStory?.identifier ?? null,
-      storeCount: storySource.length,
-      hookCount: snap.stories.length,
-      isSidebar,
-      showPortal,
-      pathname,
-    });
-  }, [
-    hookSelectedId,
-    globalSelectedId,
-    effectiveSelectedId,
-    selectedStory,
-    storySource.length,
-    snap.stories.length,
+  // Sync dataset during render — useEffect lagged behind live store on f2c8972.
+  writeStoryDetailDebugDataset({
+    selectedStoryId,
+    globalSelectedStoryId: selectedStoryId,
+    effectiveSelectedId: selectedStoryId,
+    resolved: selectedStory?.identifier ?? null,
+    storeCount: snap.stories.length,
+    hookCount: snap.stories.length,
     isSidebar,
     showPortal,
     pathname,
-  ]);
+    source: 'globalThis.__landiFlowStoryStore',
+  });
 
   React.useEffect(() => {
     if (isSidebar || isPinned) {
@@ -126,7 +87,7 @@ function StoryDetailModalHost({
     }
     // Only clear when pathname is a settled non-story route.
     // Keep selection while stories are still hydrating (param/selection set, list empty).
-    if (storySource.length === 0) {
+    if (snap.stories.length === 0) {
       return;
     }
     if (
@@ -134,7 +95,7 @@ function StoryDetailModalHost({
       pathname !== '/' &&
       !onStoryModalRoute &&
       !preservesStorySelection(pathname) &&
-      effectiveSelectedId
+      selectedStoryId
     ) {
       storyStore.selectStory(null);
     }
@@ -143,8 +104,8 @@ function StoryDetailModalHost({
     isPinned,
     onStoryModalRoute,
     pathname,
-    effectiveSelectedId,
-    storySource.length,
+    selectedStoryId,
+    snap.stories.length,
   ]);
 
   React.useEffect(() => {
@@ -160,9 +121,7 @@ function StoryDetailModalHost({
     storyStore.selectStory(null);
   }, [setExpanded, setPinned]);
 
-  // Native <dialog>.showModal() left production builds with fiber props
-  // (visible/story set) but an empty closed dialog node. Portal overlay is
-  // deterministic under OpenNext/Cloudflare and matches create-* stacking.
+  // showPortal follows selectedStoryId; modal body waits for story resolve.
   if (!showPortal || !selectedStory) {
     return null;
   }
@@ -459,16 +418,14 @@ export function StoryDetailSurface({
   onClose,
 }: StoryDetailSurfaceProps): React.ReactElement | null {
   const { isSidebar } = useStoryDetailLayout();
-  const { snap } = useCanonicalStoryStore();
-  // Same OR-gate as StoryDetailModalHost — board/list/deeplink must not require
-  // hook snap.selectedStoryId alone (fbe3091: snap null, global GEN-* UUID).
-  const globalSnap = readGlobalStorySnapshot();
-  const effectiveSelectedId =
-    globalSnap.selectedStoryId ?? snap.selectedStoryId;
-  const storySource =
-    globalSnap.stories.length > 0 ? globalSnap.stories : snap.stories;
+  const globalSnap = useGlobalLandiFlowStoryStore();
+  const liveSnap = readPinnedLandiFlowStorySnapshot();
+  const snap =
+    liveSnap.selectedStoryId !== null || liveSnap.stories.length > 0
+      ? liveSnap
+      : globalSnap;
   const story =
-    storyProp ?? resolveStoryBySelection(storySource, effectiveSelectedId);
+    storyProp ?? resolveStoryBySelection(snap.stories, snap.selectedStoryId);
 
   if (!story || !isSidebar) {
     return null;
