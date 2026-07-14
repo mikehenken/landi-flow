@@ -151,6 +151,18 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
     this.hydrate(stories);
   }
 
+  /**
+   * Always attach listeners to the pinned global instance so OpenNext chunk
+   * orphans cannot leave React subscribed to a silent duplicate.
+   */
+  override subscribe(listener: () => void): () => void {
+    const canonical = StoryStore.getInstance();
+    if (canonical !== this) {
+      return canonical.subscribe(listener);
+    }
+    return super.subscribe(listener);
+  }
+
   selectStory(storyId: string | null): void {
     const canonical = StoryStore.getInstance();
     if (canonical !== this) {

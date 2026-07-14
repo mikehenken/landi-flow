@@ -12,7 +12,10 @@ import {
   useStoryDetailLayout,
 } from '@/components/story-detail-layout-context';
 import { StoryDetailLayoutToggle } from '@/components/story-detail-layout-toggle';
-import { useStoryStore } from '@/hooks/use-story-store';
+import {
+  readGlobalStorySnapshot,
+  useCanonicalStoryStore,
+} from '@/hooks/use-canonical-story-store';
 import {
   isStoryModalRoute,
   preservesStorySelection,
@@ -30,18 +33,37 @@ export function StoryDetailLayoutRoot({
   return (
     <StoryDetailLayoutProvider>
       {children}
-      <StoryDetailModalHost />
+      <StoryDetailModalHostBridge />
     </StoryDetailLayoutProvider>
   );
 }
 
-function StoryDetailModalHost(): React.ReactElement | null {
+/**
+ * Remount gate: when global selection changes, destroy/recreate the host so
+ * OpenNext cannot keep a fiber stuck on selectedStoryId=null (GATE 2 P0-1).
+ */
+function StoryDetailModalHostBridge(): React.ReactElement {
+  const { snap, hostEpoch } = useCanonicalStoryStore();
+  return (
+    <StoryDetailModalHost
+      key={`story-detail-host-${snap.selectedStoryId ?? 'none'}-${hostEpoch}`}
+      snap={snap}
+    />
+  );
+}
+
+interface StoryDetailModalHostProps {
+  snap: ReturnType<typeof useCanonicalStoryStore>['snap'];
+}
+
+function StoryDetailModalHost({
+  snap,
+}: StoryDetailModalHostProps): React.ReactElement | null {
   const pathname = usePathname();
   const { isSidebar, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
-  // Single canonical snapshot via window-bridged subscribe — avoids chunk-orphan
-  // hosts seeing selectedStoryId=null while globalThis store already selected GEN-*.
-  const snap = useStoryStore();
+  // Props come from useCanonicalStoryStore → globalThis.__landiFlowStoryStore only.
   const canonicalSelectedId = snap.selectedStoryId;
+  const globalProbeId = readGlobalStorySnapshot().selectedStoryId;
   const selectedStory =
     canonicalSelectedId
       ? snap.stories.find(
@@ -58,6 +80,7 @@ function StoryDetailModalHost(): React.ReactElement | null {
   React.useEffect(() => {
     document.documentElement.dataset.storyDetailDebug = JSON.stringify({
       selectedStoryId: canonicalSelectedId,
+      globalSelectedStoryId: globalProbeId,
       resolved: selectedStory?.identifier ?? null,
       storeCount: snap.stories.length,
       hookCount: snap.stories.length,
@@ -67,6 +90,7 @@ function StoryDetailModalHost(): React.ReactElement | null {
     });
   }, [
     canonicalSelectedId,
+    globalProbeId,
     selectedStory,
     snap.stories.length,
     isSidebar,
@@ -413,7 +437,7 @@ export function StoryDetailSurface({
   onClose,
 }: StoryDetailSurfaceProps): React.ReactElement | null {
   const { isSidebar } = useStoryDetailLayout();
-  const snap = useStoryStore();
+  const { snap } = useCanonicalStoryStore();
   const selectedStoryId = snap.selectedStoryId;
   const story =
     storyProp ??

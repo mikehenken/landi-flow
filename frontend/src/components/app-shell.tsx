@@ -1262,6 +1262,7 @@ export function AppShellFrame({
 
       {createStoryOpen ? (
         <CreateStoryModal
+          key={`create-story-${createStoryEpicId ?? 'none'}`}
           open={createStoryOpen}
           onOpenChange={handleCreateStoryOpenChange}
           defaultEpicId={createStoryEpicId}

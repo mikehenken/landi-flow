@@ -583,25 +583,35 @@ export function StoryEpicPicker({
 }: StoryEpicPickerProps): React.ReactElement {
   const { epics } = useEpicStore();
   const selectedEpic = epicId ? epics.find((entry) => entry.id === epicId) ?? null : null;
+  // UX-05: create-from-epic may set epicId before the picker catalog resolves.
+  // Never show "No Epic" when an association id is already present.
+  const triggerLabel = selectedEpic ? (
+    <span className="cursor-pointer">
+      <EpicBadge
+        name={selectedEpic.name}
+        status={getEpicStatusCategory(selectedEpic)}
+        showLabel
+      />
+    </span>
+  ) : epicId ? (
+    <Badge
+      variant="outline"
+      className="cursor-pointer"
+      data-testid="story-epic-picker-pending"
+      title={epicId}
+    >
+      Epic linked
+    </Badge>
+  ) : (
+    <Badge variant="outline" className="cursor-pointer text-muted-foreground">
+      No Epic
+    </Badge>
+  );
 
   return (
     <InlinePopover
       testId="story-epic-picker"
-      trigger={
-        selectedEpic ? (
-          <span className="cursor-pointer">
-            <EpicBadge
-              name={selectedEpic.name}
-              status={getEpicStatusCategory(selectedEpic)}
-              showLabel
-            />
-          </span>
-        ) : (
-          <Badge variant="outline" className="cursor-pointer text-muted-foreground">
-            No Epic
-          </Badge>
-        )
-      }
+      trigger={triggerLabel}
     >
       <PopoverOption selected={epicId === null} onSelect={() => onSelect(null)}>
         <span className="text-sm text-muted-foreground">No Epic</span>

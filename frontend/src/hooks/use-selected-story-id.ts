@@ -1,19 +1,14 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
-import { getStoryStore, subscribeStoryStore } from '@/stores/story-store';
+import { useCanonicalStoryStore } from '@/hooks/use-canonical-story-store';
 
 /**
  * Primitive selector so list/detail re-render when selection changes.
  *
- * Uses {@link subscribeStoryStore} so OpenNext chunk duplicates cannot leave
- * the detail host stuck on `selectedStoryId: null` while
- * `globalThis.__landiFlowStoryStore` already holds the selection (GATE 2).
+ * Reads `globalThis.__landiFlowStoryStore` via {@link useCanonicalStoryStore}
+ * (event + poll) — useSyncExternalStore alone left the detail host stuck on
+ * `selectedStoryId: null` in OpenNext production (GATE 2 P0-1).
  */
 export function useSelectedStoryId(): string | null {
-  return useSyncExternalStore(
-    subscribeStoryStore,
-    () => getStoryStore().getServerSnapshot().selectedStoryId,
-    () => getStoryStore().getServerSnapshot().selectedStoryId,
-  );
+  return useCanonicalStoryStore().snap.selectedStoryId;
 }

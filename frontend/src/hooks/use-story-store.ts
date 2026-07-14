@@ -1,17 +1,12 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
-import {
-  getStoryStore,
-  subscribeStoryStore,
-  type StoryStoreState,
-} from '@/stores/story-store';
+import { useCanonicalStoryStore } from '@/hooks/use-canonical-story-store';
+import type { StoryStoreState } from '@/stores/story-store';
 
-/** Full story domain snapshot — same canonical subscribe bridge as selection. */
+/**
+ * Full story domain snapshot — follows `globalThis.__landiFlowStoryStore` only
+ * (same path as StoryDetailModalHost) so OpenNext chunk orphans cannot desync.
+ */
 export function useStoryStore(): StoryStoreState {
-  return useSyncExternalStore(
-    subscribeStoryStore,
-    () => getStoryStore().getServerSnapshot(),
-    () => getStoryStore().getServerSnapshot(),
-  );
+  return useCanonicalStoryStore().snap;
 }
