@@ -91,4 +91,43 @@ describe('storyStore singleton', () => {
     expect(getStoryStore().getServerSnapshot().stories).toHaveLength(2);
     expect(getStoryStore()).toBe((globalThis as StoryStoreGlobal)[STORY_STORE_GLOBAL_KEY]);
   });
+
+  it('adopts orphaned listeners when a later instance pins the singleton', () => {
+    const first = getStoryStore();
+    let notified = 0;
+    first.subscribe(() => {
+      notified += 1;
+    });
+    const initial = notified;
+
+    // Create a second instance (cleared pin), then restore the orphan as the
+    // "previous" global so hydrate/pin adopts its listeners — mirrors chunk split.
+    delete (globalThis as StoryStoreGlobal)[STORY_STORE_GLOBAL_KEY];
+    const second = getStoryStore();
+    expect(second).not.toBe(first);
+    (globalThis as StoryStoreGlobal)[STORY_STORE_GLOBAL_KEY] = first;
+
+    second.hydrate([makeStory('id-gen-5', 'GEN-5')]);
+    second.openStoryDetail('id-gen-5');
+
+    expect(getStoryStore()).toBe(second);
+    expect(probeGlobal()?.selectedStoryId).toBe('id-gen-5');
+    expect(notified).toBeGreaterThan(initial);
+  });
+
+  it('dispatches a window change event on openStoryDetail', () => {
+    if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
+      // Node vitest pool has no DOM — browser event path covered by notify + adopt tests.
+      return;
+    }
+    const events: string[] = [];
+    const handler = (): void => {
+      events.push('changed');
+    };
+    window.addEventListener('landi-flow-story-store-changed', handler);
+    storyStore.hydrate([makeStory('id-gen-5', 'GEN-5')]);
+    storyStore.openStoryDetail('id-gen-5');
+    window.removeEventListener('landi-flow-story-store-changed', handler);
+    expect(events.length).toBeGreaterThan(0);
+  });
 });

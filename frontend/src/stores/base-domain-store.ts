@@ -23,6 +23,22 @@ export abstract class BaseDomainStore<TState> {
     }
   }
 
+  /**
+   * Move subscribers from an orphaned duplicate instance onto this canonical store.
+   * OpenNext/webpack chunk splits can leave React hooks subscribed to a non-global
+   * instance while mutations pin a different one on `globalThis`.
+   */
+  protected adoptListenersFrom(other: BaseDomainStore<TState>): void {
+    if (other === this) {
+      return;
+    }
+    for (const listener of other.listeners) {
+      this.listeners.add(listener);
+    }
+    other.listeners.clear();
+    other.invalidateServerSnapshotCache();
+  }
+
   /** Subscribe for useSyncExternalStore — notify-only after mutations.
    * Call the listener once after subscribe so late subscribers pick up current state
    * without violating the "no sync notify during subscribe" tear guidance: schedule microtask.

@@ -39,18 +39,21 @@ export function StoryDetailLayoutRoot({
 function StoryDetailModalHost(): React.ReactElement | null {
   const pathname = usePathname();
   const { isSidebar, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
+  // Both hooks use subscribeStoryStore (window change bridge) so chunk duplicates
+  // cannot leave selection set on globalThis while this host never re-renders.
   const { stories } = useStoryStore();
   const selectedStoryId = useSelectedStoryId();
-  // Resolve from the live singleton snapshot (not only the hook value) so a
-  // stale subscriber cannot leave selectedStoryId set with story=null.
-  const storeStories = getStoryStore().getServerSnapshot().stories;
+  const storeSnap = getStoryStore().getServerSnapshot();
+  const storeStories = storeSnap.stories;
+  // Prefer hook value; fall back to live singleton if a stale subscriber tore.
+  const canonicalSelectedId = selectedStoryId ?? storeSnap.selectedStoryId;
   const selectedStory =
-    (selectedStoryId
+    (canonicalSelectedId
       ? storeStories.find(
-          (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+          (story) => story.id === canonicalSelectedId || story.identifier === canonicalSelectedId,
         ) ??
         stories.find(
-          (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+          (story) => story.id === canonicalSelectedId || story.identifier === canonicalSelectedId,
         ) ??
         null
       : null);
@@ -63,7 +66,7 @@ function StoryDetailModalHost(): React.ReactElement | null {
 
   React.useEffect(() => {
     document.documentElement.dataset.storyDetailDebug = JSON.stringify({
-      selectedStoryId,
+      selectedStoryId: canonicalSelectedId,
       resolved: selectedStory?.identifier ?? null,
       storeCount: storeStories.length,
       hookCount: stories.length,
@@ -72,7 +75,7 @@ function StoryDetailModalHost(): React.ReactElement | null {
       pathname,
     });
   }, [
-    selectedStoryId,
+    canonicalSelectedId,
     selectedStory,
     storeStories.length,
     stories.length,
@@ -91,11 +94,11 @@ function StoryDetailModalHost(): React.ReactElement | null {
       pathname !== '/' &&
       !onStoryModalRoute &&
       !preservesStorySelection(pathname) &&
-      selectedStoryId
+      canonicalSelectedId
     ) {
       storyStore.selectStory(null);
     }
-  }, [isSidebar, isPinned, onStoryModalRoute, pathname, selectedStoryId]);
+  }, [isSidebar, isPinned, onStoryModalRoute, pathname, canonicalSelectedId]);
 
   React.useEffect(() => {
     if (!showPortal) {

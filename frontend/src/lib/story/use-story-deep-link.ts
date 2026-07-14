@@ -24,6 +24,8 @@ export function useStoryDeepLink(): void {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  /** True after selection was non-null — distinguishes close vs initial hydrate. */
+  const hadSelectionRef = React.useRef(false);
 
   React.useEffect(() => {
     const storyParam = searchParams.get('story');
@@ -35,12 +37,6 @@ export function useStoryDeepLink(): void {
 
     const storyId = resolveStoryIdFromQuery(storyParam, storeStories);
     if (!storyId) {
-      const byIdentifier = storeStories.find(
-        (story) => story.identifier.toLowerCase() === storyParam.toLowerCase(),
-      );
-      if (byIdentifier) {
-        openStoryModal(byIdentifier.id);
-      }
       return;
     }
 
@@ -66,13 +62,32 @@ export function useStoryDeepLink(): void {
 
   React.useEffect(() => {
     if (selectedStoryId !== null) {
+      hadSelectionRef.current = true;
       return;
     }
-    if (!searchParams.get('story')) {
+
+    const storyParam = searchParams.get('story');
+    if (!storyParam) {
+      hadSelectionRef.current = false;
       return;
     }
+
+    const storeStories = getStoryStore().getServerSnapshot().stories;
+    // Keep `?story=` until hydrate finishes so the open effect can resolve it.
+    if (storeStories.length === 0) {
+      return;
+    }
+
+    const resolved = resolveStoryIdFromQuery(storyParam, storeStories);
+    if (resolved && !hadSelectionRef.current) {
+      // Resolvable deep link still opening — do not strip.
+      return;
+    }
+
+    // User closed detail, or param does not match any story.
     router.replace(pathname, { scroll: false });
-  }, [pathname, router, searchParams, selectedStoryId]);
+    hadSelectionRef.current = false;
+  }, [pathname, router, searchParams, selectedStoryId, stories.length]);
 }
 
 export function syncStoryModalUrl(
@@ -101,9 +116,10 @@ export function useStoryModalSelect(): (
   return React.useCallback(
     (storyId: string, options?: OpenStoryModalOptions) => {
       openStoryModal(storyId, options);
+      const snap = storyStore.getServerSnapshot();
       const story =
-        storyStore.getServerSnapshot().stories.find((row) => row.id === storyId) ??
-        storyStore.getServerSnapshot().stories.find(
+        snap.stories.find((row) => row.id === storyId) ??
+        snap.stories.find(
           (row) => row.identifier.toLowerCase() === storyId.toLowerCase(),
         );
       router.replace(syncStoryModalUrl(pathname, story, options), { scroll: false });

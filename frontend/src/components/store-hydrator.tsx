@@ -86,18 +86,13 @@ export function resetStoreHydrationState(): void {
 }
 
 /**
- * Skip refetch only when the shared singleton actually holds stories.
- * Prevents "hydrated" flags on one chunk from masking an empty global store.
+ * Skip refetch only when this workspace was marked hydrated.
+ * Story emptiness alone must not leave the shell on a permanent skeleton —
+ * empty workspaces and post-hydrate remounts still need to render children.
+ * Orphaned chunk instances are healed via STORY_STORE_CHANGE_EVENT + pin adopt.
  */
 function isStoryStoreHydratedForWorkspace(workspaceId: string): boolean {
-  if (isMockAuthEnabled()) {
-    return getStoresHydrated() && getHydratedWorkspaceId() === workspaceId;
-  }
-  return (
-    getStoresHydrated() &&
-    getHydratedWorkspaceId() === workspaceId &&
-    storyStore.getServerSnapshot().stories.length > 0
-  );
+  return getStoresHydrated() && getHydratedWorkspaceId() === workspaceId;
 }
 
 /**

@@ -65,6 +65,10 @@ const emptyState = (): StoryStoreState => ({
  */
 export const STORY_STORE_GLOBAL_KEY = '__landiFlowStoryStore' as const;
 
+/** Window event so React hooks re-read the canonical singleton even if their
+ * `subscribe()` landed on an orphaned duplicate instance (GATE 2 P0-1). */
+export const STORY_STORE_CHANGE_EVENT = 'landi-flow-story-store-changed' as const;
+
 type StoryStoreGlobal = typeof globalThis & {
   [STORY_STORE_GLOBAL_KEY]?: StoryStore;
 };
@@ -87,9 +91,40 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
     return created;
   }
 
-  /** Re-assert this instance as the process-wide singleton after hydrate. */
+  /**
+   * Re-assert this instance as the process-wide singleton.
+   * Adopts listeners from any previously pinned orphan so hooks keep updating.
+   */
   private pinGlobalSingleton(): void {
-    (globalThis as StoryStoreGlobal)[STORY_STORE_GLOBAL_KEY] = this;
+    const globalStore = globalThis as StoryStoreGlobal;
+    const previous = globalStore[STORY_STORE_GLOBAL_KEY];
+    if (previous && previous !== this) {
+      this.adoptListenersFrom(previous);
+      // Prefer the richer of the two story lists so a late pin cannot wipe hydrate.
+      if (
+        this.state.stories.length === 0 &&
+        previous.getServerSnapshot().stories.length > 0
+      ) {
+        const prevSnap = previous.getServerSnapshot();
+        this.state = {
+          ...this.state,
+          stories: prevSnap.stories,
+          selectedStoryId: this.state.selectedStoryId ?? prevSnap.selectedStoryId,
+          detailFocus: this.state.selectedStoryId
+            ? this.state.detailFocus
+            : prevSnap.detailFocus,
+        };
+      }
+    }
+    globalStore[STORY_STORE_GLOBAL_KEY] = this;
+  }
+
+  private emitChange(): void {
+    this.pinGlobalSingleton();
+    this.notify();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(STORY_STORE_CHANGE_EVENT));
+    }
   }
 
   protected getSnapshot(): StoryStoreState {
@@ -109,8 +144,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
       loading: false,
       error: null,
     };
-    this.pinGlobalSingleton();
-    this.notify();
+    this.emitChange();
   }
 
   setStories(stories: Story[]): void {
@@ -118,15 +152,25 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
   }
 
   selectStory(storyId: string | null): void {
+    const canonical = StoryStore.getInstance();
+    if (canonical !== this) {
+      canonical.selectStory(storyId);
+      return;
+    }
     this.state = {
       ...this.state,
       selectedStoryId: storyId,
       detailFocus: storyId ? this.state.detailFocus : emptyDetailFocus(),
     };
-    this.notify();
+    this.emitChange();
   }
 
   openStoryDetail(storyId: string, focus: Partial<StoryDetailFocus> = {}): void {
+    const canonical = StoryStore.getInstance();
+    if (canonical !== this) {
+      canonical.openStoryDetail(storyId, focus);
+      return;
+    }
     this.state = {
       ...this.state,
       selectedStoryId: storyId,
@@ -135,7 +179,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
         highlightedSignalId: focus.highlightedSignalId ?? null,
       },
     };
-    this.notify();
+    this.emitChange();
   }
 
   setDetailFocus(focus: Partial<StoryDetailFocus>): void {
@@ -149,7 +193,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
             : this.state.detailFocus.highlightedSignalId,
       },
     };
-    this.notify();
+    this.emitChange();
   }
 
   clearDetailFocus(): void {
@@ -157,7 +201,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
       ...this.state,
       detailFocus: emptyDetailFocus(),
     };
-    this.notify();
+    this.emitChange();
   }
 
   /** Replace or insert a Story from server truth. */
@@ -172,7 +216,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
       stories,
       selectedStoryId: this.state.selectedStoryId ?? story.id,
     };
-    this.notify();
+    this.emitChange();
   }
 
   removeStory(storyId: string): void {
@@ -182,7 +226,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
       selectedStoryId:
         this.state.selectedStoryId === storyId ? null : this.state.selectedStoryId,
     };
-    this.notify();
+    this.emitChange();
   }
 
   getStory(storyId: string): Story | undefined {
@@ -229,7 +273,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
       stories: [...this.state.stories, story],
       selectedStoryId: story.id,
     };
-    this.notify();
+    this.emitChange();
     return story;
   }
 
@@ -298,7 +342,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
           : story,
       ),
     };
-    this.notify();
+    this.emitChange();
   }
 
   updateStorySortOrder(storyId: string, sortOrder: number): void {
@@ -314,7 +358,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
           : story,
       ),
     };
-    this.notify();
+    this.emitChange();
   }
 
   /**
@@ -344,7 +388,7 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
           : story,
       ),
     };
-    this.notify();
+    this.emitChange();
   }
 
   publishStory(storyId: string): void {
@@ -364,24 +408,23 @@ class StoryStore extends BaseDomainStore<StoryStoreState> {
           : story,
       ),
     };
-    this.notify();
+    this.emitChange();
   }
 
   setLoading(loading: boolean): void {
     this.state = { ...this.state, loading };
-    this.notify();
+    this.emitChange();
   }
 
   setError(error: string | null): void {
     this.state = { ...this.state, error, loading: false };
-    this.notify();
+    this.emitChange();
   }
 
   /** Clear all stories — used on soft workspace switch. */
   reset(): void {
     this.state = emptyState();
-    this.pinGlobalSingleton();
-    this.notify();
+    this.emitChange();
   }
 }
 
@@ -404,6 +447,38 @@ function createStoryStoreAccessor(): StoryStore {
 
 export function getStoryStore(): StoryStore {
   return StoryStore.getInstance();
+}
+
+/**
+ * Subscribe to the canonical story store and re-bind if the global singleton
+ * identity changes. Also listens for {@link STORY_STORE_CHANGE_EVENT} so React
+ * hooks update even when their initial `subscribe()` landed on an orphaned
+ * duplicate instance (OpenNext chunk split / GATE 2 P0-1).
+ */
+export function subscribeStoryStore(onStoreChange: () => void): () => void {
+  let unsub = getStoryStore().subscribe(onStoreChange);
+  let pinned = getStoryStore();
+
+  const rebindIfNeeded = (): void => {
+    const canonical = getStoryStore();
+    if (canonical !== pinned) {
+      unsub();
+      pinned = canonical;
+      unsub = pinned.subscribe(onStoreChange);
+    }
+    onStoreChange();
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener(STORY_STORE_CHANGE_EVENT, rebindIfNeeded);
+  }
+
+  return () => {
+    unsub();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener(STORY_STORE_CHANGE_EVENT, rebindIfNeeded);
+    }
+  };
 }
 
 export const storyStore: StoryStore = createStoryStoreAccessor();
