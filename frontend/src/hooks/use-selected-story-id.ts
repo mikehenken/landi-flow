@@ -1,14 +1,17 @@
 'use client';
 
-import { useCanonicalStoryStore } from '@/hooks/use-canonical-story-store';
+import {
+  readGlobalStorySnapshot,
+  useCanonicalStoryStore,
+} from '@/hooks/use-canonical-story-store';
 
 /**
  * Primitive selector so list/detail re-render when selection changes.
  *
- * Reads `globalThis.__landiFlowStoryStore` via {@link useCanonicalStoryStore}
- * (event + poll) — useSyncExternalStore alone left the detail host stuck on
- * `selectedStoryId: null` in OpenNext production (GATE 2 P0-1).
+ * Prefers live `globalThis.__landiFlowStoryStore` over hook snap — fbe3091 left
+ * hook `selectedStoryId: null` while global already held GEN-* (GATE 2 P0-1).
  */
 export function useSelectedStoryId(): string | null {
-  return useCanonicalStoryStore().snap.selectedStoryId;
+  const { snap } = useCanonicalStoryStore();
+  return readGlobalStorySnapshot().selectedStoryId ?? snap.selectedStoryId;
 }

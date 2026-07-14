@@ -41,12 +41,16 @@ export function StoryDetailLayoutRoot({
 /**
  * Remount gate: when global selection changes, destroy/recreate the host so
  * OpenNext cannot keep a fiber stuck on selectedStoryId=null (GATE 2 P0-1).
+ * Key prefers live global id — hook snap alone stayed null on fbe3091 while
+ * window.__landiFlowStoryStore already held GEN-*.
  */
 function StoryDetailModalHostBridge(): React.ReactElement {
   const { snap, hostEpoch } = useCanonicalStoryStore();
+  const globalSelectedId = readGlobalStorySnapshot().selectedStoryId;
+  const remountId = globalSelectedId ?? snap.selectedStoryId ?? 'none';
   return (
     <StoryDetailModalHost
-      key={`story-detail-host-${snap.selectedStoryId ?? 'none'}-${hostEpoch}`}
+      key={`story-detail-host-${remountId}-${hostEpoch}`}
       snap={snap}
     />
   );
@@ -56,20 +60,35 @@ interface StoryDetailModalHostProps {
   snap: ReturnType<typeof useCanonicalStoryStore>['snap'];
 }
 
+function resolveStoryBySelection(
+  stories: Story[],
+  selectedId: string | null,
+): Story | null {
+  if (!selectedId) {
+    return null;
+  }
+  return (
+    stories.find(
+      (story) => story.id === selectedId || story.identifier === selectedId,
+    ) ?? null
+  );
+}
+
 function StoryDetailModalHost({
   snap,
 }: StoryDetailModalHostProps): React.ReactElement | null {
   const pathname = usePathname();
   const { isSidebar, isPinned, isExpanded, setExpanded, setPinned } = useStoryDetailLayout();
-  // Props come from useCanonicalStoryStore → globalThis.__landiFlowStoryStore only.
-  const canonicalSelectedId = snap.selectedStoryId;
-  const globalProbeId = readGlobalStorySnapshot().selectedStoryId;
-  const selectedStory =
-    canonicalSelectedId
-      ? snap.stories.find(
-          (story) => story.id === canonicalSelectedId || story.identifier === canonicalSelectedId,
-        ) ?? null
-      : null;
+  // Live fbe3091: hook snap.selectedStoryId stayed null while
+  // globalThis.__landiFlowStoryStore.selectedStoryId matched GEN-*. Open portal
+  // when EITHER path is set; resolve story from the canonical global snapshot.
+  const globalSnap = readGlobalStorySnapshot();
+  const hookSelectedId = snap.selectedStoryId;
+  const globalSelectedId = globalSnap.selectedStoryId;
+  const effectiveSelectedId = globalSelectedId ?? hookSelectedId;
+  const storySource =
+    globalSnap.stories.length > 0 ? globalSnap.stories : snap.stories;
+  const selectedStory = resolveStoryBySelection(storySource, effectiveSelectedId);
 
   const onStoryModalRoute = isStoryModalRoute(pathname);
   // Always portal when a story is selected and resolved. Layout preference only
@@ -79,19 +98,22 @@ function StoryDetailModalHost({
 
   React.useEffect(() => {
     document.documentElement.dataset.storyDetailDebug = JSON.stringify({
-      selectedStoryId: canonicalSelectedId,
-      globalSelectedStoryId: globalProbeId,
+      selectedStoryId: hookSelectedId,
+      globalSelectedStoryId: globalSelectedId,
+      effectiveSelectedId,
       resolved: selectedStory?.identifier ?? null,
-      storeCount: snap.stories.length,
+      storeCount: storySource.length,
       hookCount: snap.stories.length,
       isSidebar,
       showPortal,
       pathname,
     });
   }, [
-    canonicalSelectedId,
-    globalProbeId,
+    hookSelectedId,
+    globalSelectedId,
+    effectiveSelectedId,
     selectedStory,
+    storySource.length,
     snap.stories.length,
     isSidebar,
     showPortal,
@@ -104,7 +126,7 @@ function StoryDetailModalHost({
     }
     // Only clear when pathname is a settled non-story route.
     // Keep selection while stories are still hydrating (param/selection set, list empty).
-    if (snap.stories.length === 0) {
+    if (storySource.length === 0) {
       return;
     }
     if (
@@ -112,7 +134,7 @@ function StoryDetailModalHost({
       pathname !== '/' &&
       !onStoryModalRoute &&
       !preservesStorySelection(pathname) &&
-      canonicalSelectedId
+      effectiveSelectedId
     ) {
       storyStore.selectStory(null);
     }
@@ -121,8 +143,8 @@ function StoryDetailModalHost({
     isPinned,
     onStoryModalRoute,
     pathname,
-    canonicalSelectedId,
-    snap.stories.length,
+    effectiveSelectedId,
+    storySource.length,
   ]);
 
   React.useEffect(() => {
@@ -438,14 +460,15 @@ export function StoryDetailSurface({
 }: StoryDetailSurfaceProps): React.ReactElement | null {
   const { isSidebar } = useStoryDetailLayout();
   const { snap } = useCanonicalStoryStore();
-  const selectedStoryId = snap.selectedStoryId;
+  // Same OR-gate as StoryDetailModalHost — board/list/deeplink must not require
+  // hook snap.selectedStoryId alone (fbe3091: snap null, global GEN-* UUID).
+  const globalSnap = readGlobalStorySnapshot();
+  const effectiveSelectedId =
+    globalSnap.selectedStoryId ?? snap.selectedStoryId;
+  const storySource =
+    globalSnap.stories.length > 0 ? globalSnap.stories : snap.stories;
   const story =
-    storyProp ??
-    (selectedStoryId
-      ? snap.stories.find(
-          (row) => row.id === selectedStoryId || row.identifier === selectedStoryId,
-        ) ?? null
-      : null);
+    storyProp ?? resolveStoryBySelection(storySource, effectiveSelectedId);
 
   if (!story || !isSidebar) {
     return null;

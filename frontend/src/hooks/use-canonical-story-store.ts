@@ -124,5 +124,21 @@ export function useCanonicalStoryStore(): CanonicalStoryStoreHook {
     };
   }, []);
 
-  return { snap, hostEpoch };
+  // Heal OpenNext stale React state: fbe3091 left snap.selectedStoryId=null while
+  // global already held GEN-*. Prefer live global on every render so consumers
+  // (host, surface, useSelectedStoryId) do not require hook state alone.
+  const live =
+    typeof globalThis !== 'undefined' ? readGlobalStorySnapshot() : EMPTY_SNAPSHOT;
+  const mergedSnap: StoryStoreState = {
+    ...snap,
+    selectedStoryId: live.selectedStoryId ?? snap.selectedStoryId,
+    stories: live.stories.length > 0 ? live.stories : snap.stories,
+    loading: live.loading,
+    error: live.error ?? snap.error,
+    detailFocus: live.selectedStoryId
+      ? live.detailFocus
+      : snap.detailFocus,
+  };
+
+  return { snap: mergedSnap, hostEpoch };
 }
