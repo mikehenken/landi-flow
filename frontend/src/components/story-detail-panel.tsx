@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import type { Story } from '@landi-flow/core/types';
 import { Button, cn, useTranslations } from '@landi-flow/ui';
 import { Maximize2, Minimize2, PanelRight, Pin, PinOff, X } from 'lucide-react';
@@ -51,9 +52,6 @@ function StoryDetailModalHost(): React.ReactElement | null {
         ) ?? null
       : null);
 
-  const dialogRef = React.useRef<HTMLDialogElement>(null);
-  /** Ignore native `close` fired by programmatic `dialog.close()` / unmount. */
-  const ignoreNativeCloseRef = React.useRef(false);
   const onStoryModalRoute = isStoryModalRoute(pathname);
   // Once a story is resolved, show the modal on story-capable routes (or when pinned).
   // Route gating previously raced with next-intl pathname settling and left the dialog mounted but closed.
@@ -71,41 +69,11 @@ function StoryDetailModalHost(): React.ReactElement | null {
     }
   }, [isModal, isPinned, pathname, selectedStoryId]);
 
-  // useLayoutEffect: open the native dialog before paint so React-committed
-  // children are visible. useEffect raced with dialog UA `display:none` and left
-  // fiber children without DOM nodes on OpenNext/Cloudflare production builds.
-  React.useLayoutEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) {
-      return;
-    }
-
-    if (showModal) {
-      if (!dialog.open) {
-        try {
-          dialog.showModal();
-        } catch {
-          // Already open or not in document — ignore.
-        }
-      }
-      return;
-    }
-
-    if (dialog.open) {
-      ignoreNativeCloseRef.current = true;
-      dialog.close();
-      requestAnimationFrame(() => {
-        ignoreNativeCloseRef.current = false;
-      });
-    }
-    setExpanded(false);
-  }, [showModal, setExpanded, selectedStoryId]);
-
   React.useEffect(() => {
-    return () => {
-      ignoreNativeCloseRef.current = true;
-    };
-  }, []);
+    if (!showModal) {
+      setExpanded(false);
+    }
+  }, [showModal, setExpanded]);
 
   const handleCloseModal = React.useCallback((): void => {
     setPinned(false);
@@ -114,58 +82,48 @@ function StoryDetailModalHost(): React.ReactElement | null {
     storyStore.selectStory(null);
   }, [setExpanded, setPinned]);
 
-  const handleNativeClose = React.useCallback((): void => {
-    if (ignoreNativeCloseRef.current) {
-      return;
-    }
-    handleCloseModal();
-  }, [handleCloseModal]);
-
-  // Keep the dialog node mounted whenever modal layout is active so `showModal()`
-  // can run against a stable ref (unmounting on hide races with native close).
-  if (!isModal) {
+  // Native <dialog>.showModal() left production builds with fiber props
+  // (visible/story set) but an empty closed dialog node. Portal overlay is
+  // deterministic under OpenNext/Cloudflare and matches create-* stacking.
+  if (!isModal || !showModal || !selectedStory) {
     return null;
   }
 
-  return (
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(
     <StoryDetailModal
-      dialogRef={dialogRef}
       story={selectedStory}
       isExpanded={isExpanded}
       isPinned={isPinned}
-      visible={showModal}
       onClose={handleCloseModal}
-      onNativeClose={handleNativeClose}
       onTogglePin={() => setPinned((prev) => !prev)}
       onToggleExpand={() => setExpanded((prev) => !prev)}
-    />
+    />,
+    document.body,
   );
 }
 
 interface StoryDetailModalProps {
-  dialogRef: React.RefObject<HTMLDialogElement | null>;
-  story: Story | null;
+  story: Story;
   isExpanded: boolean;
   isPinned: boolean;
-  visible: boolean;
   onClose: () => void;
-  onNativeClose: () => void;
   onTogglePin: () => void;
   onToggleExpand: () => void;
 }
 
 function StoryDetailModal({
-  dialogRef,
   story,
   isExpanded,
   isPinned,
-  visible,
   onClose,
-  onNativeClose,
   onTogglePin,
   onToggleExpand,
 }: StoryDetailModalProps): React.ReactElement {
-  const headerActions = story ? (
+  const headerActions = (
     <StoryDetailModalControls
       isPinned={isPinned}
       isExpanded={isExpanded}
@@ -173,58 +131,60 @@ function StoryDetailModal({
       onTogglePin={onTogglePin}
       onToggleExpand={onToggleExpand}
     />
-  ) : null;
+  );
 
-  // Always keep a stable child wrapper mounted (create-* modals do this).
-  // Conditional-only children on <dialog> left OpenNext builds with fiber nodes
-  // but childElementCount === 0 after showModal().
-  return (
-    <dialog
-      ref={dialogRef}
-      data-testid="story-detail-modal"
-      data-story-detail-visible={visible ? 'true' : 'false'}
-      aria-labelledby="story-detail-modal-title"
-      className={cn(
-        'fixed inset-0 z-50 m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-0',
-        'backdrop:bg-black/50 backdrop:backdrop-blur-sm',
-      )}
-      onCancel={(event) => {
+  React.useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
         event.preventDefault();
         onClose();
-      }}
-      onClose={onNativeClose}
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      data-testid="story-detail-modal"
+      data-story-detail-visible="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="story-detail-modal-title"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
     >
-      <div data-story-detail-root className="contents">
-        {story ? (
-          <div
-            className={cn(
-              'flex min-h-full',
-              isExpanded ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-[5vh_5vw]',
-            )}
-            onClick={(event) => {
-              if (event.target === event.currentTarget && !isPinned) {
-                onClose();
-              }
-            }}
-          >
-            <div
-              className={cn(
-                'relative flex min-h-0 w-full flex-col overflow-hidden border border-border/80 shadow-2xl',
-                'bg-[#0b0e14]',
-                isExpanded
-                  ? 'h-full max-h-full rounded-none'
-                  : 'h-[min(90vh,960px)] max-h-[90vh] w-[min(90vw,1400px)] max-w-[90vw] rounded-[10px]',
-              )}
-            >
-              <span id="story-detail-modal-title" className="sr-only">
-                {story.identifier} — {story.title}
-              </span>
-              <StoryDetailBody story={story} headerActions={headerActions} />
-            </div>
-          </div>
-        ) : null}
+      <div
+        className={cn(
+          'flex min-h-full',
+          isExpanded ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-[5vh_5vw]',
+        )}
+        onClick={(event) => {
+          if (event.target === event.currentTarget && !isPinned) {
+            onClose();
+          }
+        }}
+      >
+        <div
+          className={cn(
+            'relative flex min-h-0 w-full flex-col overflow-hidden border border-border/80 shadow-2xl',
+            'bg-[#0b0e14]',
+            isExpanded
+              ? 'h-full max-h-full rounded-none'
+              : 'h-[min(90vh,960px)] max-h-[90vh] w-[min(90vw,1400px)] max-w-[90vw] rounded-[10px]',
+          )}
+        >
+          <span id="story-detail-modal-title" className="sr-only">
+            {story.identifier} — {story.title}
+          </span>
+          <StoryDetailBody story={story} headerActions={headerActions} />
+        </div>
       </div>
-    </dialog>
+    </div>
   );
 }
 
