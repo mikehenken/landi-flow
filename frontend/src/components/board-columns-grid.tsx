@@ -10,6 +10,12 @@ import {
   updateStorySortOrder,
   updateStoryWorkflowState,
 } from '@/controllers/story-controller';
+import {
+  createBoardCardPointerState,
+  shouldOpenBoardCardOnClick,
+  updateBoardCardPointerMoved,
+  type BoardCardPointerState,
+} from '@/lib/board/board-card-pointer';
 
 type BoardColumn = { statusId: string; cards: string[] };
 
@@ -34,6 +40,97 @@ export interface BoardColumnsGridProps {
   className?: string;
   hiddenColumnIds?: Set<string>;
   onQuickAdd?: (workflowStateId: string) => void;
+}
+
+interface BoardStoryCardProps {
+  cardId: string;
+  title: string;
+  selected: boolean;
+  onSelect?: (storyId: string) => void;
+  onDragStart: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragOver: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDrop: (event: React.DragEvent<HTMLDivElement>) => void;
+}
+
+/** Click opens detail; drag reorders / moves columns (pointer threshold avoids false drags). */
+function BoardStoryCard({
+  cardId,
+  title,
+  selected,
+  onSelect,
+  onDragStart,
+  onDragOver,
+  onDrop,
+}: BoardStoryCardProps): React.ReactElement {
+  const pointerRef = React.useRef<BoardCardPointerState | null>(null);
+
+  return (
+    <div
+      draggable
+      onDragStart={(event) => {
+        // Do not mark `moved` on dragStart alone — HTML5 can fire dragStart before
+        // click on tiny jitters; pointer-move + `drag` distinguish real drags.
+        if (!pointerRef.current) {
+          pointerRef.current = createBoardCardPointerState(event.clientX, event.clientY);
+        }
+        onDragStart(event);
+      }}
+      onDrag={() => {
+        if (!pointerRef.current || pointerRef.current.moved) {
+          return;
+        }
+        pointerRef.current = { ...pointerRef.current, moved: true };
+      }}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onPointerDown={(event) => {
+        pointerRef.current = createBoardCardPointerState(event.clientX, event.clientY);
+      }}
+      onPointerMove={(event) => {
+        if (!pointerRef.current) {
+          return;
+        }
+        pointerRef.current = updateBoardCardPointerMoved(
+          pointerRef.current,
+          event.clientX,
+          event.clientY,
+        );
+      }}
+    >
+      <Card
+        role="button"
+        tabIndex={0}
+        className={cn(
+          'cursor-pointer transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:cursor-grabbing',
+          selected ? 'ring-1 ring-primary' : '',
+        )}
+        onClick={() => {
+          if (!shouldOpenBoardCardOnClick(pointerRef.current)) {
+            return;
+          }
+          onSelect?.(cardId);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onSelect?.(cardId);
+          }
+        }}
+        data-testid="board-story-card"
+        aria-label={`Open story ${title}`}
+      >
+        <CardHeader className="p-3 pb-1">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-0">
+          <SubStoryProgressChip parentStoryId={cardId} />
+          <p className="font-mono text-[10px] text-muted-foreground">
+            Click to open · drag to move
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 /** CAP-019: workflow columns with offline drag-and-drop. */
@@ -185,37 +282,19 @@ export function BoardColumnsGrid({
             </header>
             <div className="flex flex-1 flex-col gap-2 p-2">
               {cards.map((cardId, cardIndex) => (
-                <div
+                <BoardStoryCard
                   key={String(cardId)}
-                  draggable
+                  cardId={String(cardId)}
+                  title={storyTitles[String(cardId)] ?? String(cardId)}
+                  selected={selectedStoryId === cardId}
+                  onSelect={onCardSelect}
                   onDragStart={(event) => handleDragStart(event, columnIndex, cardIndex)}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => {
                     event.stopPropagation();
                     handleDrop(event, columnIndex, cardIndex);
                   }}
-                >
-                  <Card
-                    className={cn(
-                      'cursor-grab active:cursor-grabbing',
-                      selectedStoryId === cardId ? 'ring-1 ring-primary' : '',
-                    )}
-                    onClick={() => onCardSelect?.(String(cardId))}
-                    data-testid="board-story-card"
-                  >
-                    <CardHeader className="p-3 pb-1">
-                      <CardTitle className="text-sm font-medium">
-                        {storyTitles[String(cardId)] ?? String(cardId)}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-3 pt-0">
-                      <SubStoryProgressChip parentStoryId={String(cardId)} />
-                      <p className="font-mono text-[10px] text-muted-foreground">
-                        Drag to reorder or change column
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
+                />
               ))}
             </div>
           </section>

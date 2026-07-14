@@ -6,7 +6,7 @@ import { StoryListView } from '@/components/story-list-view';
 import { listEpicAttachedViews } from '@/lib/epic-surfaces/epic-surfaces-store';
 import { listSavedViews } from '@/lib/views/saved-views-store';
 import { useStoryStore } from '@/hooks/use-story-store';
-import { storyStore } from '@/stores/story-store';
+import { useStoryModalSelect } from '@/lib/story/use-story-deep-link';
 
 export interface EpicAttachedViewsTabProps {
   epic: Epic;
@@ -20,13 +20,14 @@ export function EpicAttachedViewsTab({ epic }: EpicAttachedViewsTabProps): React
   const [activeViewId, setActiveViewId] = React.useState(
     attached[0]?.view_id ?? allViews[0]?.id ?? null,
   );
+  const handleStorySelect = useStoryModalSelect();
 
   const activeView = allViews.find((view) => view.id === activeViewId);
   const epicStories = stories.filter((story) => story.epic_id === epic.id && !story.is_draft);
 
   return (
     <div className="p-6" data-testid="epic-attached-views-tab" data-cap="CAP-046">
-      <div className="flex gap-1 mb-4">
+      <div className="mb-4 flex gap-1">
         {attached.map((link) => {
           const view = allViews.find((row) => row.id === link.view_id);
           if (!view) {
@@ -51,7 +52,9 @@ export function EpicAttachedViewsTab({ epic }: EpicAttachedViewsTabProps): React
         <StoryListView
           stories={epicStories}
           selectedStoryId={selectedStoryId}
-          onStorySelect={(id) => storyStore.selectStory(id)}
+          onStorySelect={handleStorySelect}
+          enableBulkSelect={false}
+          enableDragReorder={false}
         />
       ) : (
         <p className="text-sm text-muted-foreground">No attached views.</p>

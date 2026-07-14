@@ -65,6 +65,8 @@ export function MyIssuesTabs({ stories, className }: MyIssuesTabsProps): React.R
           stories={filtered}
           selectedStoryId={selectedStoryId}
           onStorySelect={handleStorySelect}
+          enableBulkSelect={false}
+          enableDragReorder={false}
         />
       </div>
     </div>

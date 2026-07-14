@@ -20,9 +20,11 @@ import {
   EpicOverviewPanel,
 } from '@/components/epic-detail-sidebar';
 import { EpicDependenciesPanel } from '@/components/milestones/epic-dependencies-panel';
+import { StoryDetailSurface } from '@/components/story-detail-panel';
 import { StoryListView } from '@/components/story-list-view';
 import { useEpicStore } from '@/hooks/use-epic-store';
 import { useDefaultTeamLabel } from '@/hooks/use-default-team-label';
+import { useSelectedStoryId } from '@/hooks/use-selected-story-id';
 import { useStoryStore } from '@/hooks/use-story-store';
 import { useWorkspaceTeams } from '@/hooks/use-workspace-teams';
 import { epicStore } from '@/stores/epic-store';
@@ -32,6 +34,7 @@ import { useWorkspace } from '@/lib/workspace';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { getWorkflowStatesForTeam } from '@/lib/api/workspace-context';
 import { DEMO_WORKFLOW_STATE_ROWS } from '@/lib/seed-data';
+import { useStoryDeepLink, useStoryModalSelect } from '@/lib/story/use-story-deep-link';
 
 type EpicDetailTab =
   | 'overview'
@@ -55,6 +58,8 @@ function EpicStoriesTab({
   const { workspace } = useWorkspace();
   const { defaultTeamId, teams } = useWorkspaceTeams(workspace.id);
   const [activeTeamId, setActiveTeamId] = React.useState<string | null>(null);
+  const handleStorySelect = useStoryModalSelect();
+  useStoryDeepLink();
 
   React.useEffect(() => {
     if (activeTeamId) {
@@ -70,7 +75,11 @@ function EpicStoriesTab({
 
   if (!activeTeamId) {
     return (
-      <div data-testid="epic-stories-tab" data-cap="CAP-044" className="p-6 text-sm text-muted-foreground">
+      <div
+        data-testid="epic-stories-tab"
+        data-cap="CAP-044"
+        className="p-6 text-sm text-muted-foreground"
+      >
         No team available for this epic yet.
       </div>
     );
@@ -83,12 +92,14 @@ function EpicStoriesTab({
       activeTeamId={activeTeamId}
       onTeamChange={setActiveTeamId}
     >
-      <div data-testid="epic-stories-tab" data-cap="CAP-044">
+      <div data-testid="epic-stories-tab" data-cap="CAP-044" className="pt-1">
         <StoryListView
           stories={filteredStories}
           selectedStoryId={selectedStoryId}
-          onStorySelect={(id) => storyStore.selectStory(id)}
-          onCreateStory={openCreateStory}
+          onStorySelect={handleStorySelect}
+          onCreateStory={() => openCreateStory({ epicId: epic.id })}
+          enableBulkSelect={false}
+          enableDragReorder={false}
         />
       </div>
     </EpicTeamSubTabs>
@@ -100,7 +111,8 @@ export default function EpicDetailPage(): React.ReactElement {
   const epicId = params.epicId;
   const { workspace } = useWorkspace();
   const { epics } = useEpicStore();
-  const { stories, selectedStoryId } = useStoryStore();
+  const { stories } = useStoryStore();
+  const selectedStoryId = useSelectedStoryId();
   const teamLabel = useDefaultTeamLabel();
   const [activeTab, setActiveTab] = React.useState<EpicDetailTab>('overview');
 
@@ -125,6 +137,13 @@ export default function EpicDetailPage(): React.ReactElement {
     [epic, workspace.id],
   );
 
+  const selectedStory =
+    selectedStoryId
+      ? stories.find(
+          (story) => story.id === selectedStoryId || story.identifier === selectedStoryId,
+        ) ?? null
+      : null;
+
   if (!epic) {
     return (
       <AppShell viewTitle="Epic not found" breadcrumbs={[teamLabel, 'Epics']}>
@@ -143,14 +162,11 @@ export default function EpicDetailPage(): React.ReactElement {
   ];
 
   return (
-    <AppShell
-      viewTitle={epic.name}
-      breadcrumbs={[teamLabel, 'Epics', epic.name]}
-    >
+    <AppShell viewTitle={epic.name} breadcrumbs={[teamLabel, 'Epics', epic.name]}>
       <div className="flex h-full min-h-0 flex-col lg:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div
-            className="flex flex-wrap gap-1 border-b border-border px-6 pt-3"
+            className="flex flex-wrap gap-1 border-b border-border px-6 pb-2 pt-3"
             role="tablist"
             aria-label="Epic detail sections"
           >
@@ -212,6 +228,7 @@ export default function EpicDetailPage(): React.ReactElement {
           epicStories={epicStories}
           workflowStates={workflowStates.length > 0 ? workflowStates : DEMO_WORKFLOW_STATE_ROWS}
         />
+        <StoryDetailSurface story={selectedStory} onClose={() => storyStore.selectStory(null)} />
       </div>
     </AppShell>
   );

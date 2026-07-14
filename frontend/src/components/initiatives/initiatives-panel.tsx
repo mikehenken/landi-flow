@@ -18,18 +18,24 @@ interface InitiativesListResponse {
   initiatives?: Initiative[];
   settings?: InitiativeSettings;
   errorText?: string;
+  schemaPending?: boolean;
+  hint?: string;
 }
 
 interface CreateInitiativeResponse {
   ok: boolean;
   initiative?: Initiative;
   errorText?: string;
+  schemaPending?: boolean;
+  hint?: string;
 }
 
 interface PatchSettingsResponse {
   ok: boolean;
   settings?: InitiativeSettings;
   errorText?: string;
+  schemaPending?: boolean;
+  hint?: string;
 }
 
 /** Initiatives list — live API when authenticated; mock seed only under MOCK_AUTH. */
@@ -42,6 +48,7 @@ export function InitiativesPanel(): React.ReactElement {
   );
   const [loading, setLoading] = React.useState(!mock);
   const [error, setError] = React.useState<string | null>(null);
+  const [schemaHint, setSchemaHint] = React.useState<string | null>(null);
   const [creating, setCreating] = React.useState(false);
 
   const reloadMock = React.useCallback((): void => {
@@ -64,6 +71,7 @@ export function InitiativesPanel(): React.ReactElement {
         throw new Error(payload.errorText ?? `Failed to load initiatives (${response.status})`);
       }
       setInitiatives(payload.initiatives ?? []);
+      setSchemaHint(payload.schemaPending ? (payload.hint ?? null) : null);
       setSettings(
         payload.settings ?? {
           workspace_id: workspace.id,
@@ -74,6 +82,7 @@ export function InitiativesPanel(): React.ReactElement {
       );
     } catch (err) {
       setInitiatives([]);
+      setSchemaHint(null);
       setError(err instanceof Error ? err.message : 'Failed to load initiatives');
     } finally {
       setLoading(false);
@@ -192,6 +201,11 @@ export function InitiativesPanel(): React.ReactElement {
       </header>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {schemaHint ? (
+        <p className="text-sm text-amber-500" data-testid="initiatives-schema-hint">
+          {schemaHint}
+        </p>
+      ) : null}
 
       {total === 0 ? (
         <div

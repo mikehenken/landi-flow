@@ -108,7 +108,7 @@ export function EpicTeamSubTabs({
 
   return (
     <div data-testid="epic-team-subtabs" data-cap="CAP-047">
-      <div className="flex gap-1 border-b border-border px-6 pt-2" role="tablist">
+      <div className="flex gap-1 border-b border-border px-6 pb-2 pt-4" role="tablist">
         {teamIds.map((teamId) => (
           <Button
             key={teamId}

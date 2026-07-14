@@ -2,8 +2,12 @@
 
 import * as React from 'react';
 
+export interface OpenCreateStoryOptions {
+  epicId?: string | null;
+}
+
 export interface CreateModalsContextValue {
-  openCreateStory: () => void;
+  openCreateStory: (options?: OpenCreateStoryOptions) => void;
   openCreateEpic: () => void;
   openCreateCustomer: () => void;
   openCreateMember: () => void;
@@ -35,7 +39,7 @@ export function CreateModalsProvider({
 }
 
 /** Opens the Create Story modal from nested views (e.g. empty-state CTA). */
-export function useOpenCreateStoryModal(): () => void {
+export function useOpenCreateStoryModal(): (options?: OpenCreateStoryOptions) => void {
   return useCreateModalsContext().openCreateStory;
 }
 

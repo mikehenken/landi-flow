@@ -13,6 +13,12 @@ import { isMockAuthEnabled } from '@/lib/api/config';
 import { isLiveblocksConfigured } from '@/lib/liveblocks/config';
 import type { BoardGroupBy } from '@/lib/board-swimlane-preference';
 import { isWorkspaceUuid } from '@/lib/workspace/is-workspace-uuid';
+import {
+  createBoardCardPointerState,
+  shouldOpenBoardCardOnClick,
+  updateBoardCardPointerMoved,
+  type BoardCardPointerState,
+} from '@/lib/board/board-card-pointer';
 import { CollaborativeRoom } from './collaboration-provider';
 import { CursorOverlay, PresenceAvatars } from './presence-cursors';
 
@@ -344,12 +350,21 @@ function BoardInner({
                     }}
                   >
                     <Card
+                      role="button"
+                      tabIndex={0}
                       className={cn(
-                        'cursor-grab active:cursor-grabbing',
-                        selectedStoryId === cardId ? 'ring-1 ring-primary' : ''
+                        'cursor-pointer transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:cursor-grabbing',
+                        selectedStoryId === cardId ? 'ring-1 ring-primary' : '',
                       )}
                       onClick={() => onCardSelect?.(String(cardId))}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onCardSelect?.(String(cardId));
+                        }
+                      }}
                       data-testid="board-story-card"
+                      aria-label={`Open story ${storyTitles[String(cardId)] ?? String(cardId)}`}
                     >
                       <CardHeader className="p-3 pb-1">
                         <CardTitle className="text-sm font-medium">
@@ -358,7 +373,7 @@ function BoardInner({
                       </CardHeader>
                       <CardContent className="p-3 pt-0">
                         <p className="font-mono text-[10px] text-muted-foreground">
-                          Drag to reorder or change column
+                          Click to open · drag to move
                         </p>
                       </CardContent>
                     </Card>

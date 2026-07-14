@@ -38,6 +38,7 @@ import {
 } from '@/lib/api/workspace-context';
 import { isMockAuthEnabled } from '@/lib/api/config';
 import { createStory as persistCreateStory } from '@/controllers/story-controller';
+import { buildCreateStoryInput } from '@/lib/story/build-create-story-input';
 import { getTaxonomySettings, getStoryTemplateById } from '@/lib/taxonomy/taxonomy-store';
 import { useTeamCycles } from '@/hooks/use-team-cycles';
 import { useTeamWorkflowStates } from '@/hooks/use-team-workflow-states';
@@ -63,6 +64,7 @@ import { useCap004Dialog } from '@/components/create-modal-utils';
 
 export type {
   CreateModalsProviderProps,
+  OpenCreateStoryOptions,
 } from '@/components/create-modals-context';
 export {
   CreateModalsProvider,
@@ -76,6 +78,8 @@ export {
 export interface CreateStoryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Pre-associate the new story with this epic (e.g. Create from Epic Stories tab). */
+  defaultEpicId?: string | null;
 }
 
 /**
@@ -84,6 +88,7 @@ export interface CreateStoryModalProps {
 export function CreateStoryModal({
   open,
   onOpenChange,
+  defaultEpicId = null,
 }: CreateStoryModalProps): React.ReactElement {
   const { workspace } = useWorkspace();
   const { pickerMembers } = useAssignableMembers();
@@ -97,7 +102,7 @@ export function CreateStoryModal({
   );
   const [workflowStateId, setWorkflowStateId] = React.useState<string>(WORKFLOW_STATES.todo);
   const [priority, setPriority] = React.useState<StoryPriority>('none');
-  const [epicId, setEpicId] = React.useState<string | null>(null);
+  const [epicId, setEpicId] = React.useState<string | null>(defaultEpicId);
   const [cycleId, setCycleId] = React.useState<string | null>(null);
   const [storyTypeId, setStoryTypeId] = React.useState<string | null>(null);
   const [ownerId, setOwnerId] = React.useState<string | null>(null);
@@ -167,7 +172,7 @@ export function CreateStoryModal({
     setTeamId(isMockAuthEnabled() ? DEMO_TEAM_ID : getDefaultTeamId() ?? '');
     setWorkflowStateId(WORKFLOW_STATES.todo);
     setPriority('none');
-    setEpicId(null);
+    setEpicId(defaultEpicId);
     setCycleId(null);
     setStoryTypeId(null);
     setOwnerId(null);
@@ -177,7 +182,14 @@ export function CreateStoryModal({
     setDueDate(null);
     setCustomFields(EMPTY_CUSTOM_FIELDS);
     setSelectedTemplateId('');
-  }, []);
+  }, [defaultEpicId]);
+
+  React.useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setEpicId(defaultEpicId);
+  }, [open, defaultEpicId]);
 
   const resetFormFields = React.useCallback((): void => {
     setTitle('');
@@ -219,21 +231,23 @@ export function CreateStoryModal({
 
       const resolvedWorkflowStateId = workflowStateId;
 
-      void persistCreateStory({
-        title: trimmedTitle,
-        descriptionMd: descriptionMd.trim() || null,
-        workspaceId: workspace.id,
-        teamId: resolvedTeamId,
-        workflowStateId: resolvedWorkflowStateId,
-        priority,
-        epicId,
-        assigneeId: ownerId,
-        cycleId,
-        estimate,
-        dueDate,
-        followerIds,
-        labelIds,
-      }).then(() => {
+      void persistCreateStory(
+        buildCreateStoryInput({
+          title: trimmedTitle,
+          descriptionMd: descriptionMd.trim() || null,
+          workspaceId: workspace.id,
+          teamId: resolvedTeamId,
+          workflowStateId: resolvedWorkflowStateId,
+          priority,
+          epicId,
+          assigneeId: ownerId,
+          cycleId,
+          estimate,
+          dueDate,
+          followerIds,
+          labelIds,
+        }),
+      ).then(() => {
         if (createMore) {
           resetFormFields();
           return;

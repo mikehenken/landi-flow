@@ -16,7 +16,6 @@ import { EmptyState } from '@/components/empty-state';
 import { getParentStoryId, getStoryCustomerId } from '@/lib/story-relations-seed';
 import { useAssignableMembers } from '@/hooks/use-assignable-members';
 import { useStorySelection } from '@/hooks/use-story-selection';
-import { storyStore } from '@/stores/story-store';
 import {
   formatAssigneeDisplayName,
   formatAssigneeInitials,
@@ -32,6 +31,8 @@ export interface StoryListViewProps {
   onCreateStory?: () => void;
   displayProperties?: StoryDisplayProperty[];
   enableDragReorder?: boolean;
+  /** When false, hide checkboxes (no bulk action bar on this surface). */
+  enableBulkSelect?: boolean;
   loading?: boolean;
 }
 
@@ -43,6 +44,7 @@ export function StoryListView({
   onCreateStory,
   displayProperties = ['id', 'status', 'assignee', 'priority'],
   enableDragReorder = true,
+  enableBulkSelect = true,
   loading = false,
 }: StoryListViewProps): React.ReactElement {
   const t = useTranslations('stories');
@@ -145,30 +147,31 @@ export function StoryListView({
                 isBulkSelected ? 'bg-primary/10' : isRowSelected ? 'bg-white/10' : 'hover:bg-white/5',
               )}
             >
-              <input
-                type="checkbox"
-                checked={isBulkSelected}
-                onChange={(event) => {
-                  event.stopPropagation();
-                  if (event.nativeEvent instanceof MouseEvent && event.nativeEvent.shiftKey) {
-                    selectRange(story.id, orderedIds);
-                    return;
-                  }
-                  toggle(story.id);
-                }}
-                aria-label={`Select ${story.identifier}`}
-                data-testid="story-list-select"
-                className="h-3.5 w-3.5 shrink-0"
-              />
+              {enableBulkSelect ? (
+                <input
+                  type="checkbox"
+                  checked={isBulkSelected}
+                  onChange={(event) => {
+                    event.stopPropagation();
+                    if (event.nativeEvent instanceof MouseEvent && event.nativeEvent.shiftKey) {
+                      selectRange(story.id, orderedIds);
+                      return;
+                    }
+                    toggle(story.id);
+                  }}
+                  aria-label={`Select ${story.identifier}`}
+                  data-testid="story-list-select"
+                  className="h-3.5 w-3.5 shrink-0"
+                />
+              ) : null}
               <button
                 type="button"
                 data-testid="story-list-item"
                 role="listitem"
                 onClick={() => {
-                  storyStore.openStoryDetail(story.id);
                   onStorySelect(story.id);
                 }}
-                className="flex min-w-0 flex-1 items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:gap-3"
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:gap-3"
                 aria-current={isRowSelected ? 'true' : undefined}
               >
                 {showProperty('id') ? <StoryIdentifierBadge identifier={story.identifier} /> : null}

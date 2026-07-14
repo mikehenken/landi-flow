@@ -96,6 +96,12 @@ import { isMockAuthEnabled } from '@/lib/api/config';
 import { DEMO_TEAM_ID } from '@/lib/seed-data';
 import type { ResolvedWorkspace } from '@/lib/workspace/registry';
 import { useWorkspacePageMeta, useWorkspaceShellContext } from '@/components/workspace-shell-provider';
+import { useWorkspaceTeams } from '@/hooks/use-workspace-teams';
+import type { OpenCreateStoryOptions } from '@/components/create-modals-context';
+import {
+  resolveTriageTeamId,
+  triageHrefForTeam,
+} from '@/lib/navigation/resolve-triage-team-id';
 
 const WorkspacePresenceLobby = dynamic(
   () =>
@@ -155,10 +161,19 @@ export function AppShellFrame({
 
   const { workspace } = useWorkspace();
   const { workspaces: membershipWorkspaces, loading: membershipsLoading } = useWorkspaceMemberships();
+  const { defaultTeamId, teams } = useWorkspaceTeams(workspace.id);
   const triageTeamId = React.useMemo(
-    () => (isMockAuthEnabled() ? DEMO_TEAM_ID : getDefaultTeamId() ?? ''),
-    [workspace.id],
+    () =>
+      resolveTriageTeamId({
+        mockAuth: isMockAuthEnabled(),
+        demoTeamId: DEMO_TEAM_ID,
+        defaultTeamId,
+        contextTeamId: getDefaultTeamId(),
+        firstTeamId: teams[0]?.id ?? null,
+      }),
+    [defaultTeamId, teams],
   );
+  const triageHref = React.useMemo(() => triageHrefForTeam(triageTeamId), [triageTeamId]);
 
   const tNav = useTranslations('navigation');
 
@@ -190,6 +205,7 @@ export function AppShellFrame({
   const [commandOpen, setCommandOpen] = React.useState(false);
 
   const [createStoryOpen, setCreateStoryOpen] = React.useState(false);
+  const [createStoryEpicId, setCreateStoryEpicId] = React.useState<string | null>(null);
   const [createEpicOpen, setCreateEpicOpen] = React.useState(false);
   const [createCustomerOpen, setCreateCustomerOpen] = React.useState(false);
   const [createMemberOpen, setCreateMemberOpen] = React.useState(false);
@@ -231,7 +247,8 @@ export function AppShellFrame({
 
 
 
-  const openCreateStory = React.useCallback(() => {
+  const openCreateStory = React.useCallback((options?: OpenCreateStoryOptions) => {
+    setCreateStoryEpicId(options?.epicId ?? null);
     setCreateStoryOpen(true);
   }, []);
 
@@ -249,9 +266,17 @@ export function AppShellFrame({
 
   const closeAllCreateModals = React.useCallback(() => {
     setCreateStoryOpen(false);
+    setCreateStoryEpicId(null);
     setCreateEpicOpen(false);
     setCreateCustomerOpen(false);
     setCreateMemberOpen(false);
+  }, []);
+
+  const handleCreateStoryOpenChange = React.useCallback((open: boolean) => {
+    setCreateStoryOpen(open);
+    if (!open) {
+      setCreateStoryEpicId(null);
+    }
   }, []);
 
   const createModalsValue = React.useMemo(
@@ -458,7 +483,7 @@ export function AppShellFrame({
 
         group: tNav('command_palette.navigation_group'),
 
-        onSelect: () => navigate(`/workspace/team/${triageTeamId}/triage`),
+        onSelect: () => navigate(triageHref),
 
       },
 
@@ -512,7 +537,7 @@ export function AppShellFrame({
 
     ],
 
-    [navigate, openCreateStory, openCreateEpic, tCommon, tEntity, tNav, triageTeamId],
+    [navigate, openCreateStory, openCreateEpic, tCommon, tEntity, tNav, triageHref],
 
   );
 
@@ -692,7 +717,7 @@ export function AppShellFrame({
 
           label: 'Triage',
 
-          href: `/workspace/team/${triageTeamId}/triage`,
+          href: triageHref,
 
           icon: <Inbox className="h-4 w-4" />,
 
@@ -1177,7 +1202,11 @@ export function AppShellFrame({
 
       </SidebarLayout>
 
-      <CreateStoryModal open={createStoryOpen} onOpenChange={setCreateStoryOpen} />
+      <CreateStoryModal
+        open={createStoryOpen}
+        onOpenChange={handleCreateStoryOpenChange}
+        defaultEpicId={createStoryEpicId}
+      />
       <CreateEpicModal open={createEpicOpen} onOpenChange={setCreateEpicOpen} />
       <CreateCustomerModal open={createCustomerOpen} onOpenChange={setCreateCustomerOpen} />
       <CreateMemberModal open={createMemberOpen} onOpenChange={setCreateMemberOpen} />

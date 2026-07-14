@@ -12,6 +12,37 @@ export const dynamic = 'force-dynamic';
 const mockInitiatives: Initiative[] = [...SEED_INITIATIVES];
 let mockSettings: InitiativeSettings = readMockSettings();
 
+/** In-memory fallback when `linear_clone.initiatives` is not migrated yet. */
+const memoryInitiatives: Initiative[] = [];
+const memorySettingsByWorkspace = new Map<string, InitiativeSettings>();
+
+function isMissingRelationError(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('could not find the table') ||
+    normalized.includes('does not exist') ||
+    normalized.includes('schema cache')
+  );
+}
+
+function memoryList(workspaceId: string): {
+  initiatives: Initiative[];
+  settings: InitiativeSettings;
+} {
+  const settings =
+    memorySettingsByWorkspace.get(workspaceId) ??
+    ({
+      workspace_id: workspaceId,
+      enabled: true,
+      schedule_cadence: 'weekly',
+      updated_at: new Date().toISOString(),
+    } satisfies InitiativeSettings);
+  return {
+    initiatives: memoryInitiatives.filter((row) => row.workspace_id === workspaceId),
+    settings,
+  };
+}
+
 function mapInitiativeRow(row: Record<string, unknown>, epicIds: string[]): Initiative {
   return {
     id: String(row.id),
@@ -62,6 +93,16 @@ export async function GET(request: NextRequest): Promise<Response> {
     ]);
 
     if (initiativesResult.error) {
+      if (isMissingRelationError(initiativesResult.error.message)) {
+        const fallback = memoryList(workspaceId);
+        return Response.json({
+          ok: true,
+          ...fallback,
+          live: false,
+          schemaPending: true,
+          hint: 'Apply supabase/migrations/0036_task09_batch_caps_initiatives.sql to enable persistent initiatives.',
+        });
+      }
       return Response.json({ ok: false, errorText: initiativesResult.error.message }, { status: 502 });
     }
 
@@ -152,6 +193,19 @@ export async function POST(request: NextRequest): Promise<Response> {
       .single();
 
     if (error) {
+      if (isMissingRelationError(error.message)) {
+        memoryInitiatives.push(initiative);
+        return Response.json(
+          {
+            ok: true,
+            initiative,
+            live: false,
+            schemaPending: true,
+            hint: 'Apply supabase/migrations/0036_task09_batch_caps_initiatives.sql to persist initiatives.',
+          },
+          { status: 201 },
+        );
+      }
       return Response.json({ ok: false, errorText: error.message }, { status: 502 });
     }
 
@@ -209,6 +263,16 @@ export async function PATCH(request: NextRequest): Promise<Response> {
       .single();
 
     if (error) {
+      if (isMissingRelationError(error.message)) {
+        memorySettingsByWorkspace.set(body.workspace_id, settings);
+        return Response.json({
+          ok: true,
+          settings,
+          live: false,
+          schemaPending: true,
+          hint: 'Apply supabase/migrations/0036_task09_batch_caps_initiatives.sql to persist initiative settings.',
+        });
+      }
       return Response.json({ ok: false, errorText: error.message }, { status: 502 });
     }
 
