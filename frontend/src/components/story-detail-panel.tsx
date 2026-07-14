@@ -284,29 +284,23 @@ function StoryDetailModal({
                 ? `${story.identifier} — ${story.title}`
                 : 'Loading story detail'}
             </span>
-            <React.Suspense
-              fallback={
+            {/*
+              Do NOT wrap in React.Suspense — Liveblocks CollaborativeRoom can
+              suspend indefinitely and trap the GATE 2 surface on the fallback.
+              ObsErrorBoundary still isolates hard render failures.
+            */}
+            <ObsErrorBoundary fallbackMessage="Unable to render story detail.">
+              {story ? (
+                <StoryDetailBody story={story} headerActions={headerActions} />
+              ) : (
                 <div
                   className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
                   data-testid="story-detail-modal-loading"
                 >
                   Loading story…
                 </div>
-              }
-            >
-              <ObsErrorBoundary fallbackMessage="Unable to render story detail.">
-                {story ? (
-                  <StoryDetailBody story={story} headerActions={headerActions} />
-                ) : (
-                  <div
-                    className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
-                    data-testid="story-detail-modal-loading"
-                  >
-                    Loading story…
-                  </div>
-                )}
-              </ObsErrorBoundary>
-            </React.Suspense>
+              )}
+            </ObsErrorBoundary>
           </div>
         </div>
       ) : null}
