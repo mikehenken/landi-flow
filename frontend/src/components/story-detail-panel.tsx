@@ -74,7 +74,7 @@ function StoryDetailModalHost(): React.ReactElement | null {
   // Sidebar layout: dialog stays closed; StoryDetailSurface owns the visible panel.
   const dialogShouldOpen = showPortal && !isSidebar;
 
-  // Sync dataset during render — useEffect lagged behind live store on f2c8972.
+  // Sync dataset during render for probe visibility; also stamp after paint.
   writeStoryDetailDebugDataset({
     selectedStoryId,
     globalSelectedStoryId: selectedStoryId,
@@ -88,6 +88,32 @@ function StoryDetailModalHost(): React.ReactElement | null {
     pathname,
     source: 'globalThis.__landiFlowStoryStore',
   });
+
+  React.useLayoutEffect(() => {
+    writeStoryDetailDebugDataset({
+      selectedStoryId,
+      globalSelectedStoryId: selectedStoryId,
+      effectiveSelectedId: selectedStoryId,
+      resolved: selectedStory?.identifier ?? null,
+      storeCount: snap.stories.length,
+      hookCount: snap.stories.length,
+      isSidebar,
+      showPortal,
+      dialogShouldOpen,
+      dialogMounted: dialogRef.current !== null,
+      dialogOpen: dialogRef.current?.open ?? false,
+      pathname,
+      source: 'globalThis.__landiFlowStoryStore',
+    });
+  }, [
+    selectedStoryId,
+    selectedStory?.identifier,
+    snap.stories.length,
+    isSidebar,
+    showPortal,
+    dialogShouldOpen,
+    pathname,
+  ]);
 
   React.useEffect(() => {
     if (isSidebar || isPinned) {
@@ -158,18 +184,15 @@ function StoryDetailModalHost(): React.ReactElement | null {
     }
   }, [dialogShouldOpen, selectedStoryId]);
 
-  // Keep the dialog node mounted whenever selection is set so probes can find it.
-  // Sidebar mode still mounts the node but keeps it closed (StoryDetailSurface shows).
-  if (!showPortal) {
-    return null;
-  }
-
+  // Always mount the <dialog> node so OpenNext/concurrent renders cannot leave
+  // probes with showPortal=true and modalPresent=false. Content fills when open.
   return (
     <StoryDetailModal
       dialogRef={dialogRef}
-      story={selectedStory}
+      story={dialogShouldOpen ? selectedStory : null}
       isExpanded={isExpanded}
       isPinned={isPinned}
+      contentActive={dialogShouldOpen}
       onClose={handleCloseModal}
       onTogglePin={() => setPinned((prev) => !prev)}
       onToggleExpand={() => setExpanded((prev) => !prev)}
@@ -182,6 +205,8 @@ interface StoryDetailModalProps {
   story: Story | null;
   isExpanded: boolean;
   isPinned: boolean;
+  /** When false, dialog stays mounted but empty/closed. */
+  contentActive: boolean;
   onClose: () => void;
   onTogglePin: () => void;
   onToggleExpand: () => void;
@@ -192,12 +217,11 @@ function StoryDetailModal({
   story,
   isExpanded,
   isPinned,
+  contentActive,
   onClose,
   onTogglePin,
   onToggleExpand,
 }: StoryDetailModalProps): React.ReactElement {
-  // Keep controls outside StoryDetailBody so the dialog shell can commit even if
-  // body/collaboration suspends or throws (GATE 2 modalPresent).
   const headerActions = (
     <StoryDetailModalControls
       isPinned={isPinned}
@@ -212,7 +236,7 @@ function StoryDetailModal({
     <dialog
       ref={dialogRef}
       data-testid="story-detail-modal"
-      data-story-detail-visible="true"
+      data-story-detail-visible={contentActive ? 'true' : 'false'}
       aria-modal="true"
       aria-labelledby="story-detail-modal-title"
       className={cn(
@@ -232,60 +256,60 @@ function StoryDetailModal({
         }
       }}
     >
-      <div
-        className={cn(
-          'flex min-h-full w-full flex-1',
-          isExpanded ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-[5vh_5vw]',
-        )}
-        onClick={(event) => {
-          if (event.target === event.currentTarget && !isPinned) {
-            onClose();
-          }
-        }}
-      >
+      {contentActive ? (
         <div
           className={cn(
-            'relative flex min-h-0 w-full flex-col overflow-hidden border border-border/80 shadow-2xl',
-            'bg-[#0b0e14]',
+            'flex min-h-full w-full flex-1',
             isExpanded
-              ? 'h-full max-h-full rounded-none'
-              : 'h-[min(90vh,960px)] max-h-[90vh] w-[min(90vw,1400px)] max-w-[90vw] rounded-[10px]',
+              ? 'items-stretch justify-stretch p-0'
+              : 'items-center justify-center p-[5vh_5vw]',
           )}
-        >
-          <span id="story-detail-modal-title" className="sr-only">
-            {story
-              ? `${story.identifier} — ${story.title}`
-              : 'Loading story detail'}
-          </span>
-          {/*
-            Suspense + error boundary: dialog shell must paint for GATE 2 even when
-            Liveblocks / next-intl children suspend or throw.
-          */}
-          <React.Suspense
-            fallback={
-              <div
-                className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
-                data-testid="story-detail-modal-loading"
-              >
-                Loading story…
-              </div>
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !isPinned) {
+              onClose();
             }
+          }}
+        >
+          <div
+            className={cn(
+              'relative flex min-h-0 w-full flex-col overflow-hidden border border-border/80 shadow-2xl',
+              'bg-[#0b0e14]',
+              isExpanded
+                ? 'h-full max-h-full rounded-none'
+                : 'h-[min(90vh,960px)] max-h-[90vh] w-[min(90vw,1400px)] max-w-[90vw] rounded-[10px]',
+            )}
           >
-            <ObsErrorBoundary fallbackMessage="Unable to render story detail.">
-              {story ? (
-                <StoryDetailBody story={story} headerActions={headerActions} />
-              ) : (
+            <span id="story-detail-modal-title" className="sr-only">
+              {story
+                ? `${story.identifier} — ${story.title}`
+                : 'Loading story detail'}
+            </span>
+            <React.Suspense
+              fallback={
                 <div
                   className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
                   data-testid="story-detail-modal-loading"
                 >
                   Loading story…
                 </div>
-              )}
-            </ObsErrorBoundary>
-          </React.Suspense>
+              }
+            >
+              <ObsErrorBoundary fallbackMessage="Unable to render story detail.">
+                {story ? (
+                  <StoryDetailBody story={story} headerActions={headerActions} />
+                ) : (
+                  <div
+                    className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
+                    data-testid="story-detail-modal-loading"
+                  >
+                    Loading story…
+                  </div>
+                )}
+              </ObsErrorBoundary>
+            </React.Suspense>
+          </div>
         </div>
-      </div>
+      ) : null}
     </dialog>
   );
 }
