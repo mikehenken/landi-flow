@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createCorrelationContext } from '@/lib/correlation';
 import {
   fetchFlowApiUpstream,
   resolveFlowApiUpstreamBase,
 } from '@/lib/api/upstream-fetch';
-import { resolveProxyAccessToken } from '@/lib/api/resolve-proxy-access-token';
+import { resolveCachedProxyAuth } from '@/lib/api/resolve-cached-proxy-auth';
 
 async function proxyRequest(
   request: NextRequest,
@@ -18,27 +17,15 @@ async function proxyRequest(
     );
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
+  // PERF-04: request-scoped + in-flight cookie singleflight (parallel bootstrap hops).
+  const auth = await resolveCachedProxyAuth(request.headers.get('cookie') ?? '');
+  if (!auth.ok) {
     return NextResponse.json(
       { error: 'unauthorized', message: 'Authentication required' },
       { status: 401 },
     );
   }
-
-  const accessToken = await resolveProxyAccessToken(supabase);
-
-  if (!accessToken) {
-    return NextResponse.json(
-      { error: 'unauthorized', message: 'Authentication required' },
-      { status: 401 },
-    );
-  }
+  const { accessToken } = auth;
 
   const correlation =
     request.headers.get('x-landi-correlation-id') ??
