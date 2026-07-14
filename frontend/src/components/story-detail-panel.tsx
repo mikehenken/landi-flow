@@ -56,11 +56,30 @@ function StoryDetailModalHost(): React.ReactElement | null {
       : null);
 
   const onStoryModalRoute = isStoryModalRoute(pathname);
-  // Prefer portal whenever a story is selected and layout is not sidebar.
-  // Do not require `isModal===true` — production builds were leaving preference
-  // at modal in localStorage while context isModal stayed false, so neither
-  // portal nor sidebar mounted despite a valid selection.
-  const showPortal = selectedStory !== null && !isSidebar;
+  // Always portal when a story is selected. Layout preference only affects
+  // StoryDetailSurface (sidebar); production was stuck with context layout
+  // desynced from localStorage so neither surface mounted.
+  const showPortal = selectedStory !== null;
+
+  React.useEffect(() => {
+    document.documentElement.dataset.storyDetailDebug = JSON.stringify({
+      selectedStoryId,
+      resolved: selectedStory?.identifier ?? null,
+      storeCount: storeStories.length,
+      hookCount: stories.length,
+      isSidebar,
+      showPortal,
+      pathname,
+    });
+  }, [
+    selectedStoryId,
+    selectedStory,
+    storeStories.length,
+    stories.length,
+    isSidebar,
+    showPortal,
+    pathname,
+  ]);
 
   React.useEffect(() => {
     if (isSidebar || isPinned) {
